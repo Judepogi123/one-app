@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Voters" ALTER COLUMN "houseHoldId" DROP DEFAULT,
+ALTER COLUMN "mobileNumber" DROP DEFAULT,
+ALTER COLUMN "teamLeaderId" DROP DEFAULT;

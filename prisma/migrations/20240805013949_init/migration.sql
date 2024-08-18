@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "CandidateBatch" ALTER COLUMN "timestamp" SET DEFAULT CURRENT_TIMESTAMP;
+
+-- AlterTable
+ALTER TABLE "NewBatchDraft" ALTER COLUMN "timestamp" SET DEFAULT CURRENT_TIMESTAMP;

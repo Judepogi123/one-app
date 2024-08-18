@@ -1,0 +1,313 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUser {
+  uid         String       @id @default(uuid())
+  firstname   String
+  lastname    String
+  phoneNumber String
+  password    String
+  address     String
+  DeviceLogs  DeviceLogs[]
+  Survey      Survey[]
+}
+
+model Users {
+  uid            String           @id @default(uuid())
+  firstname      String
+  lastname       String
+  phoneNumber    String
+  password       String
+  address        String
+  status         String
+  SurveyResponse SurveyResponse[]
+  DeviceLogs     DeviceLogs[]
+}
+
+model Candidates {
+  id               String         @id @default(uuid())
+  lastname         String
+  firstname        String
+  position         String
+  code             String
+  desc             String
+  batch            CandidateBatch @relation(fields: [candidateBatchId], references: [id])
+  candidateBatchId String
+}
+
+model CandidateBatch {
+  id         String       @id @default(uuid())
+  timestamp  DateTime     @default(now())
+  Candidates Candidates[]
+  waveID     Wave         @relation(fields: [waveId], references: [id])
+  waveId     Int
+}
+
+model Wave {
+  id             Int              @id @default(autoincrement())
+  timestamp      DateTime         @default(now())
+  CandidateBatch CandidateBatch[]
+}
+
+model Voters {
+  id              String         @id @default(uuid())
+  lastname        String
+  firstname       String
+  barangay        Barangays      @relation(fields: [barangaysId], references: [id])
+  municipal       Municipals     @relation(fields: [municipalsId], references: [id])
+  precent         Precents?      @relation(fields: [precintsId], references: [id])
+  status          Int            @default(1)
+  calcAge         Int
+  birthYear       String
+  level           Int            @default(0)
+  barangaysId     String
+  municipalsId    Int
+  precintsId      String?        @default("Unknown")
+  batchDraft      NewBatchDraft? @relation(fields: [newBatchDraftId], references: [id])
+  saveStatus      String         @default("drafted")
+  mobileNumber    String?        @default("Unknown")
+  houseHold       HouseHold?     @relation(fields: [houseHoldId], references: [id])
+  houseHoldId     String?        @default("Unknown")
+  newBatchDraftId String?        @default("Unknown")
+  purok           Purok?         @relation(fields: [purokId], references: [id])
+  purokId         String?
+  teamLeader      TeamLeader?    @relation(fields: [teamLeaderId], references: [id])
+  teamLeaderId    String?        @default("Unknown")
+  hubID           Hub?           @relation(fields: [hubId], references: [id])
+  BarangayCoor    BarangayCoor[]
+  PurokCoor       PurokCoor[]
+  pwd             String?
+  oor             String?
+  inc             String?
+  illi            String?
+  inPurok         Boolean?
+  hubId           String?        @default("Unknown")
+  Response        Response[]
+  qrCode          String?
+}
+
+model Purok {
+  id           String      @id @default(cuid())
+  purokNumber  String
+  barangaysId  String
+  barangay     Barangays   @relation(fields: [barangaysId], references: [id])
+  municipalsId Int
+  municipal    Municipals  @relation(fields: [municipalsId], references: [id])
+  houseHolds   HouseHold[]
+  voters       Voters[]
+  draftID      String
+}
+
+model Municipals {
+  id             Int              @id
+  name           String
+  barangays      Barangays[]
+  voters         Voters[]
+  Precents       Precents[]
+  NewBatchDraft  NewBatchDraft[]
+  Purok          Purok[]
+  HouseHold      HouseHold[]
+  Hub            Hub[]
+  PurokCoor      PurokCoor[]
+  BarangayCoor   BarangayCoor[]
+  SurveyResponse SurveyResponse[]
+}
+
+model Barangays {
+  id             String           @id @default(uuid())
+  name           String
+  municipal      Municipals       @relation(fields: [municipalId], references: [id])
+  municipalId    Int
+  voters         Voters[]
+  precents       Precents[]
+  NewBatchDraft  NewBatchDraft[]
+  Purok          Purok[]
+  HouseHold      HouseHold[]
+  Hub            Hub[]
+  PurokCoor      PurokCoor[]
+  BarangayCoor   BarangayCoor[]
+  Response       Response[]
+  SurveyResponse SurveyResponse[]
+}
+
+model HouseHold {
+  id              String     @id
+  houseHoldNumber String
+  barangayId      Barangays  @relation(fields: [barangaysId], references: [id])
+  barangaysId     String
+  municipalId     Municipals @relation(fields: [municipalsId], references: [id])
+  municipalsId    Int
+  Voters          Voters[]
+  purokID         Purok      @relation(fields: [purokId], references: [id])
+  purokId         String
+}
+
+model Hub {
+  id           String     @id @default(cuid())
+  barangayID   Barangays  @relation(fields: [barangaysId], references: [id])
+  barangaysId  String
+  municipalId  Municipals @relation(fields: [municipalsId], references: [id])
+  municipalsId Int
+  teamLeader   TeamLeader @relation(fields: [teamLeaderId], references: [id])
+  teamLeaderId String
+  Voters       Voters[]
+}
+
+model Precents {
+  id            String     @id
+  precintNumber String
+  barangay      Barangays  @relation(fields: [barangayId], references: [id])
+  barangayId    String
+  municipal     Municipals @relation(fields: [municipalsId], references: [id])
+  Voters        Voters[]
+  municipalsId  Int
+}
+
+model NewBatchDraft {
+  id          String      @id @default(uuid())
+  Municipals  Municipals? @relation(fields: [municipalId], references: [id])
+  municipalId Int?
+  barangay    Barangays   @relation(fields: [barangayId], references: [id])
+  barangayId  String
+  timestamp   DateTime    @default(now())
+  Voters      Voters[]
+}
+
+model CutstomList {
+  id          String   @id @default(uuid())
+  name        String
+  wave        String
+  municipalId Int
+  barangayId  String
+  timestamp   DateTime @default(now())
+}
+
+model TeamLeader {
+  id          String    @id @default(cuid())
+  Voters      Voters[]
+  hubId       String
+  purokCoor   PurokCoor @relation(fields: [purokCoorId], references: [id])
+  purokCoorId String
+  voterId     String
+  Hub         Hub[]
+}
+
+model PurokCoor {
+  id             String       @id @default(cuid())
+  voter          Voters       @relation(fields: [votersId], references: [id])
+  municipalId    Municipals   @relation(fields: [municipalsId], references: [id])
+  municipalsId   Int
+  barangayId     Barangays    @relation(fields: [barangaysId], references: [id])
+  barangaysId    String
+  TeamLeader     TeamLeader[]
+  barangayCoor   BarangayCoor @relation(fields: [barangayCoorId], references: [id])
+  barangayCoorId String
+  votersId       String
+}
+
+model BarangayCoor {
+  id           String      @id @default(cuid())
+  voter        Voters      @relation(fields: [votersId], references: [id])
+  purokCoor    PurokCoor[]
+  municipalID  Municipals  @relation(fields: [municipalsId], references: [id])
+  municipalsId Int
+  barangayID   Barangays   @relation(fields: [barangaysId], references: [id])
+  barangaysId  String
+  votersId     String
+}
+
+model Survey {
+  id           String       @id @default(cuid())
+  tagID        String
+  timestamp    DateTime     @default(now())
+  type         String
+  queries      Queries[]
+  drafted      Boolean?     @default(true)
+  status       String?      @default("Ongoing")
+  createdBy    AdminUser    @relation(fields: [adminUserUid], references: [uid])
+  adminUserUid String
+  DeviceLogs   DeviceLogs[]
+}
+
+model Queries {
+  id            String     @id @default(uuid())
+  queries       String
+  survey        Survey     @relation(fields: [surveyId], references: [id])
+  surveyId      String
+  type          String?    @default("regular")
+  componentType String?    @default("regular")
+  Response      Response[]
+  Option        Option[]
+}
+
+model Option {
+  id         String           @id @default(cuid())
+  order      Int              @default(autoincrement())
+  title      String?
+  desc       String?
+  fileUrl    MediaUrl?        @relation(fields: [mediaUrlId], references: [id])
+  mediaUrlId String?
+  queries    Queries          @relation(fields: [queryId], references: [id])
+  queryId    String
+  responses  OptionResponse[]
+}
+
+model MediaUrl {
+  id       String   @id @default(uuid())
+  url      String
+  filename String?
+  size     String
+  Option   Option[]
+}
+
+model SurveyResponse {
+  id           String     @id @default(cuid())
+  timestamp    DateTime   @default(now())
+  response     Response[]
+  submittedBy  Users      @relation(fields: [usersUid], references: [uid])
+  usersUid     String
+  municipal    Municipals @relation(fields: [municipalsId], references: [id])
+  municipalsId Int
+  barangay     Barangays  @relation(fields: [barangaysId], references: [id])
+  barangaysId  String
+}
+
+model Response {
+  id               String           @id @default(cuid())
+  queries          Queries          @relation(fields: [queryId], references: [id])
+  queryId          String
+  surveyResponse   SurveyResponse   @relation(fields: [surveyResponseId], references: [id])
+  surveyResponseId String
+  voter            Voters?          @relation(fields: [votersId], references: [id])
+  votersId         String?
+  barangay         Barangays        @relation(fields: [barangaysId], references: [id])
+  barangaysId      String
+  options          OptionResponse[]
+}
+
+model OptionResponse {
+  id         String   @id @default(cuid())
+  option     Option   @relation(fields: [optionId], references: [id])
+  optionId   String
+  response   Response @relation(fields: [responseId], references: [id])
+  responseId String
+}
+
+model DeviceLogs {
+  id           String    @id @default(cuid())
+  release      String    @default("-/-")
+  return       String    @default("-/-")
+  user         Users     @relation(fields: [usersUid], references: [uid])
+  usersUid     String
+  condition    String    @default("New")
+  handTo       AdminUser @relation(fields: [adminUserUid], references: [uid])
+  adminUserUid String
+  survey       Survey    @relation(fields: [surveyId], references: [id])
+  surveyId     String
+}
