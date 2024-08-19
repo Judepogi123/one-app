@@ -1,7 +1,7 @@
 import { ApolloServer } from "@apollo/server";
 
 import { expressMiddleware } from "@apollo/server/express4";
-import express from "express";
+import express, { Request, Response } from "express";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
 import cors from "cors";
@@ -140,7 +140,7 @@ const resolvers: Resolvers = {
     surveyList: async () => {
       return await prisma.survey.findMany();
     },
-  
+
     queries: async (_, { id }) => {
       return await prisma.queries.findUnique({ where: { id } });
     },
@@ -513,6 +513,11 @@ const main = async () => {
     app.use("/purok", purok);
     app.use("/upload", imageUpload);
 
+    //test
+    app.get("/test", (req: Request, res: Response) => {
+      res.status(200).json({ message: "Hello Wolrd" });
+    });
+
     io.on("connection", (socket) => {
       socket.on("draftedCounter", (data) => {
         console.log(data);
@@ -522,7 +527,7 @@ const main = async () => {
       });
     });
 
-    const port = 3000
+    const port = 3000;
 
     ioserver.listen(port, async () => {
       console.log(`Server running at http://localhost:${port}`);
