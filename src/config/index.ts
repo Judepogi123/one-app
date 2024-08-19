@@ -140,9 +140,7 @@ const resolvers: Resolvers = {
     surveyList: async () => {
       return await prisma.survey.findMany();
     },
-    getSurvey: async (_, { tagID }) => {
-      return prisma.survey.findFirst({ where: { tagID, drafted: false } });
-    },
+  
     queries: async (_, { id }) => {
       return await prisma.queries.findUnique({ where: { id } });
     },
@@ -257,6 +255,9 @@ const resolvers: Resolvers = {
         where: { id },
         data: { drafted: false },
       });
+    },
+    getSurvey: async (_, { tagID }) => {
+      return prisma.survey.findFirst({ where: { tagID, drafted: false } });
     },
     createSurvey: async (_, { survey }) => {
       const checkTagID = async () => {
@@ -495,7 +496,6 @@ const resolvers: Resolvers = {
 };
 
 const server = new ApolloServer({ typeDefs, resolvers });
-
 const main = async () => {
   try {
     await server.start();
@@ -507,7 +507,7 @@ const main = async () => {
       expressMiddleware(server)
     );
 
-    app.use("/", fileRoutes);
+    app.use("/upload", fileRoutes);
     app.use("/precint", precint);
     app.use("/voters", voters);
     app.use("/purok", purok);
@@ -522,8 +522,10 @@ const main = async () => {
       });
     });
 
-    ioserver.listen(3000, () => {
-      console.log(`Server running at http://localhost:3000`);
+    const port = 3000
+
+    ioserver.listen(port, async () => {
+      console.log(`Server running at http://localhost:${port}`);
     });
   } catch (error) {
     console.error("Error:", error);

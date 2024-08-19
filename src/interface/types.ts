@@ -84,7 +84,7 @@ export type Resolvers = {
     draft: ResolverFn<{}, { id: string }, {}, NewBatchDraft | null>;
     survey: ResolverFn<{}, { id: string }, {}, Survey | null>;
     surveyList: ResolverFn<{}, {}, {}, Survey[]>;
-    getSurvey: ResolverFn<{}, { tagID: string }, {}, Survey | null>;
+    
     queries: ResolverFn<{}, { id: string }, {}, Queries | null>;
     option: ResolverFn<{}, { id: string }, {}, Option | null>;
     //barangayVoters: ResolverFn<Voters,{},{},number>
@@ -208,6 +208,7 @@ export type Resolvers = {
       {},
       MediaUrl
     >;
+    getSurvey: ResolverFn<{}, { tagID: string }, {}, Survey | null>;
     deleteQuery: ResolverFn<{}, { id: string }, {}, Queries>;
     updateOptionImage: ResolverFn<
       {},

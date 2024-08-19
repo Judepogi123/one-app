@@ -22,7 +22,7 @@ export default (io: any) => {
   const router = express.Router();
 
   router.post(
-    "/upload",
+    "/file",
     upload.single("file"),
     async (req: Request, res: Response) => {
       if (!req.file) {

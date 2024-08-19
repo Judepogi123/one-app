@@ -172,7 +172,6 @@ type Users {
     draft(id: String!): NewBatchDraft!
     survey(id: String!): Survey!
     surveyList: [Survey]!
-    getSurvey(tagID: String!): Survey!
     queries(id: String!): Queries!
     option(id: String!):Option!
   }
@@ -202,6 +201,7 @@ type Users {
     deleteOptionMedia(option: OptionMedia!): MediaUrl!
     updateOptionImage(image: NewOptionImageInput!): MediaUrl!
     updateOption(option: UpdateOption!): Option!
+    getSurvey(tagID: String!): Survey!
     goLiveSurvey(id: String!): Survey!
     signUp(user: SignUpInput!): AdminUser!
     adminLogin(user:AdminLoginInput!): AuthUser!
