@@ -50,6 +50,9 @@ app.use(body_parser_1.default.json());
 app.use((0, cors_1.default)());
 const resolvers = {
     Query: {
+        users: () => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma.users.findMany();
+        }),
         voters: () => __awaiter(void 0, void 0, void 0, function* () { return yield prisma.voters.findMany(); }),
         voter: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) { return yield prisma.voters.findUnique({ where: { id } }); }),
         votersCount: () => __awaiter(void 0, void 0, void 0, function* () {
@@ -81,6 +84,9 @@ const resolvers = {
         }),
         barangay: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
             return yield prisma.barangays.findUnique({ where: { id } });
+        }),
+        barangays: () => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma.barangays.findMany();
         }),
         barangayList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { municipalId }) {
             return yield prisma.barangays.findMany({
@@ -143,14 +149,46 @@ const resolvers = {
         survey: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
             return yield prisma.survey.findUnique({ where: { id } });
         }),
+        getSurvey: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { tagID }) {
+            const target = yield prisma.survey.findFirst({
+                where: { tagID: tagID, status: "Ongoing" },
+            });
+            if (!target) {
+                throw new graphql_1.GraphQLError("No active survey found with tag ID", {
+                    extensions: { code: "SURVEY_NOT_FOUND" },
+                });
+            }
+            return target;
+        }),
         surveyList: () => __awaiter(void 0, void 0, void 0, function* () {
-            return yield prisma.survey.findMany();
+            return yield prisma.survey.findMany({ orderBy: { timestamp: "asc" } });
         }),
         queries: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
             return yield prisma.queries.findUnique({ where: { id } });
         }),
+        ageList: () => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma.ageBracket.findMany({ orderBy: { order: "asc" } });
+        }),
+        genderList: () => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma.gender.findMany();
+        }),
         option: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
             return yield prisma.option.findUnique({ where: { id } });
+        }),
+        getRespondentResponse: () => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma.respondentResponse.findMany();
+        }),
+        surveyResponseList: () => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma.surveyResponse.findMany();
+        }),
+        allSurveyResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { survey }) {
+            return yield prisma.surveyResponse.findMany({
+                where: { municipalsId: survey.municipalsId, surveyId: survey.surveyId },
+                orderBy: { timestamp: "asc" }
+            });
+        }),
+        surveyResponseInfo: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
+            return yield prisma.surveyResponse.findUnique({ where: { id } });
         }),
     },
     Mutation: {
@@ -278,20 +316,20 @@ const resolvers = {
                 }
             });
             const tagID = yield checkTagID();
-            return yield prisma.survey.create({
+            const data = yield prisma.survey.create({
                 data: {
-                    type: survey.type,
+                    type: "random",
                     adminUserUid: survey.adminUserUid,
                     tagID: tagID,
                 },
             });
+            return data;
         }),
         createQuery: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { query }) {
             return yield prisma.queries.create({
                 data: {
                     queries: query.queries,
                     surveyId: query.surveyId,
-                    type: query.type,
                 },
             });
         }),
@@ -303,6 +341,30 @@ const resolvers = {
                     queryId: option.queryId,
                     mediaUrlId: option.mediaUrlId,
                 },
+            });
+        }),
+        createAge: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { age }) {
+            return yield prisma.ageBracket.create({ data: { segment: age } });
+        }),
+        deleteAge: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
+            return yield prisma.ageBracket.delete({ where: { id } });
+        }),
+        updateAge: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { age }) {
+            return yield prisma.ageBracket.update({
+                where: { id: age.id },
+                data: { segment: age.value },
+            });
+        }),
+        createGender: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { gender }) {
+            return yield prisma.gender.create({ data: { name: gender } });
+        }),
+        deleteGender: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
+            return yield prisma.gender.delete({ where: { id } });
+        }),
+        updateGender: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { gender }) {
+            return yield prisma.gender.update({
+                where: { id: gender.id },
+                data: { name: gender.value },
             });
         }),
         deleteOption: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
@@ -332,6 +394,16 @@ const resolvers = {
                 data: { title: option.title, desc: option.desc },
             });
         }),
+        updateSampleSize: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { sample }) {
+            return yield prisma.barangays.update({
+                where: { id: sample.id },
+                data: {
+                    sampleRate: sample.sampleRate,
+                    sampleSize: sample.sampleSize,
+                    population: sample.population,
+                },
+            });
+        }),
         createMedia: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { media }) {
             return prisma.mediaUrl.create({
                 data: { filename: media.filename, size: media.size, url: media.url },
@@ -339,21 +411,117 @@ const resolvers = {
         }),
         createOptionWithMedia: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { media, option }) {
             let mediaUrlId = null;
-            if (media) {
-                const createdMedia = yield prisma.mediaUrl.create({
-                    data: { filename: media.filename, size: media.size, url: media.url },
-                });
-                mediaUrlId = createdMedia.id;
-            }
             const createdOption = yield prisma.option.create({
                 data: {
                     title: option.title,
                     desc: option.desc,
                     queryId: option.queryId,
-                    mediaUrlId: mediaUrlId,
                 },
             });
+            if (media) {
+                const createdMedia = yield prisma.mediaUrl.create({
+                    data: {
+                        filename: media.filename,
+                        size: media.size,
+                        url: media.url,
+                        surveyId: media.surveyId,
+                        optionId: createdOption.id,
+                    },
+                });
+                mediaUrlId = createdMedia.id;
+            }
             return createdOption;
+        }),
+        surveyConclude: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
+            return yield prisma.survey.update({
+                where: { id: id },
+                data: { status: "Concluded" },
+            });
+        }),
+        deleteSurvey: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
+            return yield prisma.survey.delete({ where: { id } });
+        }),
+        createRespondentResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { respondentResponse }) {
+            return yield prisma.respondentResponse.create({
+                data: {
+                    id: respondentResponse.id,
+                    ageBracketId: respondentResponse.ageBracketId,
+                    genderId: respondentResponse.genderId,
+                    barangaysId: respondentResponse.barangaysId,
+                    municipalsId: respondentResponse.municipalsId,
+                    surveyId: respondentResponse.surveyId,
+                    surveyResponseId: respondentResponse.id,
+                },
+            });
+        }),
+        addSurveyResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { surveyResponse }) {
+            return yield prisma.surveyResponse.create({
+                data: {
+                    id: surveyResponse.id,
+                    municipalsId: surveyResponse.municipalsId,
+                    barangaysId: surveyResponse.barangaysId,
+                    surveyId: surveyResponse.surveyId,
+                },
+            });
+        }),
+        addResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { response }) {
+            return yield prisma.response.create({
+                data: {
+                    id: response.id,
+                    ageBracketId: response.ageBracketId,
+                    genderId: response.genderId,
+                    barangaysId: response.barangaysId,
+                    municipalsId: response.municipalsId,
+                    surveyId: response.surveyId,
+                    surveyResponseId: response.id,
+                    optionId: response.optionId,
+                    queryId: response.queryId,
+                    respondentResponseId: response.respondentResponseId,
+                },
+            });
+        }),
+        submitResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { respondentResponse, response, surveyResponse }) {
+            return yield prisma.$transaction((prisma) => __awaiter(void 0, void 0, void 0, function* () {
+                const surveyResponsed = yield prisma.surveyResponse.create({
+                    data: {
+                        id: surveyResponse.id,
+                        municipalsId: surveyResponse.municipalsId,
+                        barangaysId: surveyResponse.barangaysId,
+                        surveyId: surveyResponse.surveyId,
+                    },
+                });
+                for (const res of respondentResponse) {
+                    yield prisma.respondentResponse.create({
+                        data: {
+                            id: res.id,
+                            ageBracketId: res.ageBracketId,
+                            genderId: res.genderId,
+                            barangaysId: res.barangaysId,
+                            municipalsId: res.municipalsId,
+                            surveyId: res.surveyId,
+                            surveyResponseId: surveyResponsed.id,
+                        },
+                    });
+                }
+                // Create Response entries
+                for (const res of response) {
+                    yield prisma.response.create({
+                        data: {
+                            id: res.id,
+                            ageBracketId: res.ageBracketId,
+                            genderId: res.genderId,
+                            barangaysId: res.barangaysId,
+                            municipalsId: res.municipalsId,
+                            surveyId: res.surveyId,
+                            surveyResponseId: surveyResponsed.id,
+                            optionId: res.optionId,
+                            queryId: res.queryId,
+                            respondentResponseId: res.respondentResponseId,
+                        },
+                    });
+                }
+                return surveyResponsed;
+            }));
         }),
         adminLogin: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { user }) {
             const secretToken = process.env.JWT_SECRECT_TOKEN;
@@ -458,6 +626,9 @@ const resolvers = {
         queries: (parent) => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma.queries.findMany({ where: { surveyId: parent.id } });
         }),
+        images: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma.mediaUrl.findMany({ where: { surveyId: parent.id } });
+        }),
     },
     Queries: {
         options: (parent) => __awaiter(void 0, void 0, void 0, function* () {
@@ -469,11 +640,38 @@ const resolvers = {
     },
     Option: {
         fileUrl: (parent) => __awaiter(void 0, void 0, void 0, function* () {
-            if (!parent.mediaUrlId) {
+            if (!parent.id) {
                 return null;
             }
             return yield prisma.mediaUrl.findFirst({
-                where: { id: parent.mediaUrlId },
+                where: { optionId: parent.id },
+            });
+        }),
+    },
+    RespondentResponse: {
+        age: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma.ageBracket.findUnique({
+                where: { id: parent.ageBracketId },
+            });
+        }),
+        gender: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma.gender.findUnique({ where: { id: parent.genderId } });
+        }),
+        responses: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma.response.findMany({
+                where: { respondentResponseId: parent.id },
+            });
+        }),
+    },
+    SurveyResponse: {
+        barangay: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma.barangays.findUnique({
+                where: { id: parent.barangaysId },
+            });
+        }),
+        respondentResponses: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            return prisma.respondentResponse.findMany({
+                where: { surveyResponseId: parent.id },
             });
         }),
     },
@@ -488,6 +686,10 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
         app.use("/voters", voter_1.default);
         app.use("/purok", purok_1.default);
         app.use("/upload", image_1.default);
+        //test
+        app.get("/test", (req, res) => {
+            res.status(200).json({ message: "Hello Wolrd" });
+        });
         io.on("connection", (socket) => {
             socket.on("draftedCounter", (data) => {
                 console.log(data);
