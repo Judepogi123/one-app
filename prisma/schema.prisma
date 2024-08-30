@@ -88,7 +88,6 @@ model Voters {
   illi            String?
   inPurok         Boolean?
   hubId           String?        @default("Unknown")
-  Response        Response[]
   qrCode          String?
 }
 
@@ -105,35 +104,41 @@ model Purok {
 }
 
 model Municipals {
-  id             Int              @id
-  name           String
-  barangays      Barangays[]
-  voters         Voters[]
-  Precents       Precents[]
-  NewBatchDraft  NewBatchDraft[]
-  Purok          Purok[]
-  HouseHold      HouseHold[]
-  Hub            Hub[]
-  PurokCoor      PurokCoor[]
-  BarangayCoor   BarangayCoor[]
-  SurveyResponse SurveyResponse[]
+  id                 Int                  @id
+  name               String
+  barangays          Barangays[]
+  voters             Voters[]
+  Precents           Precents[]
+  NewBatchDraft      NewBatchDraft[]
+  Purok              Purok[]
+  HouseHold          HouseHold[]
+  Hub                Hub[]
+  PurokCoor          PurokCoor[]
+  BarangayCoor       BarangayCoor[]
+  SurveyResponse     SurveyResponse[]
+  Response           Response[]
+  RespondentResponse RespondentResponse[]
 }
 
 model Barangays {
-  id             String           @id @default(uuid())
-  name           String
-  municipal      Municipals       @relation(fields: [municipalId], references: [id])
-  municipalId    Int
-  voters         Voters[]
-  precents       Precents[]
-  NewBatchDraft  NewBatchDraft[]
-  Purok          Purok[]
-  HouseHold      HouseHold[]
-  Hub            Hub[]
-  PurokCoor      PurokCoor[]
-  BarangayCoor   BarangayCoor[]
-  Response       Response[]
-  SurveyResponse SurveyResponse[]
+  id                 String               @id @default(uuid())
+  name               String
+  municipal          Municipals           @relation(fields: [municipalId], references: [id])
+  municipalId        Int
+  voters             Voters[]
+  precents           Precents[]
+  NewBatchDraft      NewBatchDraft[]
+  Purok              Purok[]
+  HouseHold          HouseHold[]
+  Hub                Hub[]
+  PurokCoor          PurokCoor[]
+  BarangayCoor       BarangayCoor[]
+  Response           Response[]
+  SurveyResponse     SurveyResponse[]
+  population         Int?                 @default(0)
+  sampleSize         Int?                 @default(0)
+  sampleRate         Int?                 @default(10)
+  RespondentResponse RespondentResponse[]
 }
 
 model HouseHold {
@@ -223,16 +228,50 @@ model BarangayCoor {
 }
 
 model Survey {
-  id           String       @id @default(cuid())
-  tagID        String
-  timestamp    DateTime     @default(now())
-  type         String
-  queries      Queries[]
-  drafted      Boolean?     @default(true)
-  status       String?      @default("Ongoing")
-  createdBy    AdminUser    @relation(fields: [adminUserUid], references: [uid])
-  adminUserUid String
-  DeviceLogs   DeviceLogs[]
+  id                 String               @id @default(cuid())
+  tagID              String
+  timestamp          DateTime             @default(now())
+  type               String
+  queries            Queries[]
+  drafted            Boolean?             @default(true)
+  status             String?              @default("Ongoing")
+  createdBy          AdminUser            @relation(fields: [adminUserUid], references: [uid])
+  images             MediaUrl[]
+  adminUserUid       String
+  DeviceLogs         DeviceLogs[]
+  Response           Response[]
+  RespondentResponse RespondentResponse[]
+  SurveyResponse     SurveyResponse[]
+}
+
+model SampleSize {
+  id   String @id @default(cuid())
+  size Int
+  rate Int
+}
+
+model DefaultQuery {
+  id        String @id @default(cuid())
+  queriesId String
+}
+
+model AgeBracket {
+  id                 String               @id @default(cuid())
+  segment            String
+  order              Int                  @default(autoincrement())
+  Response           Response[]
+  RespondentResponse RespondentResponse[]
+}
+
+model Gender {
+  id                 String               @id @default(cuid())
+  name               String
+  Response           Response[]
+  RespondentResponse RespondentResponse[]
+}
+
+model Quota {
+  id String @id @default(cuid())
 }
 
 model Queries {
@@ -247,56 +286,80 @@ model Queries {
 }
 
 model Option {
-  id         String           @id @default(cuid())
-  order      Int              @default(autoincrement())
+  id         String     @id @default(cuid())
+  order      Int        @default(autoincrement())
   title      String?
   desc       String?
-  fileUrl    MediaUrl?        @relation(fields: [mediaUrlId], references: [id])
   mediaUrlId String?
-  queries    Queries          @relation(fields: [queryId], references: [id])
+  queries    Queries    @relation(fields: [queryId], references: [id])
   queryId    String
-  responses  OptionResponse[]
+  Response   Response[]
+  MediaUrl   MediaUrl[]
 }
 
 model MediaUrl {
-  id       String   @id @default(uuid())
+  id       String  @id @default(uuid())
   url      String
   filename String?
   size     String
-  Option   Option[]
+  option   Option? @relation(fields: [optionId], references: [id])
+  Survey   Survey? @relation(fields: [surveyId], references: [id])
+  surveyId String?
+  optionId String?
 }
 
 model SurveyResponse {
-  id           String     @id @default(cuid())
-  timestamp    DateTime   @default(now())
-  response     Response[]
-  submittedBy  Users      @relation(fields: [usersUid], references: [uid])
-  usersUid     String
-  municipal    Municipals @relation(fields: [municipalsId], references: [id])
-  municipalsId Int
-  barangay     Barangays  @relation(fields: [barangaysId], references: [id])
-  barangaysId  String
+  id                 String               @id
+  timestamp          DateTime             @default(now())
+  municipal          Municipals           @relation(fields: [municipalsId], references: [id])
+  municipalsId       Int
+  barangay           Barangays            @relation(fields: [barangaysId], references: [id])
+  barangaysId        String
+  survey             Survey               @relation(fields: [surveyId], references: [id])
+  Users              Users?               @relation(fields: [usersUid], references: [uid])
+  usersUid           String?
+  surveyId           String
+  RespondentResponse RespondentResponse[]
+  Response           Response[]
+}
+
+model RespondentResponse {
+  id               String         @id
+  age              AgeBracket     @relation(fields: [ageBracketId], references: [id])
+  ageBracketId     String
+  gender           Gender         @relation(fields: [genderId], references: [id])
+  genderId         String
+  municipal        Municipals     @relation(fields: [municipalsId], references: [id])
+  municipalsId     Int
+  barangay         Barangays      @relation(fields: [barangaysId], references: [id])
+  barangaysId      String
+  survey           Survey         @relation(fields: [surveyId], references: [id])
+  surveyId         String
+  Response         Response[]
+  surveyResponse   SurveyResponse @relation(fields: [surveyResponseId], references: [id])
+  surveyResponseId String
 }
 
 model Response {
-  id               String           @id @default(cuid())
-  queries          Queries          @relation(fields: [queryId], references: [id])
-  queryId          String
-  surveyResponse   SurveyResponse   @relation(fields: [surveyResponseId], references: [id])
-  surveyResponseId String
-  voter            Voters?          @relation(fields: [votersId], references: [id])
-  votersId         String?
-  barangay         Barangays        @relation(fields: [barangaysId], references: [id])
-  barangaysId      String
-  options          OptionResponse[]
-}
-
-model OptionResponse {
-  id         String   @id @default(cuid())
-  option     Option   @relation(fields: [optionId], references: [id])
-  optionId   String
-  response   Response @relation(fields: [responseId], references: [id])
-  responseId String
+  id                   String             @id
+  survey               Survey             @relation(fields: [surveyId], references: [id])
+  queries              Queries            @relation(fields: [queryId], references: [id])
+  queryId              String
+  barangay             Barangays          @relation(fields: [barangaysId], references: [id])
+  barangaysId          String
+  municipal            Municipals         @relation(fields: [municipalsId], references: [id])
+  option               Option             @relation(fields: [optionId], references: [id])
+  optionId             String
+  ageBracket           AgeBracket         @relation(fields: [ageBracketId], references: [id])
+  ageBracketId         String
+  gender               Gender             @relation(fields: [genderId], references: [id])
+  genderId             String
+  municipalsId         Int
+  surveyId             String
+  surveyResponse       SurveyResponse     @relation(fields: [surveyResponseId], references: [id])
+  respondentResponse   RespondentResponse @relation(fields: [respondentResponseId], references: [id])
+  respondentResponseId String
+  surveyResponseId     String
 }
 
 model DeviceLogs {

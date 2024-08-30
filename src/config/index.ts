@@ -43,6 +43,9 @@ app.use(cors());
 
 const resolvers: Resolvers = {
   Query: {
+    users: async () => {
+      return await prisma.users.findMany();
+    },
     voters: async () => await prisma.voters.findMany(),
     voter: async (_, { id }) =>
       await prisma.voters.findUnique({ where: { id } }),
@@ -75,6 +78,9 @@ const resolvers: Resolvers = {
     },
     barangay: async (_, { id }) => {
       return await prisma.barangays.findUnique({ where: { id } });
+    },
+    barangays: async () => {
+      return await prisma.barangays.findMany();
     },
     barangayList: async (_, { municipalId }) => {
       return await prisma.barangays.findMany({
@@ -137,15 +143,48 @@ const resolvers: Resolvers = {
     survey: async (_, { id }) => {
       return await prisma.survey.findUnique({ where: { id } });
     },
+    getSurvey: async (_, { tagID }) => {
+      const target = await prisma.survey.findFirst({
+        where: { tagID: tagID, status: "Ongoing" },
+      });
+
+      if (!target) {
+        throw new GraphQLError("No active survey found with tag ID", {
+          extensions: { code: "SURVEY_NOT_FOUND" },
+        });
+      }
+      return target;
+    },
     surveyList: async () => {
-      return await prisma.survey.findMany();
+      return await prisma.survey.findMany({ orderBy: { timestamp: "asc" } });
     },
 
     queries: async (_, { id }) => {
       return await prisma.queries.findUnique({ where: { id } });
     },
+    ageList: async () => {
+      return await prisma.ageBracket.findMany({ orderBy: { order: "asc" } });
+    },
+    genderList: async () => {
+      return await prisma.gender.findMany();
+    },
     option: async (_, { id }) => {
       return await prisma.option.findUnique({ where: { id } });
+    },
+    getRespondentResponse: async () => {
+      return await prisma.respondentResponse.findMany();
+    },
+    surveyResponseList: async () => {
+      return await prisma.surveyResponse.findMany();
+    },
+    allSurveyResponse: async (_, { survey }) => {
+      return await prisma.surveyResponse.findMany({
+        where: { municipalsId: survey.municipalsId, surveyId: survey.surveyId },
+        orderBy: {timestamp: "asc"}
+      });
+    },
+    surveyResponseInfo: async (_, { id }) => {
+      return await prisma.surveyResponse.findUnique({ where: { id } });
     },
   },
   Mutation: {
@@ -274,20 +313,20 @@ const resolvers: Resolvers = {
 
       const tagID = await checkTagID();
 
-      return await prisma.survey.create({
+      const data = await prisma.survey.create({
         data: {
-          type: survey.type,
+          type: "random",
           adminUserUid: survey.adminUserUid,
           tagID: tagID,
         },
       });
+      return data;
     },
     createQuery: async (_, { query }) => {
       return await prisma.queries.create({
         data: {
           queries: query.queries,
           surveyId: query.surveyId,
-          type: query.type,
         },
       });
     },
@@ -299,6 +338,30 @@ const resolvers: Resolvers = {
           queryId: option.queryId,
           mediaUrlId: option.mediaUrlId,
         },
+      });
+    },
+    createAge: async (_, { age }) => {
+      return await prisma.ageBracket.create({ data: { segment: age } });
+    },
+    deleteAge: async (_, { id }) => {
+      return await prisma.ageBracket.delete({ where: { id } });
+    },
+    updateAge: async (_, { age }) => {
+      return await prisma.ageBracket.update({
+        where: { id: age.id },
+        data: { segment: age.value },
+      });
+    },
+    createGender: async (_, { gender }) => {
+      return await prisma.gender.create({ data: { name: gender } });
+    },
+    deleteGender: async (_, { id }) => {
+      return await prisma.gender.delete({ where: { id } });
+    },
+    updateGender: async (_, { gender }) => {
+      return await prisma.gender.update({
+        where: { id: gender.id },
+        data: { name: gender.value },
       });
     },
     deleteOption: async (_, { id }) => {
@@ -328,6 +391,16 @@ const resolvers: Resolvers = {
         data: { title: option.title, desc: option.desc },
       });
     },
+    updateSampleSize: async (_, { sample }) => {
+      return await prisma.barangays.update({
+        where: { id: sample.id },
+        data: {
+          sampleRate: sample.sampleRate,
+          sampleSize: sample.sampleSize,
+          population: sample.population,
+        },
+      });
+    },
     createMedia: async (_, { media }) => {
       return prisma.mediaUrl.create({
         data: { filename: media.filename, size: media.size, url: media.url },
@@ -336,24 +409,128 @@ const resolvers: Resolvers = {
     createOptionWithMedia: async (_, { media, option }) => {
       let mediaUrlId = null;
 
-      if (media) {
-        const createdMedia = await prisma.mediaUrl.create({
-          data: { filename: media.filename, size: media.size, url: media.url },
-        });
-        mediaUrlId = createdMedia.id;
-      }
-
       const createdOption = await prisma.option.create({
         data: {
           title: option.title,
           desc: option.desc,
           queryId: option.queryId,
-          mediaUrlId: mediaUrlId,
         },
       });
 
+      if (media) {
+        const createdMedia = await prisma.mediaUrl.create({
+          data: {
+            filename: media.filename,
+            size: media.size,
+            url: media.url,
+            surveyId: media.surveyId,
+            optionId: createdOption.id,
+          },
+        });
+        mediaUrlId = createdMedia.id;
+      }
+
       return createdOption;
     },
+    surveyConclude: async (_, { id }) => {
+      return await prisma.survey.update({
+        where: { id: id },
+        data: { status: "Concluded" },
+      });
+    },
+    deleteSurvey: async (_, { id }) => {
+      return await prisma.survey.delete({ where: { id } });
+    },
+    createRespondentResponse: async (_, { respondentResponse }) => {
+      return await prisma.respondentResponse.create({
+        data: {
+          id: respondentResponse.id,
+          ageBracketId: respondentResponse.ageBracketId,
+          genderId: respondentResponse.genderId,
+          barangaysId: respondentResponse.barangaysId,
+          municipalsId: respondentResponse.municipalsId,
+          surveyId: respondentResponse.surveyId,
+          surveyResponseId: respondentResponse.id,
+        },
+      });
+    },
+    addSurveyResponse: async (_, { surveyResponse }) => {
+      return await prisma.surveyResponse.create({
+        data: {
+          id: surveyResponse.id,
+          municipalsId: surveyResponse.municipalsId,
+          barangaysId: surveyResponse.barangaysId,
+          surveyId: surveyResponse.surveyId,
+        },
+      });
+    },
+    addResponse: async (_, { response }) => {
+      return await prisma.response.create({
+        data: {
+          id: response.id,
+          ageBracketId: response.ageBracketId,
+          genderId: response.genderId,
+          barangaysId: response.barangaysId,
+          municipalsId: response.municipalsId,
+          surveyId: response.surveyId,
+          surveyResponseId: response.id,
+          optionId: response.optionId,
+          queryId: response.queryId,
+          respondentResponseId: response.respondentResponseId,
+        },
+      });
+    },
+    submitResponse: async (
+      _,
+      { respondentResponse, response, surveyResponse }
+    ) => {
+
+      return await prisma.$transaction(async (prisma) => {
+        const surveyResponsed = await prisma.surveyResponse.create({
+          data: {
+            id: surveyResponse.id,
+            municipalsId: surveyResponse.municipalsId,
+            barangaysId: surveyResponse.barangaysId,
+            surveyId: surveyResponse.surveyId,
+          },
+        });
+
+        for (const res of respondentResponse) {
+          await prisma.respondentResponse.create({
+            data: {
+              id: res.id,
+              ageBracketId: res.ageBracketId,
+              genderId: res.genderId,
+              barangaysId: res.barangaysId,
+              municipalsId: res.municipalsId,
+              surveyId: res.surveyId,
+              surveyResponseId: surveyResponsed.id,
+            },
+          });
+        }
+
+        // Create Response entries
+        for (const res of response) {
+          await prisma.response.create({
+            data: {
+              id: res.id,
+              ageBracketId: res.ageBracketId,
+              genderId: res.genderId,
+              barangaysId: res.barangaysId,
+              municipalsId: res.municipalsId,
+              surveyId: res.surveyId,
+              surveyResponseId: surveyResponsed.id,
+              optionId: res.optionId,
+              queryId: res.queryId,
+              respondentResponseId: res.respondentResponseId,
+            },
+          });
+        }
+
+        return surveyResponsed;
+      });
+    },
+
     adminLogin: async (_, { user }) => {
       const secretToken = process.env.JWT_SECRECT_TOKEN;
 
@@ -473,6 +650,9 @@ const resolvers: Resolvers = {
     queries: async (parent) => {
       return await prisma.queries.findMany({ where: { surveyId: parent.id } });
     },
+    images: async (parent) => {
+      return await prisma.mediaUrl.findMany({ where: { surveyId: parent.id } });
+    },
   },
   Queries: {
     options: async (parent) => {
@@ -484,12 +664,39 @@ const resolvers: Resolvers = {
   },
   Option: {
     fileUrl: async (parent) => {
-      if (!parent.mediaUrlId) {
+      if (!parent.id) {
         return null;
       }
 
       return await prisma.mediaUrl.findFirst({
-        where: { id: parent.mediaUrlId as string },
+        where: { optionId: parent.id as string },
+      });
+    },
+  },
+  RespondentResponse: {
+    age: async (parent) => {
+      return await prisma.ageBracket.findUnique({
+        where: { id: parent.ageBracketId },
+      });
+    },
+    gender: async (parent) => {
+      return await prisma.gender.findUnique({ where: { id: parent.genderId } });
+    },
+    responses: async (parent) => {
+      return await prisma.response.findMany({
+        where: { respondentResponseId: parent.id },
+      });
+    },
+  },
+  SurveyResponse: {
+    barangay: async (parent) => {
+      return await prisma.barangays.findUnique({
+        where: { id: parent.barangaysId },
+      });
+    },
+    respondentResponses: async (parent) => {
+      return prisma.respondentResponse.findMany({
+        where: { surveyResponseId: parent.id },
       });
     },
   },

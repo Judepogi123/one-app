@@ -1,6 +1,5 @@
 // types.ts
 import { GraphQLResolveInfo, GraphQLScalarType } from "graphql";
-import { FileUpload } from "graphql-upload-ts";
 import {
   Voters,
   Users,
@@ -14,6 +13,11 @@ import {
   Queries,
   Option,
   MediaUrl,
+  AgeBracket,
+  Gender,
+  SurveyResponse,
+  RespondentResponse,
+  Response as DataResponse,
 } from "@prisma/client";
 
 export type ResolverFn<Parent, Args, Context, Result> = (
@@ -25,6 +29,7 @@ export type ResolverFn<Parent, Args, Context, Result> = (
 
 export type Resolvers = {
   Query: {
+    users: ResolverFn<{}, {}, {}, Users[]>;
     voters: ResolverFn<{}, {}, {}, Voters[]>;
     voter: ResolverFn<{}, { id: string }, {}, Voters | null>;
     searchDraftVoter: ResolverFn<
@@ -42,6 +47,7 @@ export type Resolvers = {
       Voters[]
     >;
     votersCount: ResolverFn<{}, {}, {}, number>;
+    barangays: ResolverFn<{}, {}, {}, Barangays[]>;
     barangay: ResolverFn<{}, { id: string }, {}, Barangays | null>;
     municipal: ResolverFn<{}, { zipCode: number }, {}, Municipals | null>;
     municipals: ResolverFn<{}, {}, {}, Municipals[]>;
@@ -84,9 +90,25 @@ export type Resolvers = {
     draft: ResolverFn<{}, { id: string }, {}, NewBatchDraft | null>;
     survey: ResolverFn<{}, { id: string }, {}, Survey | null>;
     surveyList: ResolverFn<{}, {}, {}, Survey[]>;
-    
+    getSurvey: ResolverFn<{}, { tagID: string }, {}, Survey>;
+    ageList: ResolverFn<{}, {}, {}, AgeBracket[]>;
+    genderList: ResolverFn<{}, {}, {}, Gender[]>;
     queries: ResolverFn<{}, { id: string }, {}, Queries | null>;
     option: ResolverFn<{}, { id: string }, {}, Option | null>;
+    getRespondentResponse: ResolverFn<{}, {}, {}, RespondentResponse[]>;
+    surveyResponseList: ResolverFn<{}, {}, {}, SurveyResponse[]>;
+    allSurveyResponse: ResolverFn<
+      {},
+      { survey: { municipalsId: number; surveyId: string } },
+      {},
+      SurveyResponse[]
+    >;
+    surveyResponseInfo: ResolverFn<
+      {},
+      { id: string },
+      {},
+      SurveyResponse | null
+    >;
     //barangayVoters: ResolverFn<Voters,{},{},number>
     //precints: ResolverFn<{}, {}, {}, Precents[] | []>;
   };
@@ -153,7 +175,7 @@ export type Resolvers = {
     >;
     createSurvey: ResolverFn<
       {},
-      { survey: { type: string; adminUserUid: string } },
+      { survey: { adminUserUid: string } },
       {},
       Survey
     >;
@@ -163,7 +185,6 @@ export type Resolvers = {
         query: {
           queries: string;
           surveyId: string;
-          type: string;
         };
       },
       {},
@@ -191,7 +212,13 @@ export type Resolvers = {
     createOptionWithMedia: ResolverFn<
       {},
       {
-        media: { filename: string; url: string; size: string };
+        media: {
+          filename: string;
+          url: string;
+          size: string;
+          surveyId: string;
+          optionId: string;
+        };
         option: {
           title: string;
           desc: string;
@@ -200,6 +227,22 @@ export type Resolvers = {
       },
       {},
       Option
+    >;
+    createAge: ResolverFn<{}, { age: string }, {}, AgeBracket>;
+    deleteAge: ResolverFn<{}, { id: string }, {}, AgeBracket>;
+    updateAge: ResolverFn<
+      {},
+      { age: { id: string; value: string } },
+      {},
+      AgeBracket
+    >;
+    createGender: ResolverFn<{}, { gender: string }, {}, Gender>;
+    deleteGender: ResolverFn<{}, { id: string }, {}, Gender>;
+    updateGender: ResolverFn<
+      {},
+      { gender: { id: string; value: string } },
+      {},
+      Gender
     >;
     deleteOption: ResolverFn<{}, { id: string }, {}, Option>;
     deleteOptionMedia: ResolverFn<
@@ -222,7 +265,22 @@ export type Resolvers = {
       {},
       Option
     >;
+    updateSampleSize: ResolverFn<
+      {},
+      {
+        sample: {
+          id: string;
+          sampleSize: number;
+          sampleRate: number;
+          population: number;
+        };
+      },
+      {},
+      Barangays
+    >;
     goLiveSurvey: ResolverFn<{}, { id: string }, {}, Survey>;
+    surveyConclude: ResolverFn<{}, { id: string }, {}, Survey>;
+    deleteSurvey: ResolverFn<{}, { id: string }, {}, Survey>;
     signUp: ResolverFn<
       {},
       {
@@ -236,6 +294,88 @@ export type Resolvers = {
       },
       {},
       AdminUser
+    >;
+    addSurveyResponse: ResolverFn<
+      {},
+      {
+        surveyResponse: {
+          id: string;
+          municipalsId: number;
+          barangaysId: string;
+          surveyId: string;
+        };
+      },
+      {},
+      SurveyResponse
+    >;
+    createRespondentResponse: ResolverFn<
+      {},
+      {
+        respondentResponse: {
+          id: string;
+          municipalsId: number;
+          barangaysId: string;
+          surveyId: string;
+          genderId: string;
+          ageBracketId: string;
+          surveyResponseId: string;
+        };
+      },
+      {},
+      RespondentResponse
+    >;
+    addResponse: ResolverFn<
+      {},
+      {
+        response: {
+          id: string;
+          municipalsId: number;
+          barangaysId: string;
+          surveyId: string;
+          genderId: string;
+          ageBracketId: string;
+          surveyResponseId: string;
+          respondentResponseId: string;
+          optionId: string;
+          queryId: string;
+        };
+      },
+      {},
+      DataResponse
+    >;
+    submitResponse: ResolverFn<
+      {},
+      {
+        surveyResponse: {
+          id: string;
+          municipalsId: number;
+          barangaysId: string;
+          surveyId: string;
+        };
+        respondentResponse: {
+          id: string;
+          municipalsId: number;
+          barangaysId: string;
+          surveyId: string;
+          genderId: string;
+          ageBracketId: string;
+          surveyResponseId: string;
+        }[];
+        response: {
+          id: string;
+          municipalsId: number;
+          barangaysId: string;
+          surveyId: string;
+          genderId: string;
+          ageBracketId: string;
+          surveyResponseId: string;
+          optionId: string;
+          queryId: string;
+          respondentResponseId: string;
+        }[];
+      },
+      {},
+      SurveyResponse
     >;
     adminLogin: ResolverFn<
       {},
@@ -292,11 +432,26 @@ export type Resolvers = {
       AdminUser | null
     >;
     queries: ResolverFn<Survey, {}, {}, Queries[]>;
+    images: ResolverFn<Survey, {}, {}, MediaUrl[]>;
   };
   Queries: {
     options: ResolverFn<Queries, {}, {}, Option[]>;
   };
   Option: {
     fileUrl: ResolverFn<Option, {}, {}, MediaUrl | null>;
+  };
+  RespondentResponse: {
+    age: ResolverFn<RespondentResponse, {}, {}, AgeBracket | null>;
+    gender: ResolverFn<RespondentResponse, {}, {}, Gender | null>;
+    responses: ResolverFn<RespondentResponse, {}, {}, DataResponse[]>;
+  };
+  SurveyResponse: {
+    barangay: ResolverFn<SurveyResponse, {}, {}, Barangays | null>;
+    respondentResponses: ResolverFn<
+      SurveyResponse,
+      {},
+      {},
+      RespondentResponse[]
+    >;
   };
 };

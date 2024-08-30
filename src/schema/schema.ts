@@ -23,8 +23,10 @@ type Users {
   uid: String!
   firstname: String!
   lastname: String!
+  address: String!
   email: String!
   password: String!
+  phoneNumber: String!
   surveyResponses: [SurveyResponse!]!
   deviceLogs: [DeviceLogs!]!
 }
@@ -86,6 +88,9 @@ type Users {
     houseHolds: [HouseHold!]!
     barangayVotersCount: Int!
     purokCount: Int!
+    population: Int!
+    sampleRate: Int!
+    sampleSize: Int!
   }
 
   type Precent {
@@ -152,7 +157,7 @@ type Users {
     municipals: [Municipal!]!
     municipal(id: Int!): Municipal
     municipalVoterList(id: Int!): [Voter!]!
-    barangays: [Barangay!]!
+    barangays: [Barangay]
     barangay(id: ID!): Barangay
     barangayList(municipalId: Int!): [Barangay!]
     precents: [Precent!]!
@@ -172,6 +177,13 @@ type Users {
     draft(id: String!): NewBatchDraft!
     survey(id: String!): Survey!
     surveyList: [Survey]!
+    ageList: [AgeBracket]
+    genderList: [Gender]
+    getSurvey(tagID: String!): Survey!
+    getRespondentResponse: [RespondentResponse!]!
+    surveyResponseList: [SurveyResponse!]!
+    allSurveyResponse(survey: AllSurveyResponseInput!): [SurveyResponse!]!
+    surveyResponseInfo(id:String!): SurveyResponse!
     queries(id: String!): Queries!
     option(id: String!):Option!
   }
@@ -201,10 +213,34 @@ type Users {
     deleteOptionMedia(option: OptionMedia!): MediaUrl!
     updateOptionImage(image: NewOptionImageInput!): MediaUrl!
     updateOption(option: UpdateOption!): Option!
+    updateSampleSize(sample: UpdateSampleInput!): Barangay!
     getSurvey(tagID: String!): Survey!
     goLiveSurvey(id: String!): Survey!
+    createAge(age: String!): AgeBracket!
+    createGender(gender: String!): Gender!
+    deleteAge(id: String!): AgeBracket!
+    deleteGender(id: String!): Gender!
+    updateAge(age: UpdateAge!): AgeBracket!
+    updateGender(gender: UpdateGender!): Gender!
+    surveyConclude(id: String): Survey!
+    deleteSurvey(id: String!): Survey!
+    submitResponse(surveyResponse: NewSurveyResponseInput!,respondentResponse:[NewRespondentResponseInput!]!, response:[NewResponseInput!]!): SurveyResponse!
+    addSurveyResponse(surveyResponse: NewSurveyResponseInput!): RespondentResponse!
+    createRespondentResponse(respondentResponse:NewRespondentResponseInput!): RespondentResponse!
+    addResponse(response:NewResponseInput!): Response!
     signUp(user: SignUpInput!): AdminUser!
     adminLogin(user:AdminLoginInput!): AuthUser!
+  }
+
+  type AgeBracket{
+    id: String!
+    segment: String!
+    order: Int!
+  }
+
+  type Gender{
+    id: String!
+    name: String!
   }
 
   type Survey {
@@ -218,6 +254,7 @@ type Users {
   admin: AdminUser!
   adminUserUid: String!
   deviceLogs: [DeviceLogs!]
+  images: [MediaUrl!]!
 }
 
 type Queries {
@@ -248,28 +285,61 @@ type MediaUrl {
   url: String!
   filename: String
   size: String!
-  options: [Option!]!
+  surveyId: String
+  optionId: String
 }
 
 type SurveyResponse {
   id: ID!
   timestamp: String!
-  response: [Response!]!
-  submittedBy: Users!
+  municipal: Municipal!
   municipalsId: Int!
+  barangay: Barangay!
   barangaysId: String!
+  survey: Survey!
+  surveyId: String!
+  users: Users
+  usersUid: String
+  respondentResponses: [RespondentResponse!]!
+  responses: [Response!]!
+}
+
+type RespondentResponse {
+  id: ID!
+  age: AgeBracket!
+  ageBracketId: String!
+  gender: Gender!
+  genderId: String!
+  municipal: Municipal!
+  municipalsId: Int!
+  barangay: Barangay!
+  barangaysId: String!
+  survey: Survey!
+  surveyId: String!
+  responses: [Response!]!
+  surveyResponse: SurveyResponse!
+  surveyResponseId: String!
 }
 
 type Response {
   id: ID!
-  queries: Query!
+  survey: Survey!
+  queries: Queries!
   queryId: String!
-  surveyResponseId: String!
-  voter: Voter
-  votersId: String
+  barangay: Barangay!
   barangaysId: String!
-  municipalsI: String!
-  options: [OptionResponse!]!
+  municipal: Municipal!
+  municipalsId: Int!
+  option: Option!
+  optionId: String!
+  ageBracket: AgeBracket!
+  ageBracketId: String!
+  gender: Gender!
+  genderId: String!
+  surveyResponse: SurveyResponse!
+  surveyResponseId: String!
+  respondentResponse: RespondentResponse!
+  respondentResponseId: String!
 }
 
 type OptionResponse {
@@ -314,6 +384,13 @@ type DeviceLogs {
     lastname: String!
     password: String!
     status: String!
+  }
+  
+  input NewAdminInput{
+    lastname: String!
+    firstname: String!
+    phoneNumber: String!
+    password: String!
   }
 
   input NewMunicipalInput {
@@ -373,14 +450,12 @@ type DeviceLogs {
   }
 
   input NewSurveyInput {
-    type: String!
     adminUserUid: String!
   }
 
   input NewQueryInput {
     queries: String!
     surveyId: String!
-     type: String!
   }
 
   input NewOptionInput {
@@ -388,14 +463,26 @@ type DeviceLogs {
     desc: String!
     queryId: String!
   }
+
   input NewMediaInput{
     filename: String!
     url: String!
     size: String!
+    surveyId: String!
   }
   input OptionMedia{
     id: String!
     optionID: String!
+  }
+
+  input UpdateAge{
+    id: String!
+    value: String!
+  }
+
+  input UpdateGender{
+    id: String!
+    value: String!
   }
 
   input NewOptionImageInput{
@@ -405,10 +492,47 @@ type DeviceLogs {
     size: String!
   }
 
+  input NewSurveyResponseInput {
+  id: ID!
+  municipalsId: Int!
+  barangaysId: String!
+  surveyId: String!
+}
+
+input NewRespondentResponseInput {
+  id: ID!
+  municipalsId: Int!
+  barangaysId: String!
+  surveyId: String!
+  genderId: String!
+  ageBracketId: String!
+  surveyResponseId: String!
+}
+
+input NewResponseInput {
+  id: ID!
+  municipalsId: Int!
+  barangaysId: String!
+  surveyId: String!
+  genderId: String!
+  ageBracketId: String!
+  surveyResponseId: String!
+  respondentResponseId: String!
+  optionId: String!
+  queryId: String!
+}
+
   input UpdateOption{
     id: String!
     title: String
     desc: String
+  }
+
+  input UpdateSampleInput{
+    id: String!
+    sampleSize: Int!
+    sampleRate: Int!
+    population: Int!
   }
 
   input SignUpInput {
@@ -417,6 +541,11 @@ type DeviceLogs {
     lastname: String!
     firstname: String!
     address: String!
+  }
+
+  input AllSurveyResponseInput {
+    municipalsId: Int!
+    surveyId: String!
   }
 
   input AdminLoginInput {
