@@ -4,7 +4,6 @@ import { expressMiddleware } from "@apollo/server/express4";
 import express, { Request, Response } from "express";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
-import ServerlessHttp from "serverless-http";
 import cors from "cors";
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
@@ -921,4 +920,3 @@ const main = async () => {
   }
 };
 main();
-export const handler = ServerlessHttp(app);
