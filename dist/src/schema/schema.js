@@ -94,6 +94,15 @@ type Users {
     population: Int!
     sampleRate: Int!
     sampleSize: Int!
+    femaleSize: Int
+      maleSize:Int
+      surveyor:Int
+      activeSurveyor:Int
+    surveyResponse(survey: AllSurveyResponseInput!):[SurveyResponse!]!
+    surveyRespondentResponse(survey: AllSurveyResponseInput!): [RespondentResponse!]!
+    RespondentResponse(id: String!): Int
+    quota: [Quota!]
+    quotas(id: ID!): [Quota!]
   }
 
   type Precent {
@@ -184,9 +193,14 @@ type Users {
     genderList: [Gender]
     getSurvey(tagID: String!): Survey!
     getRespondentResponse: [RespondentResponse!]!
+    respondentResponse(id: String!):[RespondentResponse!]!
     surveyResponseList: [SurveyResponse!]!
     allSurveyResponse(survey: AllSurveyResponseInput!): [SurveyResponse!]!
     surveyResponseInfo(id:String!): SurveyResponse!
+    surveyResult(survey: AllSurveyResponseInput!): [SurveyResponse]!
+    gendersSize: [GenderSize!]
+    quotas: [Quota!]!
+    barangayQuota(id: String!):[Quota!]
     queries(id: String!): Queries!
     option(id: String!):Option!
   }
@@ -231,6 +245,19 @@ type Users {
     addSurveyResponse(surveyResponse: NewSurveyResponseInput!): RespondentResponse!
     createRespondentResponse(respondentResponse:NewRespondentResponseInput!): RespondentResponse!
     addResponse(response:NewResponseInput!): Response!
+    updateQuota(quota: QuotaUpdate!): Quota!
+    createQuota(quota: NewQuotaInput!, gender: NewGenderInput!): Quota
+    createGenderQuota(quota: GenderQuotaInput): GenderSize
+    removeGenderQuota(id: String!): GenderSize
+    updateSurveyor(id: String!): Barangay
+    updateGenderQuota(gender: NewGenderInput!): Quota
+    resetBarangayQuota(id: String!): [Quota!]
+    resetSurveyor(id: Int!): [Barangay!]
+    resetActiveSurvey(id: String!): Barangay!
+    removeQuota(id: String!): Quota!
+    removeQuery(id: String!): Queries!
+    removeBarangay(id: String!): Barangay!
+    updateQuery(id: String!, value: String!): Queries!
     signUp(user: SignUpInput!): AdminUser!
     adminLogin(user:AdminLoginInput!): AuthUser!
   }
@@ -239,12 +266,37 @@ type Users {
     id: String!
     segment: String!
     order: Int!
+    quota(id: ID!): [Quota!]
   }
 
   type Gender{
     id: String!
     name: String!
   }
+
+  type GenderSize {
+  id: ID!
+  gender: Gender!
+  genderId: String!
+  size: Int!
+  quotaId: String
+}
+
+  type Quota {
+  id: ID!
+  survey: Survey!
+  surveyId: ID!
+  barangay: Barangay!
+  barangaysId: ID!
+  sampleSize: Int!
+  population: Int!
+  gender: Gender
+
+  gendersSize: [GenderSize!]
+  size: Int!
+  age: AgeBracket!
+  ageBracketId: String!
+}
 
   type Survey {
   id: ID!
@@ -280,6 +332,7 @@ type Option {
   queries: [Queries]!
   queryId: String!
   responses: [OptionResponse!]!
+  onExit: Boolean
   order: Int!
 }
 
@@ -304,6 +357,7 @@ type SurveyResponse {
   users: Users
   usersUid: String
   respondentResponses: [RespondentResponse!]!
+  surveyResponse: [SurveyResponse!]!
   responses: [Response!]!
 }
 
@@ -362,6 +416,11 @@ type DeviceLogs {
   adminUserUid: String!
   survey: Survey!
   surveyId: String!
+}
+
+input QuotaUpdate {
+  value: Int!
+  id: String!
 }
 
   input NewVoterInput {
@@ -459,12 +518,14 @@ type DeviceLogs {
   input NewQueryInput {
     queries: String!
     surveyId: String!
+    type: String!
   }
 
   input NewOptionInput {
     title: String!
     desc: String!
     queryId: String!
+    onExit: Boolean
   }
 
   input NewMediaInput{
@@ -536,6 +597,10 @@ input NewResponseInput {
     sampleSize: Int!
     sampleRate: Int!
     population: Int!
+    femaleSize: Int!
+    maleSize: Int!
+    surveyor: Int
+    activeSurveyor: Int
   }
 
   input SignUpInput {
@@ -544,6 +609,26 @@ input NewResponseInput {
     lastname: String!
     firstname: String!
     address: String!
+  }
+
+  input QuotaInput {
+    id: String!
+  }
+
+  input NewQuotaInput {
+    barangayId: String!
+    ageBracketId: String!
+  }
+
+  input NewGenderInput {
+    size: Int!
+    genderId: String!
+  }
+
+  input GenderQuotaInput {
+    quotaId: String!
+    genderId: String!
+    size: Int!
   }
 
   input AllSurveyResponseInput {

@@ -4,11 +4,12 @@ import { expressMiddleware } from "@apollo/server/express4";
 import express, { Request, Response } from "express";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
+import ServerlessHttp from "serverless-http";
 import cors from "cors";
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
 
-import { Gender, PrismaClient } from "@prisma/client";
+import {PrismaClient } from "@prisma/client";
 import { typeDefs } from "../schema/schema";
 import { Resolvers } from "../interface/types";
 import bodyParser from "body-parser";
@@ -920,3 +921,4 @@ const main = async () => {
   }
 };
 main();
+export const handler = ServerlessHttp(app);
