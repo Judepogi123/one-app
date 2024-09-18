@@ -18,6 +18,8 @@ import {
   SurveyResponse,
   RespondentResponse,
   Response as DataResponse,
+  Quota,
+  GenderSize,
 } from "@prisma/client";
 
 export type ResolverFn<Parent, Args, Context, Result> = (
@@ -96,6 +98,12 @@ export type Resolvers = {
     queries: ResolverFn<{}, { id: string }, {}, Queries | null>;
     option: ResolverFn<{}, { id: string }, {}, Option | null>;
     getRespondentResponse: ResolverFn<{}, {}, {}, RespondentResponse[]>;
+    respondentResponse: ResolverFn<
+      {},
+      { id: string },
+      {},
+      RespondentResponse[]
+    >;
     surveyResponseList: ResolverFn<{}, {}, {}, SurveyResponse[]>;
     allSurveyResponse: ResolverFn<
       {},
@@ -109,8 +117,9 @@ export type Resolvers = {
       {},
       SurveyResponse | null
     >;
-    //barangayVoters: ResolverFn<Voters,{},{},number>
-    //precints: ResolverFn<{}, {}, {}, Precents[] | []>;
+    quotas: ResolverFn<{}, {}, {}, Quota[]>;
+    barangayQuota: ResolverFn<{},{id: string},{},Quota[]>
+    gendersSize: ResolverFn<{}, {}, {}, GenderSize[]>;
   };
   Mutation: {
     createVoter: ResolverFn<{}, Voters, {}, Voters>;
@@ -185,6 +194,7 @@ export type Resolvers = {
         query: {
           queries: string;
           surveyId: string;
+          type: string;
         };
       },
       {},
@@ -223,6 +233,7 @@ export type Resolvers = {
           title: string;
           desc: string;
           queryId: string;
+          onExit: boolean;
         };
       },
       {},
@@ -273,6 +284,10 @@ export type Resolvers = {
           sampleSize: number;
           sampleRate: number;
           population: number;
+          femaleSize: number;
+          maleSize: number;
+          surveyor: number;
+          activeSurveyor: number;
         };
       },
       {},
@@ -377,6 +392,35 @@ export type Resolvers = {
       {},
       SurveyResponse
     >;
+    createQuota: ResolverFn<
+      {},
+      {
+        quota: { barangayId: string; ageBracketId: string };
+        gender: { size: number; genderId: string };
+      },
+      {},
+      Quota
+    >;
+    createGenderQuota: ResolverFn<
+      {},
+      { quota: { quotaId: string; genderId: string; size: number } },
+      {},
+      GenderSize
+    >;
+    removeGenderQuota: ResolverFn<{}, { id: string }, {}, GenderSize>;
+    updateSurveyor: ResolverFn<
+      {},
+      { id: string},
+      {},
+      Barangays
+    >;
+    resetSurveyor: ResolverFn<{},{id: number},{}, Barangays[]>
+    resetBarangayQuota: ResolverFn<{},{id: string},{},Quota[]>;
+    resetActiveSurvey: ResolverFn<{},{id: string},{},Barangays>;
+    removeQuota: ResolverFn<{},{id: string},{},Quota>;
+    removeQuery: ResolverFn<{},{id: string},{},Queries>;
+    updateQuery: ResolverFn<{},{id: string, value: string},{},Queries>;
+    removeBarangay: ResolverFn<{},{id: string},{},Barangays>
     adminLogin: ResolverFn<
       {},
       { user: { phoneNumber: string; password: string } },
@@ -408,6 +452,21 @@ export type Resolvers = {
     barangayVotersCount: ResolverFn<Barangays, {}, {}, number>;
     purokCount: ResolverFn<Barangays, {}, {}, number>;
     puroks: ResolverFn<Barangays, {}, {}, Purok[]>;
+    surveyResponse: ResolverFn<
+      Barangays,
+      { survey: { municipalsId: number; surveyId: string } },
+      {},
+      SurveyResponse[]
+    >;
+    surveyRespondentResponse: ResolverFn<
+      Barangays,
+      { survey: { municipalsId: number; surveyId: string } },
+      {},
+      RespondentResponse[]
+    >;
+    RespondentResponse: ResolverFn<Barangays, { id: string }, {}, number>;
+    quota: ResolverFn<Barangays, {}, {}, Quota[]>;
+    quotas: ResolverFn<Barangays, { id: string }, {}, Quota | null>;
   };
   Purok: {
     purokDraftedVotersCount: ResolverFn<Purok, {}, {}, number>;
@@ -444,6 +503,7 @@ export type Resolvers = {
     age: ResolverFn<RespondentResponse, {}, {}, AgeBracket | null>;
     gender: ResolverFn<RespondentResponse, {}, {}, Gender | null>;
     responses: ResolverFn<RespondentResponse, {}, {}, DataResponse[]>;
+    barangay: ResolverFn<RespondentResponse, {}, {}, Barangays | null>;
   };
   SurveyResponse: {
     barangay: ResolverFn<SurveyResponse, {}, {}, Barangays | null>;
@@ -453,5 +513,15 @@ export type Resolvers = {
       {},
       RespondentResponse[]
     >;
+  };
+  Quota: {
+    age: ResolverFn<Quota, {}, {}, AgeBracket | null>;
+    gendersSize: ResolverFn<Quota, {}, {}, GenderSize[]>;
+  };
+  AgeBracket: {
+    quota: ResolverFn<AgeBracket, { id: string }, {}, Quota[]>;
+  };
+  GenderSize: {
+    gender: ResolverFn<GenderSize, {}, {}, Gender | null>;
   };
 };

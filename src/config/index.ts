@@ -8,7 +8,7 @@ import cors from "cors";
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
 
-import { PrismaClient } from "@prisma/client";
+import { Gender, PrismaClient } from "@prisma/client";
 import { typeDefs } from "../schema/schema";
 import { Resolvers } from "../interface/types";
 import bodyParser from "body-parser";
@@ -180,11 +180,23 @@ const resolvers: Resolvers = {
     allSurveyResponse: async (_, { survey }) => {
       return await prisma.surveyResponse.findMany({
         where: { municipalsId: survey.municipalsId, surveyId: survey.surveyId },
-        orderBy: {timestamp: "asc"}
+        orderBy: { timestamp: "asc" },
       });
     },
     surveyResponseInfo: async (_, { id }) => {
       return await prisma.surveyResponse.findUnique({ where: { id } });
+    },
+    respondentResponse: async (_, { id }) => {
+      return await prisma.respondentResponse.findMany();
+    },
+    quotas: async () => {
+      return await prisma.quota.findMany();
+    },
+    barangayQuota: async (_, { id }) => {
+      return await prisma.quota.findMany({ where: { barangaysId: id } });
+    },
+    gendersSize: async () => {
+      return await prisma.genderSize.findMany();
     },
   },
   Mutation: {
@@ -327,6 +339,7 @@ const resolvers: Resolvers = {
         data: {
           queries: query.queries,
           surveyId: query.surveyId,
+          type: query.type,
         },
       });
     },
@@ -398,6 +411,10 @@ const resolvers: Resolvers = {
           sampleRate: sample.sampleRate,
           sampleSize: sample.sampleSize,
           population: sample.population,
+          activeSurveyor: sample.activeSurveyor,
+          femaleSize: sample.femaleSize,
+          maleSize: sample.maleSize,
+          surveyor: sample.surveyor,
         },
       });
     },
@@ -414,6 +431,7 @@ const resolvers: Resolvers = {
           title: option.title,
           desc: option.desc,
           queryId: option.queryId,
+          onExit: option.onExit,
         },
       });
 
@@ -484,8 +502,13 @@ const resolvers: Resolvers = {
       _,
       { respondentResponse, response, surveyResponse }
     ) => {
-
       return await prisma.$transaction(async (prisma) => {
+        const checkSurvey = await prisma.survey.findUnique({
+          where: { id: surveyResponse.surveyId },
+        });
+        if (checkSurvey?.status !== "Ongoing") {
+          throw new GraphQLError("The survey is currently closed or paused.");
+        }
         const surveyResponsed = await prisma.surveyResponse.create({
           data: {
             id: surveyResponse.id,
@@ -495,42 +518,76 @@ const resolvers: Resolvers = {
           },
         });
 
-        for (const res of respondentResponse) {
-          await prisma.respondentResponse.create({
-            data: {
-              id: res.id,
-              ageBracketId: res.ageBracketId,
-              genderId: res.genderId,
-              barangaysId: res.barangaysId,
-              municipalsId: res.municipalsId,
-              surveyId: res.surveyId,
-              surveyResponseId: surveyResponsed.id,
-            },
-          });
-        }
+        const respondentData = respondentResponse.map((res) => ({
+          id: res.id,
+          ageBracketId: res.ageBracketId,
+          genderId: res.genderId,
+          barangaysId: res.barangaysId,
+          municipalsId: res.municipalsId,
+          surveyId: res.surveyId,
+          surveyResponseId: surveyResponsed.id,
+        }));
 
-        // Create Response entries
-        for (const res of response) {
-          await prisma.response.create({
-            data: {
-              id: res.id,
-              ageBracketId: res.ageBracketId,
-              genderId: res.genderId,
-              barangaysId: res.barangaysId,
-              municipalsId: res.municipalsId,
-              surveyId: res.surveyId,
-              surveyResponseId: surveyResponsed.id,
-              optionId: res.optionId,
-              queryId: res.queryId,
-              respondentResponseId: res.respondentResponseId,
-            },
-          });
-        }
+        await prisma.respondentResponse.createMany({
+          data: respondentData,
+        });
+
+        // Create Response entries in batch
+        const responseData = response.map((res) => ({
+          id: res.id,
+          ageBracketId: res.ageBracketId,
+          genderId: res.genderId,
+          barangaysId: res.barangaysId,
+          municipalsId: res.municipalsId,
+          surveyId: res.surveyId,
+          surveyResponseId: surveyResponsed.id,
+          optionId: res.optionId,
+          queryId: res.queryId,
+          respondentResponseId: res.respondentResponseId,
+        }));
+
+        await prisma.response.createMany({
+          data: responseData,
+        });
 
         return surveyResponsed;
       });
     },
 
+    updateSurveyor: async (_, { id }) => {
+      const checked = await prisma.barangays.findUnique({
+        where: { id },
+      });
+      if (checked && checked.activeSurveyor === checked.surveyor) {
+        throw new GraphQLError(`${checked.name} surveyor limit reached.`);
+      }
+      return await prisma.barangays.update({
+        where: { id },
+        data: { activeSurveyor: (checked?.activeSurveyor as number) + 1 },
+      });
+    },
+    resetSurveyor: async (_, { id }) => {
+      await prisma.barangays.updateMany({
+        where: { municipalId: id },
+        data: { surveyor: 0, activeSurveyor: 0 },
+      });
+      return await prisma.barangays.findMany({
+        where: { municipalId: id },
+      });
+    },
+    resetBarangayQuota: async (_, { id }) => {
+      await prisma.quota.deleteMany({ where: { barangaysId: id } });
+      return await prisma.quota.findMany({ where: { barangaysId: id } });
+    },
+    resetActiveSurvey: async (_, { id }) => {
+      return await prisma.barangays.update({
+        where: { id },
+        data: { activeSurveyor: 0 },
+      });
+    },
+    removeQuota: async (_, { id }) => {
+      return await prisma.quota.delete({ where: { id } });
+    },
     adminLogin: async (_, { user }) => {
       const secretToken = process.env.JWT_SECRECT_TOKEN;
 
@@ -567,6 +624,64 @@ const resolvers: Resolvers = {
       const { phoneNumber, lastname, firstname, uid } = adminUser;
 
       return { phoneNumber, lastname, firstname, uid, accessToken };
+    },
+    createQuota: async (_, { quota, gender }) => {
+      const quotaData = await prisma.quota.create({
+        data: {
+          ageBracketId: quota.ageBracketId,
+          barangaysId: quota.barangayId,
+        },
+      });
+
+      await prisma.genderSize.create({
+        data: {
+          genderId: gender.genderId,
+          size: gender.size,
+          quotaId: quotaData.id,
+        },
+      });
+      return quotaData;
+    },
+    createGenderQuota: async (_, { quota }) => {
+      const checked = await prisma.genderSize.findFirst({
+        where: {
+          quotaId: quota.quotaId,
+          genderId: quota.genderId,
+        },
+      });
+      if (checked) {
+        throw new GraphQLError("Gender already existed in this quota", {
+          extensions: { code: "EXISTED" },
+        });
+      }
+      return await prisma.genderSize.create({
+        data: {
+          genderId: quota.genderId,
+          size: quota.size,
+          quotaId: quota.quotaId,
+        },
+      });
+    },
+    removeGenderQuota: async (_, { id }) => {
+      console.log(id);
+
+      return await prisma.genderSize.delete({
+        where: { id },
+      });
+    },
+    removeQuery: async (_, { id }) => {
+      return await prisma.queries.delete({ where: { id } });
+    },
+    removeBarangay: async (_, { id }) => {
+      return await prisma.barangays.delete({
+        where: { id },
+      });
+    },
+    updateQuery: async (_, { id, value }) => {
+      return await prisma.queries.update({
+        where: { id },
+        data: { queries: value },
+      });
     },
   },
   Voter: {
@@ -609,6 +724,38 @@ const resolvers: Resolvers = {
     },
     puroks: async (parent) => {
       return await prisma.purok.findMany({ where: { barangaysId: parent.id } });
+    },
+    surveyResponse: async (parent, { survey }) => {
+      return await prisma.surveyResponse.findMany({
+        where: { municipalsId: survey.municipalsId, surveyId: survey.surveyId },
+      });
+    },
+    surveyRespondentResponse: async (parent, { survey }) => {
+      return await prisma.respondentResponse.findMany({
+        where: {
+          municipalsId: survey.municipalsId,
+          surveyId: survey.surveyId,
+          barangaysId: parent.id,
+        },
+      });
+    },
+    RespondentResponse: async (parent, { id }) => {
+      return await prisma.respondentResponse.count({
+        where: {
+          barangaysId: parent.id,
+          surveyId: id,
+        },
+      });
+    },
+    quota: async (parent) => {
+      return await prisma.quota.findMany({
+        where: { barangaysId: parent.id },
+      });
+    },
+    quotas: async (parent) => {
+      return await prisma.quota.findFirst({
+        where: { barangaysId: parent.id },
+      });
     },
   },
   Purok: {
@@ -687,6 +834,9 @@ const resolvers: Resolvers = {
         where: { respondentResponseId: parent.id },
       });
     },
+    barangay: async (parent) => {
+      return await prisma.barangays.findFirst({ where: { id: parent.id } });
+    },
   },
   SurveyResponse: {
     barangay: async (parent) => {
@@ -697,6 +847,32 @@ const resolvers: Resolvers = {
     respondentResponses: async (parent) => {
       return prisma.respondentResponse.findMany({
         where: { surveyResponseId: parent.id },
+      });
+    },
+  },
+  Quota: {
+    age: async (parent) => {
+      return await prisma.ageBracket.findUnique({
+        where: { id: parent.ageBracketId },
+      });
+    },
+    gendersSize: async (parent) => {
+      return await prisma.genderSize.findMany({
+        where: { quotaId: parent.id },
+      });
+    },
+  },
+  AgeBracket: {
+    quota: async (parent, { id }) => {
+      return await prisma.quota.findMany({
+        where: { ageBracketId: parent.id, barangaysId: id },
+      });
+    },
+  },
+  GenderSize: {
+    gender: async (parent) => {
+      return await prisma.gender.findFirst({
+        where: { id: parent.genderId },
       });
     },
   },
