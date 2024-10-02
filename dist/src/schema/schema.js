@@ -100,9 +100,10 @@ type Users {
       activeSurveyor:Int
     surveyResponse(survey: AllSurveyResponseInput!):[SurveyResponse!]!
     surveyRespondentResponse(survey: AllSurveyResponseInput!): [RespondentResponse!]!
-    RespondentResponse(id: String!): Int
+    RespondentResponse(id: String!,zipCode: Int!): Int
     quota: [Quota!]
     quotas(id: ID!): [Quota!]
+    optionResponse(id: String!,surveyId: String!): Int!
   }
 
   type Precent {
@@ -171,7 +172,7 @@ type Users {
     municipalVoterList(id: Int!): [Voter!]!
     barangays: [Barangay]
     barangay(id: ID!): Barangay
-    barangayList(municipalId: Int!): [Barangay!]
+    barangayList(zipCode: Int!): [Barangay!]
     precents: [Precent!]!
     precent(id: ID!): Precent
     puroks(barangay: NewPurokInput): [Purok]!
@@ -202,6 +203,12 @@ type Users {
     quotas: [Quota!]!
     barangayQuota(id: String!):[Quota!]
     queries(id: String!): Queries!
+    surveyQueriesList(id: String):[Queries!]
+    responseRespondent(id: String!): [ResponseRespondent!]
+    getSurveyAgeResult(survey: AllSurveyResult): Survey!
+    getRespondentResponseById(id: String!): RespondentResponse
+    optionCountAge(optionId: String!, ageBracketId: String!): Int
+    optionRank(surveyId: String!,zipCode: Int!, barangayId: String!,genderId: String!, optionId: String!, queryId: String!,ageBracketId: String!): Int
     option(id: String!):Option!
   }
 
@@ -258,6 +265,11 @@ type Users {
     removeQuery(id: String!): Queries!
     removeBarangay(id: String!): Barangay!
     updateQuery(id: String!, value: String!): Queries!
+    updateQueryType(id: String!,type: String!): Queries!
+    resetSurveyResponse(id: String!, zipCode: Int!): BatchPayload
+    updateOptionTop(id: String!,value: Boolean!):Option
+    removeResponse(id: String!): RespondentResponse!
+    changeQueryOnTop(id: String!,value: Boolean!): Queries!
     signUp(user: SignUpInput!): AdminUser!
     adminLogin(user:AdminLoginInput!): AuthUser!
   }
@@ -267,6 +279,10 @@ type Users {
     segment: String!
     order: Int!
     quota(id: ID!): [Quota!]
+    surveyAgeCount(id: String!,zipCode: Int!, barangayId: String!,genderId: String!): Int!
+    optionAgeCount(surveyId: String!):[Queries!]
+    overAllAgeRanking(id: String!): [Queries!]
+    optionRank(surveyId: String!,zipCode: Int!, barangayId: String!,genderId: String!, optionId: String!): Int
   }
 
   type Gender{
@@ -301,6 +317,7 @@ type Users {
   type Survey {
   id: ID!
   tagID: String!
+  name: String
   timestamp: String!
   type: String!
   queries: [Queries!]
@@ -310,10 +327,13 @@ type Users {
   adminUserUid: String!
   deviceLogs: [DeviceLogs!]
   images: [MediaUrl!]!
+  responseCount( zipCode: Int!): Int
+  ageCount: [AgeBracket!]
 }
 
 type Queries {
   id: ID!
+  order: Int
   queries: String!
   survey: Survey!
   surveyId: String!
@@ -321,6 +341,8 @@ type Queries {
   componentType: String!
   response: [Response!]!
   options: [Option!]
+  respondentOption(id: String!): [Response!]
+  onTop: Boolean!
 }
 
 type Option {
@@ -333,7 +355,12 @@ type Option {
   queryId: String!
   responses: [OptionResponse!]!
   onExit: Boolean
+  onTop: Boolean!
   order: Int!
+  overAllResponse(id: String,zipCode: Int!, barangayId: String!,genderId: String!): Int!
+  ageCountRank(id: String,ageBracketId: String,barangayId: String!,genderId: String!): Int!
+  optionRank(surveyId: String!,zipCode: Int!, barangayId: String!,genderId: String!, optionId: String!): Int
+  barangays:[Barangay!] 
 }
 
 type MediaUrl {
@@ -376,6 +403,7 @@ type RespondentResponse {
   responses: [Response!]!
   surveyResponse: SurveyResponse!
   surveyResponseId: String!
+  optionResponse(optionId: String!): Int!
 }
 
 type Response {
@@ -387,7 +415,7 @@ type Response {
   barangaysId: String!
   municipal: Municipal!
   municipalsId: Int!
-  option: Option!
+  option: [Option!]
   optionId: String!
   ageBracket: AgeBracket!
   ageBracketId: String!
@@ -398,6 +426,30 @@ type Response {
   respondentResponse: RespondentResponse!
   respondentResponseId: String!
 }
+
+type RespondentOption {
+  id: ID!
+  queryId: ID!
+  title: String!
+  desc: String!
+}
+
+type ResponseRespondent {
+  id: ID!
+  order: Int!
+  queries: String!
+  surveyId: ID!
+  queryId: ID!
+  ageBracket: AgeBracket!
+  ageBracketId: String!
+  gender: Gender!
+  genderId: String!
+  barangaysId: String!
+  barangay: Barangay!
+  respondentResponseId: ID!
+  option: [RespondentOption!]!
+}
+
 
 type OptionResponse {
   id: ID!
@@ -416,6 +468,10 @@ type DeviceLogs {
   adminUserUid: String!
   survey: Survey!
   surveyId: String!
+}
+
+type BatchPayload {
+  count: Int!
 }
 
 input QuotaUpdate {
@@ -519,13 +575,15 @@ input QuotaUpdate {
     queries: String!
     surveyId: String!
     type: String!
+    onTop: Boolean!
   }
 
   input NewOptionInput {
     title: String!
     desc: String!
     queryId: String!
-    onExit: Boolean
+    onExit: Boolean!
+    onTop: Boolean!
   }
 
   input NewMediaInput{
@@ -634,6 +692,12 @@ input NewResponseInput {
   input AllSurveyResponseInput {
     municipalsId: Int!
     surveyId: String!
+  }
+
+  input AllSurveyResult {
+    municipalsId: Int!
+    surveyId: String!
+    barangayId: String!
   }
 
   input AdminLoginInput {
