@@ -29,3 +29,49 @@ export interface DataProps {
   OR: string;
   saveStatus: string;
 }
+
+export interface GenderProps {
+  id: string;
+  name: string;
+}
+
+
+export interface AgeBracket {
+  id: string;
+  segment: string;
+}
+export interface RespondentResponses {
+  id: string;
+  age: AgeBracket;
+  gender: GenderProps;
+}
+
+export interface OptionProps {
+  id: string;
+  queryId: string;
+  title: string;
+  desc: string
+}
+export interface RespondentResponseProps {
+  id: string;
+  order: number;
+  queries: string;
+  surveyId: string;
+  queryId: string;
+  ageBracketId: string;
+  genderId: string
+  respondentResponseId: string;
+  option: OptionProps[];
+}
+export interface SelectedOptionProps {
+  id: string;
+  title: string;
+overAllResponse:number
+  barangays: {
+    id: string;
+    name: string;
+    femaleSize: number;
+    maleSize: number;
+    optionResponse: number;
+  }[];
+}

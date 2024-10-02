@@ -1,5 +1,5 @@
 // types.ts
-import { GraphQLResolveInfo, GraphQLScalarType } from "graphql";
+import { GraphQLResolveInfo } from "graphql";
 import {
   Voters,
   Users,
@@ -21,6 +21,7 @@ import {
   Quota,
   GenderSize,
 } from "@prisma/client";
+import { RespondentResponseProps } from "./data";
 
 export type ResolverFn<Parent, Args, Context, Result> = (
   parent: Parent,
@@ -62,7 +63,7 @@ export type Resolvers = {
       Voters[]
     >;
     barangaysCount: ResolverFn<{}, {}, {}, number>;
-    barangayList: ResolverFn<{}, { municipalId: number }, {}, Barangays[] | []>;
+    barangayList: ResolverFn<{}, { zipCode: number }, {}, Barangays[] | []>;
     puroks: ResolverFn<
       {},
       { municipalId: number; barangayId: string },
@@ -118,8 +119,41 @@ export type Resolvers = {
       SurveyResponse | null
     >;
     quotas: ResolverFn<{}, {}, {}, Quota[]>;
-    barangayQuota: ResolverFn<{},{id: string},{},Quota[]>
+    barangayQuota: ResolverFn<{}, { id: string }, {}, Quota[]>;
     gendersSize: ResolverFn<{}, {}, {}, GenderSize[]>;
+    responseRespondent: ResolverFn<
+      {},
+      { id: string },
+      {},
+      RespondentResponseProps[]
+    >;
+    getRespondentResponseById: ResolverFn<
+      {},
+      { id: string },
+      {},
+      RespondentResponse | null
+    >;
+    surveyQueriesList: ResolverFn<{}, { id: string }, {}, Queries[]>;
+    optionCountAge: ResolverFn<
+      {},
+      { optionId: string; ageBracketId: string },
+      {},
+      number
+    >;
+    optionRank: ResolverFn<
+      {},
+      {
+        surveyId: string;
+        zipCode: number;
+        barangayId: string;
+        ageBracketId: string;
+        genderId: string;
+        optionId: string;
+        queryId: string
+      },
+      {},
+      number
+    >;
   };
   Mutation: {
     createVoter: ResolverFn<{}, Voters, {}, Voters>;
@@ -195,6 +229,7 @@ export type Resolvers = {
           queries: string;
           surveyId: string;
           type: string;
+          onTop: boolean;
         };
       },
       {},
@@ -234,6 +269,7 @@ export type Resolvers = {
           desc: string;
           queryId: string;
           onExit: boolean;
+          onTop: boolean;
         };
       },
       {},
@@ -408,19 +444,14 @@ export type Resolvers = {
       GenderSize
     >;
     removeGenderQuota: ResolverFn<{}, { id: string }, {}, GenderSize>;
-    updateSurveyor: ResolverFn<
-      {},
-      { id: string},
-      {},
-      Barangays
-    >;
-    resetSurveyor: ResolverFn<{},{id: number},{}, Barangays[]>
-    resetBarangayQuota: ResolverFn<{},{id: string},{},Quota[]>;
-    resetActiveSurvey: ResolverFn<{},{id: string},{},Barangays>;
-    removeQuota: ResolverFn<{},{id: string},{},Quota>;
-    removeQuery: ResolverFn<{},{id: string},{},Queries>;
-    updateQuery: ResolverFn<{},{id: string, value: string},{},Queries>;
-    removeBarangay: ResolverFn<{},{id: string},{},Barangays>
+    updateSurveyor: ResolverFn<{}, { id: string }, {}, Barangays>;
+    resetSurveyor: ResolverFn<{}, { id: number }, {}, Barangays[]>;
+    resetBarangayQuota: ResolverFn<{}, { id: string }, {}, Quota[]>;
+    resetActiveSurvey: ResolverFn<{}, { id: string }, {}, Barangays>;
+    removeQuota: ResolverFn<{}, { id: string }, {}, Quota>;
+    removeQuery: ResolverFn<{}, { id: string }, {}, Queries>;
+    updateQuery: ResolverFn<{}, { id: string; value: string }, {}, Queries>;
+    removeBarangay: ResolverFn<{}, { id: string }, {}, Barangays>;
     adminLogin: ResolverFn<
       {},
       { user: { phoneNumber: string; password: string } },
@@ -432,6 +463,21 @@ export type Resolvers = {
         lastname: string;
         firstname: string;
       }
+    >;
+    updateQueryType: ResolverFn<{}, { id: string; type: string }, {}, Queries>;
+    updateOptionTop: ResolverFn<{}, { id: string; value: boolean }, {}, Option>;
+    resetSurveyResponse: ResolverFn<
+      {},
+      { id: string; zipCode: number },
+      {},
+      Promise<{ count: number }>
+    >;
+    removeResponse: ResolverFn<{}, { id: string }, {}, RespondentResponse>;
+    changeQueryOnTop: ResolverFn<
+      {},
+      { id: string; value: boolean },
+      {},
+      Queries
     >;
   };
   Voter: {
@@ -464,9 +510,10 @@ export type Resolvers = {
       {},
       RespondentResponse[]
     >;
-    RespondentResponse: ResolverFn<Barangays, { id: string }, {}, number>;
+    RespondentResponse: ResolverFn<Barangays, { id: string,zipCode: number }, {}, number>;
     quota: ResolverFn<Barangays, {}, {}, Quota[]>;
     quotas: ResolverFn<Barangays, { id: string }, {}, Quota | null>;
+    optionResponse: ResolverFn<Barangays, {id: string, surveyId: string},{},number>
   };
   Purok: {
     purokDraftedVotersCount: ResolverFn<Purok, {}, {}, number>;
@@ -492,12 +539,46 @@ export type Resolvers = {
     >;
     queries: ResolverFn<Survey, {}, {}, Queries[]>;
     images: ResolverFn<Survey, {}, {}, MediaUrl[]>;
+    responseCount: ResolverFn<Survey, { zipCode: number }, {}, number>;
+    ageCount: ResolverFn<Survey, {}, {}, AgeBracket[]>;
   };
   Queries: {
     options: ResolverFn<Queries, {}, {}, Option[]>;
+    respondentOption: ResolverFn<Queries, { id: string }, {}, DataResponse[]>;
   };
   Option: {
     fileUrl: ResolverFn<Option, {}, {}, MediaUrl | null>;
+    overAllResponse: ResolverFn<
+      Option,
+      { id: string; zipCode: number; barangayId: string; genderId: string },
+      {},
+      number
+    >;
+    ageCountRank: ResolverFn<
+      Option,
+      {
+        id: string;
+        ageBracketId: string;
+        barangayId: string;
+        genderId: string;
+      },
+      {},
+      number
+    >;
+    optionRank: ResolverFn<
+      Option,
+      {
+        surveyId: string;
+        zipCode: number;
+        barangayId: string;
+        ageBracketId: string;
+        genderId: string;
+        optionId: string;
+      },
+      {},
+      number
+    >;
+    barangays: ResolverFn<{},{},{},Barangays[]>
   };
   RespondentResponse: {
     age: ResolverFn<RespondentResponse, {}, {}, AgeBracket | null>;
@@ -520,8 +601,40 @@ export type Resolvers = {
   };
   AgeBracket: {
     quota: ResolverFn<AgeBracket, { id: string }, {}, Quota[]>;
+    surveyAgeCount: ResolverFn<
+      AgeBracket,
+      { id: string; zipCode: number; barangayId: string; genderId: string },
+      {},
+      number
+    >;
+    optionAgeCount: ResolverFn<AgeBracket, { surveyId: string }, {}, Queries[]>;
+    overAllAgeRanking: ResolverFn<{}, { id: string }, {}, Queries[]>;
+    optionRank: ResolverFn<
+      AgeBracket,
+      {
+        surveyId: string;
+        zipCode: number;
+        barangayId: string;
+        genderId: string;
+        optionId: string;
+      },
+      {},
+      number
+    >;
   };
   GenderSize: {
     gender: ResolverFn<GenderSize, {}, {}, Gender | null>;
+  };
+  Response: {
+    option: ResolverFn<DataResponse, {}, {}, Option[]>;
+    queries: ResolverFn<DataResponse, {}, {}, Queries | null>;
+  };
+  ResponseRespondent: {
+    barangay: ResolverFn<
+      RespondentResponse,
+      { id: string },
+      {},
+      Barangays | null
+    >;
   };
 };

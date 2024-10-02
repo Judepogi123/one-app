@@ -14,8 +14,12 @@ model AdminUser {
   phoneNumber String
   password    String
   address     String
-  DeviceLogs  DeviceLogs[]  
-  Survey      Survey[]      
+  platform    String?      @default("portal")
+  accessLevel String?      @default("regular")
+  expire      String?      @default("none")
+  areaAccess  Int[]
+  DeviceLogs  DeviceLogs[]
+  Survey      Survey[]
 }
 
 model Users {
@@ -26,8 +30,8 @@ model Users {
   password       String
   address        String
   status         String
-  SurveyResponse SurveyResponse[]  
-  DeviceLogs     DeviceLogs[]      
+  SurveyResponse SurveyResponse[]
+  DeviceLogs     DeviceLogs[]
 }
 
 model Candidates {
@@ -44,7 +48,7 @@ model Candidates {
 model CandidateBatch {
   id         String       @id @default(uuid())
   timestamp  DateTime     @default(now())
-  Candidates Candidates[] 
+  Candidates Candidates[]
   waveID     Wave         @relation(fields: [waveId], references: [id], onDelete: Cascade)
   waveId     Int
 }
@@ -52,7 +56,7 @@ model CandidateBatch {
 model Wave {
   id             Int              @id @default(autoincrement())
   timestamp      DateTime         @default(now())
-  CandidateBatch CandidateBatch[] 
+  CandidateBatch CandidateBatch[]
 }
 
 model Voters {
@@ -80,8 +84,8 @@ model Voters {
   teamLeader      TeamLeader?    @relation(fields: [teamLeaderId], references: [id], onDelete: Cascade)
   teamLeaderId    String?        @default("Unknown")
   hubID           Hub?           @relation(fields: [hubId], references: [id], onDelete: Cascade)
-  BarangayCoor    BarangayCoor[] 
-  PurokCoor       PurokCoor[]    
+  BarangayCoor    BarangayCoor[]
+  PurokCoor       PurokCoor[]
   pwd             String?
   oor             String?
   inc             String?
@@ -98,26 +102,26 @@ model Purok {
   barangay     Barangays   @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
   municipalsId Int
   municipal    Municipals  @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
-  houseHolds   HouseHold[] 
-  voters       Voters[]    
+  houseHolds   HouseHold[]
+  voters       Voters[]
   draftID      String
 }
 
 model Municipals {
   id                 Int                  @id
   name               String
-  barangays          Barangays[]          
-  voters             Voters[]             
-  Precents           Precents[]           
-  NewBatchDraft      NewBatchDraft[]      
-  Purok              Purok[]              
-  HouseHold          HouseHold[]          
-  Hub                Hub[]                
-  PurokCoor          PurokCoor[]          
-  BarangayCoor       BarangayCoor[]       
-  SurveyResponse     SurveyResponse[]     
-  Response           Response[]           
-  RespondentResponse RespondentResponse[] 
+  barangays          Barangays[]
+  voters             Voters[]
+  Precents           Precents[]
+  NewBatchDraft      NewBatchDraft[]
+  Purok              Purok[]
+  HouseHold          HouseHold[]
+  Hub                Hub[]
+  PurokCoor          PurokCoor[]
+  BarangayCoor       BarangayCoor[]
+  SurveyResponse     SurveyResponse[]
+  Response           Response[]
+  RespondentResponse RespondentResponse[]
 }
 
 model Barangays {
@@ -125,16 +129,16 @@ model Barangays {
   name               String
   municipal          Municipals           @relation(fields: [municipalId], references: [id], onDelete: Cascade)
   municipalId        Int
-  voters             Voters[]             
-  precents           Precents[]           
-  NewBatchDraft      NewBatchDraft[]      
-  Purok              Purok[]              
-  HouseHold          HouseHold[]          
-  Hub                Hub[]                
-  PurokCoor          PurokCoor[]          
-  BarangayCoor       BarangayCoor[]       
-  Response           Response[]           
-  SurveyResponse     SurveyResponse[]     
+  voters             Voters[]
+  precents           Precents[]
+  NewBatchDraft      NewBatchDraft[]
+  Purok              Purok[]
+  HouseHold          HouseHold[]
+  Hub                Hub[]
+  PurokCoor          PurokCoor[]
+  BarangayCoor       BarangayCoor[]
+  Response           Response[]
+  SurveyResponse     SurveyResponse[]
   population         Int?                 @default(0)
   sampleSize         Int?                 @default(0)
   sampleRate         Int?                 @default(10)
@@ -142,8 +146,8 @@ model Barangays {
   femaleSize         Int?                 @default(0)
   maleSize           Int?                 @default(0)
   activeSurveyor     Int?                 @default(0)
-  RespondentResponse RespondentResponse[] 
-  Quota              Quota[]              
+  RespondentResponse RespondentResponse[]
+  Quota              Quota[]
 }
 
 model HouseHold {
@@ -153,7 +157,7 @@ model HouseHold {
   barangaysId     String
   municipalId     Municipals @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
   municipalsId    Int
-  Voters          Voters[]   
+  Voters          Voters[]
   purokID         Purok      @relation(fields: [purokId], references: [id], onDelete: Cascade)
   purokId         String
 }
@@ -166,7 +170,7 @@ model Hub {
   municipalsId Int
   teamLeader   TeamLeader @relation(fields: [teamLeaderId], references: [id], onDelete: Cascade)
   teamLeaderId String
-  Voters       Voters[]   
+  Voters       Voters[]
 }
 
 model Precents {
@@ -175,7 +179,7 @@ model Precents {
   barangay      Barangays  @relation(fields: [barangayId], references: [id], onDelete: Cascade)
   barangayId    String
   municipal     Municipals @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
-  Voters        Voters[]   
+  Voters        Voters[]
   municipalsId  Int
 }
 
@@ -186,7 +190,7 @@ model NewBatchDraft {
   barangay    Barangays   @relation(fields: [barangayId], references: [id], onDelete: Cascade)
   barangayId  String
   timestamp   DateTime    @default(now())
-  Voters      Voters[]    
+  Voters      Voters[]
 }
 
 model CutstomList {
@@ -198,15 +202,14 @@ model CutstomList {
   timestamp   DateTime @default(now())
 }
 
-
 model TeamLeader {
-  id          String     @id @default(cuid())
-  Voters      Voters[]   
+  id          String    @id @default(cuid())
+  Voters      Voters[]
   hubId       String
-  purokCoor   PurokCoor  @relation(fields: [purokCoorId], references: [id], onDelete: Cascade)
+  purokCoor   PurokCoor @relation(fields: [purokCoorId], references: [id], onDelete: Cascade)
   purokCoorId String
   voterId     String
-  Hub         Hub[]      
+  Hub         Hub[]
 }
 
 model PurokCoor {
@@ -216,7 +219,7 @@ model PurokCoor {
   municipalsId   Int
   barangayId     Barangays    @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
   barangaysId    String
-  TeamLeader     TeamLeader[] 
+  TeamLeader     TeamLeader[]
   barangayCoor   BarangayCoor @relation(fields: [barangayCoorId], references: [id], onDelete: Cascade)
   barangayCoorId String
   votersId       String
@@ -225,7 +228,7 @@ model PurokCoor {
 model BarangayCoor {
   id           String      @id @default(cuid())
   voter        Voters      @relation(fields: [votersId], references: [id], onDelete: Cascade)
-  purokCoor    PurokCoor[] 
+  purokCoor    PurokCoor[]
   municipalID  Municipals  @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
   municipalsId Int
   barangayID   Barangays   @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
@@ -239,16 +242,16 @@ model Survey {
   name               String               @default("Title_")
   timestamp          DateTime             @default(now())
   type               String
-  queries            Queries[]            
+  queries            Queries[]
   drafted            Boolean?             @default(true)
   status             String?              @default("Ongoing")
   createdBy          AdminUser            @relation(fields: [adminUserUid], references: [uid], onDelete: Cascade)
-  images             MediaUrl[]           
+  images             MediaUrl[]
   adminUserUid       String
-  DeviceLogs         DeviceLogs[]         
-  Response           Response[]           
-  RespondentResponse RespondentResponse[] 
-  SurveyResponse     SurveyResponse[]     
+  DeviceLogs         DeviceLogs[]
+  Response           Response[]
+  RespondentResponse RespondentResponse[]
+  SurveyResponse     SurveyResponse[]
 }
 
 model SampleSize {
@@ -266,24 +269,24 @@ model AgeBracket {
   id                 String               @id @default(cuid())
   segment            String
   order              Int                  @default(autoincrement())
-  Response           Response[]           
-  RespondentResponse RespondentResponse[] 
-  Quota              Quota[]              
+  Response           Response[]
+  RespondentResponse RespondentResponse[]
+  Quota              Quota[]
 }
 
 model Gender {
   id                 String               @id @default(cuid())
   name               String
-  Response           Response[]           
-  RespondentResponse RespondentResponse[] 
-  GenderSize         GenderSize[]         
-  GenderTotal        GenderTotal[]        
+  Response           Response[]
+  RespondentResponse RespondentResponse[]
+  GenderSize         GenderSize[]
+  GenderTotal        GenderTotal[]
 }
 
 model GenderTotal {
-  id       String  @id @default(cuid())
-  total    Int?    @default(0)
-  gender   Gender  @relation(fields: [genderId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  total    Int?   @default(0)
+  gender   Gender @relation(fields: [genderId], references: [id], onDelete: Cascade)
   genderId String
 }
 
@@ -314,9 +317,13 @@ model Queries {
   surveyId      String
   type          String?       @default("single")
   componentType String?       @default("regular")
-  Response      Response[]    
-  Option        Option[]      
-  QueryAnswer   QueryAnswer[] 
+  responseType  String?       @default("multiple")
+  selectionType String?       @default("select")
+  access        String?       @default("regular")
+  Response      Response[]
+  Option        Option[]
+  QueryAnswer   QueryAnswer[]
+  onTop         Boolean?      @default(false)
 }
 
 model Option {
@@ -328,9 +335,11 @@ model Option {
   queries     Queries       @relation(fields: [queryId], references: [id], onDelete: Cascade)
   queryId     String
   onExit      Boolean       @default(false)
-  Response    Response[]    
-  MediaUrl    MediaUrl[]    
-  QueryAnswer QueryAnswer[] 
+  onTop       Boolean?       @default(false)
+  inlcuded    Boolean?       @default(false)
+  Response    Response[]
+  MediaUrl    MediaUrl[]
+  QueryAnswer QueryAnswer[]
 }
 
 model MediaUrl {
@@ -356,7 +365,7 @@ model SurveyResponse {
   usersUid           String?
   surveyId           String
   RespondentResponse RespondentResponse[]
-  Response           Response[]          
+  Response           Response[]
 }
 
 model RespondentResponse {
@@ -371,7 +380,7 @@ model RespondentResponse {
   barangaysId      String
   survey           Survey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
   surveyId         String
-  Response         Response[]   
+  Response         Response[]
   surveyResponse   SurveyResponse @relation(fields: [surveyResponseId], references: [id], onDelete: Cascade)
   surveyResponseId String
 }
@@ -421,4 +430,3 @@ model DeviceLogs {
   survey       Survey    @relation(fields: [surveyId], references: [id], onDelete: Cascade)
   surveyId     String
 }
-
