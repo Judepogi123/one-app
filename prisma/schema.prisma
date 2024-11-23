@@ -85,7 +85,7 @@ model Wave {
 
 model Voters {
   id              String           @id @default(uuid())
-  idNumber        String?          @default("none")
+  // idNumber        String?          @default("none")
   lastname        String
   firstname       String
   gender          String?          @default("Unknown")
