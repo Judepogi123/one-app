@@ -44,14 +44,14 @@ type Users {
     level: Int!
     barangaysId: ID!
     municipalsId: Int!
-    precentsId: ID!
+    precentsId: ID
     calcAge: Int!
-    birthYear: String!
+    birthYear: String
     batchYearId: Int!
     saveStatus: String!
     mobileNumber: String!
     houseHold: HouseHold!
-    houseHoldId: String!
+    houseHoldId: String
     newBatchDraft: NewBatchDraft!
     newBatchDraftId: String!
     purok: Purok!
@@ -62,6 +62,18 @@ type Users {
     inc: String!
     illi: String!
     inPurok: Boolean!
+    senior: Boolean
+    gender: String!
+    youth: Boolean
+    hubId: String
+    hub: Hub
+    teamLeaderId: String
+    qrCode: String
+    qrCodes: [QRcode!]
+    qrCodeNumber: Int
+    candidatesId: String
+    teamId: String
+    leader: TeamLeader
   }
 
   type Municipal {
@@ -101,6 +113,9 @@ type Users {
     quota: [Quota!]
     quotas(id: ID!): [Quota!]
     optionResponse(id: String!,surveyId: String!): Int!
+    selectedQuery(id: String!): [Option!]
+    options(queryId: String!): [Option!]
+    validationList:[Validation!]
   }
 
   type Precent {
@@ -129,6 +144,7 @@ type Users {
     barangayId: ID!
     timestamp: String!
     voters: [Voter!]!
+    drafted: Boolean
   }
 
   type HouseHold {
@@ -157,12 +173,66 @@ type Users {
     draftID: String!
   }
 
+type Hub {
+  id: ID!
+  info: String!
+  barangay: Barangay!
+  barangaysId: String!
+  municipal: Municipal! 
+  municipalsId: Int!
+  teamLeader: TeamLeader!
+  teamLeaderId: String!
+  voters: [Voter!]!
+}
+
+type TeamLeader {
+  id: ID!
+  voters: [Voter!]
+  hubId: String!
+  municipal: Municipal!
+  municipalsId: Int!
+  barangay: Barangay!
+  barangaysId: String!
+  purokCoor: PurokCoor!
+  purokCoorId: String!
+  votersId: String!
+  voter: Voter
+  hub: [Hub!]!
+  teams: [Team!]!
+  level: Int!
+  teamId: String!
+}
+
+type Team {
+  id: ID!
+  teamLeader: TeamLeader
+  teamLeaderId: String
+  voters: [Voter!]
+  votersId: String 
+  purok: Purok
+  purokId: String!
+  barangay: Barangay
+  barangaysId: String!
+  municipal: Municipal!
+  municipalsId: Int!
+  votersCount: Int
+  candidate: Candidates
+  level: Int!
+}
+
+type ValdiatedTeams {
+  id: String!
+  teamLeaderId: String!
+  
+}
+
   type Query {
     users: [Users!]!
     user(uid: ID!): Users
     voters: [Voter!]!
-    voter(id: ID!): Voter
+    voter(id: String!): Voter
     searchDraftVoter(query: SearchDraftQueryInput!): [Voter]!
+    searchVoter(query: String!,skip: Int!,take: Int): [Voter!]
     votersCount: Int!
     municipals: [Municipal!]!
     municipal(id: Int!): Municipal
@@ -206,8 +276,64 @@ type Users {
     getRespondentResponseById(id: String!): RespondentResponse
     optionCountAge(optionId: String!, ageBracketId: String!): Int
     optionRank(surveyId: String!,zipCode: Int!, barangayId: String!,genderId: String!, optionId: String!, queryId: String!,ageBracketId: String!): Int
+    optionGenderRank(surveyId: String!,zipCode: Int!, barangayId: String!,genderId: String!, optionId: String!, queryId: String!,ageBracketId: String!): Int
+    barangayOptionResponse(zipCode: Int!, queryId: String!, surveyId: String!):[Barangay!]
+    getAllVoters(offset: Int!, limit: Int!, barangayId: String!, zipCode: String!): [Voter!]
+    getSelectedVoters(list: [String!]): [Voter!]
+    getRankOption(optionId: String!): String!
+    getAllPurokCoor: [PurokCoor!]
+    getAllTeamLeader: [TeamLeader!]
+    getVotersList(level: String!, take: Int, skip: Int, zipCode: String, barangayId: String,purokId: String, query: String, pwd: String, illi: String,inc: String,oor: String,dead: String,youth: String,senior: String,gender: String): VotersList
+    getPurokList(id: String!): [Purok!]
+    teamList(zipCode: String!, barangayId: String!, purokId: String!, level: String!,query: String!, skip: Int!, candidate: String): [Team!]
+    candidates: [Candidates!]
+    team(id: String!): Team
+    getAllTL: [TeamLeader!]
+    teams:[Team!]
+    validationList(id: ID!):[Validation!]
     option(id: String!):Option!
   }
+
+  type Validation {
+  id: ID!
+  timestamp: String!
+  municipal: Municipal!
+  percent: Float!
+  totalVoters: Int!
+  municipalsId: Int!
+  barangay: Barangay!
+  barangaysId: String!
+}
+
+  type VotersList {
+    voters: [Voter!]
+    results: Int!
+  }
+
+  type PurokCoor {
+  id: ID!
+  voter: Voter!
+  votersId: String!
+  municipal: Municipal!
+  municipalsId: Int!
+  barangay: Barangay!
+  barangaysId: String!
+  teamLeaders: [TeamLeader!]!
+  barangayCoor: BarangayCoor!
+  barangayCoorId: String!
+}
+
+type BarangayCoor {
+  id: ID!
+  voter: Voter!
+  votersId: String!
+  purokCoors: [PurokCoor!]!
+  municipal: Municipal!
+  municipalsId: Int!
+  barangay: Barangay!
+  barangaysId: String!
+}
+
 
   type Mutation {
     createUser(user: NewUserInput): Users!
@@ -267,9 +393,54 @@ type Users {
     updateOptionTop(id: String!,value: Boolean!):Option
     removeResponse(id: String!): RespondentResponse!
     changeQueryOnTop(id: String!,value: Boolean!): Queries!
+    updateQueryAccess(id: String!): Queries!
+    optionForAll(id: String!,value: Boolean!): Option!
     signUp(user: SignUpInput!): AdminUser!
+    discardDraftedVoter(id: String): String!
+    saveDraftedVoter(batchId: String!): NewBatchDraft!
+    removeVoter(id: String!): String!
     adminLogin(user:AdminLoginInput!): AuthUser!
+    removeMultiVoter(list: [String!]): String!
+    addTeam(headId: String!,teamIdList: [VoterInput!], level: Int!): String!
+    addMember(headId: String!,teamIdList: [VoterInput!], level: Int!, teamId: String!): String!
+    removeVotersArea(zipCode: String!, barangayId: String!, purokId: String!): String!
+    deleteTeams: String
+    genderBundleQrCode(idList: [String!]): String!
+    generatedTeamQRCode(teamId: String!): String!
+    removeQRcode(id: [String!]):String!
+    createPostion(title: String!): String!
+    addNewCandidate(firstname: String!, lastname: String!, code: String!,colorCode: String): String!
+    updateLeader(id: String!, level: Int!, teamId: String!, method: Int!): String!
+    setVoterLevel(level: Int!, id: String!,code: String!): String!
+    changeLeader(id: String!, teamId: String!, level: Int!): String!
   }
+
+  type Candidates {
+  id: ID!
+  lastname: String!
+  firstname: String!
+  code: String
+  desc: String
+  image: MediaUrl
+  colorCode: String
+  supporters: [Voter!]!
+  candidateBatchId: String!
+  BarangayCoor: [BarangayCoor!]!
+  PurokCoor: [PurokCoor!]
+  TeamLeader: [TeamLeader!]
+  Team: [Team!]
+}
+
+  type QRcode {
+  id: ID!
+  number: Int!
+  qrCode: String!
+  timestamp: String!
+  voter: Voter!
+  votersId: String!
+  stamp: Int!
+  scannedDateTime: String
+}
 
   type AgeBracket{
     id: String!
@@ -335,11 +506,13 @@ type Queries {
   survey: Survey!
   surveyId: String!
   type: String!
+  access: String
   componentType: String!
   response: [Response!]!
   options: [Option!]
   respondentOption(id: String!): [Response!]
   onTop: Boolean!
+  barangayList(zipCode: Int!): [Barangay!]
 }
 
 type Option {
@@ -354,7 +527,10 @@ type Option {
   onExit: Boolean
   onTop: Boolean!
   order: Int!
+  forAll: Boolean!
+  inlcuded: Boolean!
   overAllResponse(id: String,zipCode: Int!, barangayId: String!,genderId: String!): Int!
+  overAllCount: Int
   ageCountRank(id: String,ageBracketId: String,barangayId: String!,genderId: String!): Int!
   optionRank(surveyId: String!,zipCode: Int!, barangayId: String!,genderId: String!, optionId: String!): Int
   barangays:[Barangay!] 
@@ -467,8 +643,32 @@ type DeviceLogs {
   surveyId: String!
 }
 
+type BarangayOptionResponse {
+  id: String!
+  name: String!
+  options: [Option!]!
+}
+
 type BatchPayload {
   count: Int!
+}
+
+input VoterInput {
+    id: ID!
+    lastname: String!
+    firstname: String!
+    status: Int!
+    level: Int!
+    barangaysId: String!
+    municipalsId: Int!
+    purokId: String!
+  }
+
+input BarangayInput {
+  id: ID!
+  name: String
+  zipCode: Int
+  # Add other fields you need for output
 }
 
 input QuotaUpdate {

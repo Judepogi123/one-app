@@ -3,3 +3,20 @@ export const handleGenTagID = (min = 100000, max = 999999)=> {
 }
 
 // Example usage:
+export const handleSpecialChar = (char: string, value: string)=>{
+    const temp = value.split("")
+    if(temp.at(-1)=== char){
+        return temp.slice(0,-1).join("")
+    }
+    return value
+}
+
+export const handleGender = (value: string | undefined)=>{
+    if(value === "M" && value !== undefined){
+        return "Male"
+    }
+    if(value === "F" && value !== undefined){
+        return "Female"
+    }
+    return "Unknown"
+}

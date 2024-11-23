@@ -20,21 +20,35 @@ export interface DataProps {
   lastname: string;
   firstname: string;
   __EMPTY?: string;
+  __EMPTY_1?: string;
+  Gender?: string;
+  gender: string;
   Address: string;
-  "B-day"?: string;
+  Birthday?: string| number | null;
   DL: string;
   PWD: string;
   IL: string;
   INC: string;
   OR: string;
+  SC: string;
+  "18-30": string;
   saveStatus: string;
+}
+
+export interface UpdateDataProps {
+  firstname: string;
+  "Voter's Name"?: string;
+  lastname: string;
+  DL: string | undefined;
+  INC: string | undefined;
+  OR: string | undefined;
+  [key: string]: string | undefined;
 }
 
 export interface GenderProps {
   id: string;
   name: string;
 }
-
 
 export interface AgeBracket {
   id: string;
@@ -50,7 +64,8 @@ export interface OptionProps {
   id: string;
   queryId: string;
   title: string;
-  desc: string
+  desc: string;
+  overAllCount?: number;
 }
 export interface RespondentResponseProps {
   id: string;
@@ -59,14 +74,14 @@ export interface RespondentResponseProps {
   surveyId: string;
   queryId: string;
   ageBracketId: string;
-  genderId: string
+  genderId: string;
   respondentResponseId: string;
   option: OptionProps[];
 }
 export interface SelectedOptionProps {
   id: string;
   title: string;
-overAllResponse:number
+  overAllResponse: number;
   barangays: {
     id: string;
     name: string;
@@ -74,4 +89,26 @@ overAllResponse:number
     maleSize: number;
     optionResponse: number;
   }[];
+}
+
+export interface BarangayOptionResponse {
+  id: string;
+  name: string;
+  options: {
+    id: string;
+    queryId: string;
+    title: string | null;
+    desc: string | null;
+    overAllCount: number;
+  }[];
+}
+export interface RejectListProps {
+  id: string;
+  firstname: string;
+  lastname: string;
+  municipal: number;
+  barangay: string;
+  reason: string;
+  teamId: string | null;
+  code: number
 }
