@@ -33,6 +33,10 @@ export default (io: any) => {
         const sheets = workbook.SheetNames;
 
         const processedData: { [sheetName: string]: DataProps[] } = {};
+        const candidates = await prisma.candidates.findMany();
+        if (candidates.length <= 0) {
+          return res.status(400).send("Candidates not found.");
+        }
 
         sheets.forEach((sheetName) => {
           const worksheet = workbook.Sheets[sheetName];
@@ -40,9 +44,13 @@ export default (io: any) => {
             XLSX.utils.sheet_to_json<DataProps>(worksheet);
 
           processedData[sheetName] = data.map((row: DataProps) => {
-            console.log(row);
-
             const newRow: Partial<DataProps> = {};
+            console.log("ROw: ", `${row.No}`);
+            
+            const supporting = candidates.map((candidate) =>
+              row[candidate.code as string] ? candidate.id : undefined
+            );
+            const candidateId = supporting.filter(Boolean);
 
             if (row["Voter's Name"]) {
               const [lastname, firstname] = row["Voter's Name"]
@@ -54,7 +62,7 @@ export default (io: any) => {
               newRow.lastname = "Unknown";
               newRow.firstname = "Unknown";
             }
-
+            newRow.No = row.No;
             newRow.Birthday = extractYear(row.Birthday as string);
             newRow.__EMPTY = row.__EMPTY || "O";
             newRow.Gender = handleGender(row.Gender);
@@ -66,7 +74,7 @@ export default (io: any) => {
             newRow.OR = row.OR ? "YES" : "NO";
             newRow.SC = row.SC ? "YES" : "NO";
             newRow["18-30"] = row["18-30"] ? "YES" : "NO";
-
+            newRow.candidateId = candidateId[0];
             return newRow as DataProps;
           });
         });
@@ -95,79 +103,82 @@ export default (io: any) => {
       let successCounter = 0;
 
       for (let row of Object.values(data as DataProps[]).flat()) {
-        console.log(row);
-
         if (!row) {
           continue;
         }
         successCounter++;
         io.emit("draftedCounter", successCounter);
-
-        const voterExisted = await prisma.voters.findFirst({
-          where: {
-            firstname: row.firstname,
-            lastname: row.lastname,
-            barangaysId: barangayId,
-            municipalsId: parseInt(zipCode, 10),
-          },
-        });
-
-        if (voterExisted) {
-          rejectList.push({
-            ...row,
-            saveStatus: "Existed",
-          });
-          continue;
-        }
-
-        let purok = await prisma.purok.findFirst({
-          where: {
-            purokNumber: `${row.Address}`,
-            barangaysId: barangayId,
-            municipalsId: parseInt(zipCode, 10),
-            draftID: draftID,
-          },
-        });
-
-        if (!purok) {
-          purok = await prisma.purok.create({
-            data: {
-              purokNumber:`${row.Address}`,
-              municipalsId: parseInt(zipCode, 10),
+        try {
+          const voterExisted = await prisma.voters.findFirst({
+            where: {
+              firstname: row.firstname,
+              lastname: row.lastname,
               barangaysId: barangayId,
+              municipalsId: parseInt(zipCode, 10),
+            },
+          });
+
+          if (voterExisted) {
+            rejectList.push({
+              ...row,
+              saveStatus: "Existed",
+            });
+            continue;
+          }
+
+          let purok = await prisma.purok.findFirst({
+            where: {
+              purokNumber: `${row.Address}`,
+              barangaysId: barangayId,
+              municipalsId: parseInt(zipCode, 10),
               draftID: draftID,
             },
           });
-        }
 
-        await prisma.voters.create({
-          data: {
-            lastname: row.lastname,
-            firstname: row.firstname,
-            gender: row.Gender,
-            birthYear: `${row.Birthday}`,
-            barangaysId: barangayId,
-            municipalsId: parseInt(zipCode, 10),
-            newBatchDraftId: draftID,
-            calcAge: !row.Birthday
-              ? 0
-              : extractYear(row.Birthday as string) ?? 0,
-            purokId: purok.id,
-            pwd: row.PWD,
-            oor: row.OR,
-            inc: row.INC,
-            illi: row.IL,
-            inPurok: true,
-            hubId: null,
-            houseHoldId: undefined,
-            mobileNumber: "Unknown",
-            senior: row.SC === "YES" ? true : false,
-            status: row.DL === "YES" ? 0 : 1,
-            candidatesId: undefined,
-            precintsId: undefined,
-            youth: row["18-30"] === "YES" ? true : false,
-          },
-        });
+          if (!purok) {
+            purok = await prisma.purok.create({
+              data: {
+                purokNumber: `${row.Address}`,
+                municipalsId: parseInt(zipCode, 10),
+                barangaysId: barangayId,
+                draftID: draftID,
+              },
+            });
+          }
+
+          await prisma.voters.create({
+            data: {
+              lastname: row.lastname,
+              firstname: row.firstname,
+              gender: row.Gender,
+              birthYear: `${row.Birthday}`,
+              barangaysId: barangayId,
+              municipalsId: parseInt(zipCode, 10),
+              newBatchDraftId: draftID,
+              calcAge: !row.Birthday
+                ? 0
+                : extractYear(row.Birthday as string) ?? 0,
+              purokId: purok.id,
+              pwd: row.PWD,
+              oor: row.OR,
+              inc: row.INC,
+              illi: row.IL,
+              inPurok: true,
+              hubId: null,
+              houseHoldId: undefined,
+              mobileNumber: "Unknown",
+              senior: row.SC === "YES" ? true : false,
+              status: row.DL === "YES" ? 0 : 1,
+              candidatesId: row.candidateId,
+              precintsId: undefined,
+              youth: row["18-30"] === "YES" ? true : false,
+              idNumber: `${row.No}`,
+            },
+          });
+        } catch (error) {
+          console.log(row["Voter's Name"], error);
+          continue;
+        }
       }
 
       res.status(200).json({
@@ -177,7 +188,6 @@ export default (io: any) => {
       });
     } catch (error) {
       console.log(error);
-
       res
         .status(500)
         .send({ status: "Internal server error", message: `${error}` });

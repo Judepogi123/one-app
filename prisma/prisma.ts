@@ -27,12 +27,14 @@ import {
   Validation,
   Voters,
   Position,
-  Prisma
+  Prisma,
+  ValidatedTeams,
+  ValidatedTeamMembers,
 } from "@prisma/client";
 
 const prisma = new PrismaClient({
-    log: ['info'],
-  })
+  log: ["info"],
+});
 
 export {
   prisma,
@@ -62,5 +64,7 @@ export {
   Team,
   Validation,
   Position,
-  Prisma
+  Prisma,
+  ValidatedTeams,
+  ValidatedTeamMembers,
 };

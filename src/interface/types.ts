@@ -26,8 +26,13 @@ import {
   QRcode,
   Team,
   Validation,
+  ValidatedTeams,
 } from "../../prisma/prisma";
-import { BarangayOptionResponse, RespondentResponseProps } from "./data";
+import {
+  BarangayOptionResponse,
+  RespondentResponseProps,
+  ValidatedTeamMembers,
+} from "./data";
 
 export type ResolverFn<Parent, Args, Context, Result> = (
   parent: Parent,
@@ -238,6 +243,13 @@ export type Resolvers = {
     validationList: ResolverFn<{}, { id: string }, {}, Validation[]>;
     getAllTL: ResolverFn<{}, {}, {}, TeamLeader[]>;
     teams: ResolverFn<{}, {}, {}, Team[]>;
+    teamRecord: ResolverFn<
+      {},
+      { query: string; barangay: string; municipal: string; skip: number },
+      {},
+      ValidatedTeams[]
+    >;
+    getTeamRecord: ResolverFn<{}, { id: string }, {}, ValidatedTeams | null>;
   };
   Mutation: {
     createVoter: ResolverFn<{}, Voters, {}, Voters>;
@@ -314,6 +326,7 @@ export type Resolvers = {
           surveyId: string;
           type: string;
           onTop: boolean;
+          style: number;
         };
       },
       {},
@@ -616,6 +629,46 @@ export type Resolvers = {
       string
     >;
     deleteTeams: ResolverFn<{}, {}, {}, string>;
+    assignBarangayIDnumber: ResolverFn<{}, { zipCode: number }, {}, string>;
+    assignTeam: ResolverFn<
+      {},
+      {
+        team: {
+          zipCode: number;
+          barangayCoorId: string;
+          purokCoorId: string;
+          barangayId: string;
+          teamLeaderId: string;
+          members: string[];
+        };
+      },
+      {},
+      string
+    >;
+    composeTeam: ResolverFn<
+      {},
+      {
+        team: {
+          zipCode: number;
+          barangayCoorId: string;
+          purokCoorId: string;
+          barangayId: string;
+          teamLeaderId: string;
+          members: string[];
+        };
+      },
+      {},
+      string
+    >;
+    clearTeamRecords: ResolverFn<{}, {}, {}, string>;
+    multiSelectVoter: ResolverFn<
+      {},
+      { teamId: string; members: string[]; method: number },
+      {},
+      string
+    >;
+    removeTeam: ResolverFn<{}, { id: string }, {}, string>;
+    //removeValidateTeamleader: ResolverFn<{}, {}, {}, string>;
   };
   Voter: {
     votersCount: ResolverFn<{}, {}, {}, number>;
@@ -801,5 +854,23 @@ export type Resolvers = {
   };
   TeamLeader: {
     voter: ResolverFn<TeamLeader, {}, {}, Voters | null>;
+  };
+  Candidates: {
+    supporters: ResolverFn<Candidates, {}, {}, number>;
+  };
+  ValidatedTeams: {
+    teamLeader: ResolverFn<ValidatedTeams, {}, {}, TeamLeader | null>;
+    municipal: ResolverFn<ValidatedTeams, {}, {}, Municipals | null>;
+    barangay: ResolverFn<ValidatedTeams, {}, {}, Barangays | null>;
+    purok: ResolverFn<ValidatedTeams, {}, {}, Purok | null>;
+    validatedTeamMembers: ResolverFn<
+      ValidatedTeams,
+      {},
+      {},
+      ValidatedTeamMembers[]
+    >;
+  };
+  ValidatedTeamMembers: {
+    voter: ResolverFn<ValidatedTeamMembers, {}, {}, Voters | null>;
   };
 };

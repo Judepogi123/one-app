@@ -1,3 +1,5 @@
+import { Voters, Barangays, Municipals, TeamLeader } from "../../prisma/prisma";
+
 export interface RowProps {
   __EMPTY: string;
   __EMPTY_1: string;
@@ -24,7 +26,7 @@ export interface DataProps {
   Gender?: string;
   gender: string;
   Address: string;
-  Birthday?: string| number | null;
+  Birthday?: string | number | null;
   DL: string;
   PWD: string;
   IL: string;
@@ -33,6 +35,8 @@ export interface DataProps {
   SC: string;
   "18-30": string;
   saveStatus: string;
+  [key: string]: string | number | null | undefined;
+  candidateId?: string;
 }
 
 export interface UpdateDataProps {
@@ -110,5 +114,47 @@ export interface RejectListProps {
   barangay: string;
   reason: string;
   teamId: string | null;
-  code: number
+  code: number;
+  idNumber?: string;
+}
+export interface RejectListedProps
+  extends Pick<
+    Voters,
+    | "id"
+    | "firstname"
+    | "lastname"
+    | "idNumber"
+    | "barangaysId"
+    | "municipalsId"
+    | "level"
+  > {
+  reason: string;
+  code: number;
+}
+
+export interface ValidatedTeams {
+  id: string;
+  teamLeader?: TeamLeader | null;
+  teamLeaderId?: string | null;
+  barangay: Barangays;
+  barangaysId: string;
+  municipal: Municipals;
+  municipalsId: number;
+  purokId: string;
+  validatedTeamMembers: ValidatedTeamMembers[];
+  timestamp: Date;
+}
+
+// Interface for the ValidatedTeamMembers model
+export interface ValidatedTeamMembers {
+  idNumber: string;
+  votersId?: string | null;
+  barangayId: string;
+  municipal?: string;
+  municipalsId?: number | null;
+  purokId: string;
+  teamLeader?: TeamLeader | null;
+  teamLeaderId: string | null;
+  validatedTeamsId: string | null;
+  remark: string | null;
 }

@@ -18,9 +18,9 @@ const path_1 = __importDefault(require("path"));
 const xlsx_1 = __importDefault(require("xlsx"));
 //utils
 const date_1 = require("../utils/date");
+const data_1 = require("../utils/data");
 //database
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../../prisma/prisma");
 const uploadDir = path_1.default.join(__dirname, "uploads");
 const upload = (0, multer_1.default)({ dest: uploadDir });
 exports.default = (io) => {
@@ -34,36 +34,49 @@ exports.default = (io) => {
             const workbook = xlsx_1.default.readFile(filePath);
             const sheets = workbook.SheetNames;
             const processedData = {};
+            const candidates = yield prisma_1.prisma.candidates.findMany();
+            if (candidates.length <= 0) {
+                return res.status(400).send("Candidates not found.");
+            }
             sheets.forEach((sheetName) => {
                 const worksheet = workbook.Sheets[sheetName];
                 const data = xlsx_1.default.utils.sheet_to_json(worksheet);
                 processedData[sheetName] = data.map((row) => {
                     const newRow = {};
+                    console.log("ROw: ", `${row.No}`);
+                    const supporting = candidates.map((candidate) => row[candidate.code] ? candidate.id : undefined);
+                    const candidateId = supporting.filter(Boolean);
                     if (row["Voter's Name"]) {
                         const [lastname, firstname] = row["Voter's Name"]
                             .split(",")
                             .map((name) => name.trim());
-                        newRow.lastname = lastname || "Unknown";
+                        newRow.lastname = (0, data_1.handleSpecialChar)(",", lastname) || "Unknown";
                         newRow.firstname = firstname || "Unknown";
                     }
                     else {
                         newRow.lastname = "Unknown";
                         newRow.firstname = "Unknown";
                     }
-                    newRow["B-day"] = row["B-day"] || "Unknown";
+                    newRow.No = row.No;
+                    newRow.Birthday = (0, date_1.extractYear)(row.Birthday);
                     newRow.__EMPTY = row.__EMPTY || "O";
+                    newRow.Gender = (0, data_1.handleGender)(row.Gender);
                     newRow.Address = row.Address || "Unknown";
                     newRow.DL = row.DL ? "YES" : "NO";
                     newRow.IL = row.IL ? "YES" : "NO";
                     newRow.INC = row.INC ? "YES" : "NO";
                     newRow.PWD = row.PWD ? "YES" : "NO";
                     newRow.OR = row.OR ? "YES" : "NO";
+                    newRow.SC = row.SC ? "YES" : "NO";
+                    newRow["18-30"] = row["18-30"] ? "YES" : "NO";
+                    newRow.candidateId = candidateId[0];
                     return newRow;
                 });
             });
             res.status(200).json(processedData);
         }
         catch (error) {
+            console.log(error);
             res.status(500).send("Internal Server Error");
         }
     }));
@@ -81,68 +94,76 @@ exports.default = (io) => {
             let rejectList = [];
             let successCounter = 0;
             for (let row of Object.values(data).flat()) {
-                successCounter++;
-                io.emit("draftedCounter", successCounter);
                 if (!row) {
                     continue;
                 }
-                if (row.DL === "YES") {
-                    rejectList.push(Object.assign(Object.assign({}, row), { saveStatus: "Dead" }));
-                    continue;
-                }
-                const voterExisted = yield prisma.voters.findFirst({
-                    where: {
-                        firstname: row.firstname,
-                        lastname: row.lastname,
-                        barangaysId: barangayId,
-                        municipalsId: parseInt(zipCode, 10),
-                    },
-                });
-                if (voterExisted) {
-                    rejectList.push(Object.assign(Object.assign({}, row), { saveStatus: "Existed" }));
-                    continue;
-                }
-                let purok = yield prisma.purok.findFirst({
-                    where: {
-                        purokNumber: row.Address,
-                        barangaysId: barangayId,
-                        municipalsId: parseInt(zipCode, 10),
-                        draftID: draftID
-                    },
-                });
-                if (!purok) {
-                    purok = yield prisma.purok.create({
-                        data: {
-                            purokNumber: row.Address,
-                            municipalsId: parseInt(zipCode, 10),
+                successCounter++;
+                io.emit("draftedCounter", successCounter);
+                try {
+                    const voterExisted = yield prisma_1.prisma.voters.findFirst({
+                        where: {
+                            firstname: row.firstname,
+                            lastname: row.lastname,
                             barangaysId: barangayId,
-                            draftID: draftID
+                            municipalsId: parseInt(zipCode, 10),
+                        },
+                    });
+                    if (voterExisted) {
+                        rejectList.push(Object.assign(Object.assign({}, row), { saveStatus: "Existed" }));
+                        continue;
+                    }
+                    let purok = yield prisma_1.prisma.purok.findFirst({
+                        where: {
+                            purokNumber: `${row.Address}`,
+                            barangaysId: barangayId,
+                            municipalsId: parseInt(zipCode, 10),
+                            draftID: draftID,
+                        },
+                    });
+                    if (!purok) {
+                        purok = yield prisma_1.prisma.purok.create({
+                            data: {
+                                purokNumber: `${row.Address}`,
+                                municipalsId: parseInt(zipCode, 10),
+                                barangaysId: barangayId,
+                                draftID: draftID,
+                            },
+                        });
+                    }
+                    yield prisma_1.prisma.voters.create({
+                        data: {
+                            lastname: row.lastname,
+                            firstname: row.firstname,
+                            gender: row.Gender,
+                            birthYear: `${row.Birthday}`,
+                            barangaysId: barangayId,
+                            municipalsId: parseInt(zipCode, 10),
+                            newBatchDraftId: draftID,
+                            calcAge: !row.Birthday
+                                ? 0
+                                : (_a = (0, date_1.extractYear)(row.Birthday)) !== null && _a !== void 0 ? _a : 0,
+                            purokId: purok.id,
+                            pwd: row.PWD,
+                            oor: row.OR,
+                            inc: row.INC,
+                            illi: row.IL,
+                            inPurok: true,
+                            hubId: null,
+                            houseHoldId: undefined,
+                            mobileNumber: "Unknown",
+                            senior: row.SC === "YES" ? true : false,
+                            status: row.DL === "YES" ? 0 : 1,
+                            candidatesId: row.candidateId,
+                            precintsId: undefined,
+                            youth: row["18-30"] === "YES" ? true : false,
+                            idNumber: `${row.No}`,
                         },
                     });
                 }
-                yield prisma.voters.create({
-                    data: {
-                        lastname: row.lastname,
-                        firstname: row.firstname,
-                        birthYear: `${row["B-day"]}`,
-                        barangaysId: barangayId,
-                        municipalsId: parseInt(zipCode, 10),
-                        newBatchDraftId: draftID,
-                        calcAge: row["B-day"] === "Unknown"
-                            ? 0
-                            : (_a = (0, date_1.extractYear)(row["B-day"])) !== null && _a !== void 0 ? _a : 0,
-                        purokId: purok.id,
-                        pwd: row.PWD,
-                        oor: row.OR,
-                        inc: row.INC,
-                        illi: row.IL,
-                        inPurok: row.__EMPTY ? true : false,
-                        teamLeaderId: "Unknown",
-                        hubId: "Unknown",
-                        houseHoldId: "Unknown",
-                        mobileNumber: "Unknown",
-                    },
-                });
+                catch (error) {
+                    console.log(row["Voter's Name"], error);
+                    continue;
+                }
             }
             res.status(200).json({
                 message: "Success",
@@ -151,7 +172,136 @@ exports.default = (io) => {
             });
         }
         catch (error) {
-            res.status(500).send("Internal server error");
+            console.log(error);
+            res
+                .status(500)
+                .send({ status: "Internal server error", message: `${error}` });
+        }
+    }));
+    router.post("/update-voters", upload.single("file"), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+        const { zipCode, barangayId } = req.body;
+        if (!req.file) {
+            return res.status(400).send("No file uploaded.");
+        }
+        const filePath = path_1.default.join(uploadDir, req.file.filename);
+        const rejectList = [];
+        try {
+            const workbook = xlsx_1.default.readFile(filePath);
+            const sheets = workbook.SheetNames;
+            let updateVoterCounter = 0;
+            let validdatedVoters = 0;
+            io.emit("updateVoterCounter", updateVoterCounter);
+            const candidates = yield prisma_1.prisma.candidates.findMany();
+            if (candidates.length <= 0) {
+                return res.status(400).send("Candidates not found.");
+            }
+            for (const sheetName of sheets) {
+                const sheet = workbook.Sheets[sheetName];
+                const data = xlsx_1.default.utils.sheet_to_json(sheet);
+                for (const row of data) {
+                    const newRow = {
+                        lastname: "Unknown",
+                        firstname: "Unknown",
+                        DL: row.DL || undefined,
+                        INC: row.INC || undefined,
+                        OR: row.OR || undefined,
+                    };
+                    const supporting = candidates.map((candidate) => row[candidate.code] ? candidate.id : undefined);
+                    if (row["Voter's Name"]) {
+                        const [lastname, firstname] = row["Voter's Name"]
+                            .split(",")
+                            .map((name) => name.trim());
+                        newRow.lastname = (0, data_1.handleSpecialChar)(",", lastname) || "Unknown";
+                        newRow.firstname = firstname || "Unknown";
+                    }
+                    if (!row.DL && !row.INC && !row.OR && !supporting[0]) {
+                        rejectList.push({
+                            firstname: newRow.firstname,
+                            lastname: newRow.lastname,
+                            reason: "Updated",
+                            code: 11,
+                            barangay: barangayId,
+                            municipal: zipCode,
+                            teamId: "Unknown",
+                            id: "Unknown",
+                        });
+                        validdatedVoters++;
+                        continue;
+                    }
+                    // Fetch voter metadata
+                    const voterMetaData = yield prisma_1.prisma.voters.findFirst({
+                        where: {
+                            firstname: newRow.firstname,
+                            lastname: newRow.lastname,
+                            barangaysId: barangayId,
+                        },
+                    });
+                    if (!voterMetaData) {
+                        rejectList.push({
+                            firstname: newRow.firstname,
+                            lastname: newRow.lastname,
+                            reason: "Voter does not exist",
+                            code: 0,
+                            barangay: barangayId,
+                            municipal: zipCode,
+                            teamId: "Unknown",
+                            id: "Unknown",
+                        });
+                        validdatedVoters++;
+                        continue;
+                    }
+                    // Update voter data
+                    yield prisma_1.prisma.voters.update({
+                        where: {
+                            id: voterMetaData.id,
+                        },
+                        data: {
+                            oor: newRow.OR ? "YES" : "NO",
+                            status: newRow.DL ? 0 : 1,
+                            inc: newRow.INC ? "YES" : "NO",
+                            candidatesId: supporting[0],
+                        },
+                    });
+                    rejectList.push({
+                        lastname: voterMetaData.lastname,
+                        firstname: voterMetaData.firstname,
+                        reason: "Voter updated successfully",
+                        code: 0,
+                        barangay: voterMetaData.barangaysId,
+                        municipal: voterMetaData.municipalsId,
+                        id: voterMetaData.id,
+                        teamId: "Unknown",
+                    });
+                    updateVoterCounter++;
+                }
+            }
+            const totalAreaVoters = yield prisma_1.prisma.voters.count({
+                where: {
+                    barangaysId: barangayId,
+                },
+            });
+            const percentage = (updateVoterCounter / totalAreaVoters) * 100;
+            yield prisma_1.prisma.validation.create({
+                data: {
+                    municipalsId: parseInt(zipCode, 10),
+                    barangaysId: barangayId,
+                    percent: percentage,
+                    totalVoters: updateVoterCounter,
+                },
+            });
+            res.status(200).json({
+                results: rejectList,
+                percent: percentage.toFixed(2),
+                totalAreaVoters,
+                totalValidatedVoter: updateVoterCounter,
+            });
+        }
+        catch (error) {
+            console.error(error);
+            res.status(500).send({
+                status: "Internal server error",
+                message: "Something went wrong on the server. Please try again.",
+            });
         }
     }));
     return router;

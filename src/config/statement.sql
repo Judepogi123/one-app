@@ -1,0 +1,1 @@
+SELECT * FROM teamLeader WHERE votersId = (SELECT id FROM voter WHERE idNumber = ?)
