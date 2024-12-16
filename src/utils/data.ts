@@ -20,3 +20,18 @@ export const handleGender = (value: string | undefined)=>{
     }
     return "Unknown"
 }
+
+export const handleLevel = (value: number) => {
+    switch (value) {
+      case 0:
+        return "Voter";
+      case 1:
+        return "TL";
+      case 2:
+        return "PC";
+      case 3:
+        return "BC";
+      default:
+        return "Voter";
+    }
+  };

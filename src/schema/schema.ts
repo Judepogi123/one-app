@@ -21,15 +21,24 @@ type AuthUser {
 
 type Users {
   uid: String!
-  firstname: String!
-  lastname: String!
-  address: String!
-  email: String!
+  username: String!
   password: String!
-  phoneNumber: String!
+  purpose: Int!
+  privilege: [Int!]
+  status: Int!
+  role: Int!
+  timstamp: String!
   surveyResponses: [SurveyResponse!]!
   deviceLogs: [DeviceLogs!]!
+  userQRCodeId: String
+  qrCode: UserQRCode
 }
+
+  type UserQRCode {
+    id: ID!
+    qrCode: String
+    Users: Users
+  }
   type Voter {
     id: ID!
     tagID: String!
@@ -298,6 +307,8 @@ type ValdiatedTeams {
     option(id: String!):Option!
     teamRecord(query: String!, barangay: String!, municipal: String!, skip: Int!): [ValidatedTeams!]
     getTeamRecord(id: String!): ValidatedTeams
+    userList: [Users!]
+    userQRCodeList: [UserQRCode!]
   }
 
   type Validation {
@@ -323,6 +334,7 @@ type ValidatedTeams {
   purok: Purok
   validatedTeamMembers: [ValidatedTeamMembers!]
   timestamp: String!
+  issues: Int
 }
 
 type ValidatedTeamMembers {
@@ -375,7 +387,7 @@ type BarangayCoor {
 
   type Mutation {
     createUser(user: NewUserInput): Users!
-    newUser(user: NewUserInput): Users!
+    newUser(user: NewUserInput!): String!
     createVoter(voter: NewVoterInput): Voter
     createMunicipal(municipal: NewMunicipalInput!): Municipal!
     createBarangay(barangay: NewBarangayInput!): Barangay!
@@ -458,6 +470,8 @@ type BarangayCoor {
     removeValidateTeamleader: String!
     multiSelectVoter(teamId: String!, members: [String!],method: Int!):String!
     removeTeam(id: String!):String!
+    removeAllTeams: String!
+    createAccount(account: NewAccountInput!): String!
   }
 
   type Candidates {
@@ -699,6 +713,14 @@ type BatchPayload {
   count: Int!
 }
 
+input NewAccountInput {
+  role: String!
+  username: String!
+  password: String!
+  purpose: String!
+  adminPassword: String
+}
+
 input NewTeamInput{
   zipCode:Int!
   barangayCoorId: String!
@@ -750,10 +772,12 @@ input QuotaUpdate {
   }
 
   input NewUserInput {
-    firstname: String!
-    lastname: String!
     password: String!
-    status: String!
+    username: String!
+    purpose: Int!
+    role: Int!
+    status: Int!
+    privilege: [Int!]
   }
   
   input NewAdminInput{

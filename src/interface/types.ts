@@ -27,6 +27,7 @@ import {
   Team,
   Validation,
   ValidatedTeams,
+  UserQRCode,
 } from "../../prisma/prisma";
 import {
   BarangayOptionResponse,
@@ -250,21 +251,25 @@ export type Resolvers = {
       ValidatedTeams[]
     >;
     getTeamRecord: ResolverFn<{}, { id: string }, {}, ValidatedTeams | null>;
+    userList: ResolverFn<{}, {}, {}, Users[]>;
+    userQRCodeList: ResolverFn<{}, {}, {}, UserQRCode[]>;
   };
   Mutation: {
     createVoter: ResolverFn<{}, Voters, {}, Voters>;
     newUser: ResolverFn<
       {},
       {
-        firstname: string;
-        lastname: string;
-        password: string;
-        status: string;
-        phoneNumber: string;
-        address: string;
+        user: {
+          password: string;
+          status: number;
+          username: string;
+          purpose: number;
+          role: number;
+          privilege: number[];
+        };
       },
       {},
-      Users
+      string
     >;
     createMunicipal: ResolverFn<
       {},
@@ -668,6 +673,7 @@ export type Resolvers = {
       string
     >;
     removeTeam: ResolverFn<{}, { id: string }, {}, string>;
+    removeAllTeams: ResolverFn<{}, {}, {}, string>;
     //removeValidateTeamleader: ResolverFn<{}, {}, {}, string>;
   };
   Voter: {
@@ -872,5 +878,8 @@ export type Resolvers = {
   };
   ValidatedTeamMembers: {
     voter: ResolverFn<ValidatedTeamMembers, {}, {}, Voters | null>;
+  };
+  Users: {
+    qrCode: ResolverFn<Users, {}, {}, UserQRCode | null>;
   };
 };

@@ -21,7 +21,7 @@ import voters from "../routes/voter";
 import purok from "../routes/purok";
 import pdfFile from "../../routes/pdfFile";
 //utils
-import { handleGenTagID } from "../utils/data";
+import { handleGenTagID, handleLevel } from "../utils/data";
 import { GraphQLError } from "graphql";
 import {
   BarangayOptionResponse,
@@ -35,7 +35,11 @@ const app = express();
 const ioserver = createServer(app);
 const io = new Server(ioserver, {
   cors: {
-    origin: ["http://localhost:5173","https://jml-client-test.netlify.app","https://jml-portal.netlify.app"],
+    origin: [
+      "http://localhost:5173",
+      "https://jml-client-test.netlify.app",
+      "https://jml-portal.netlify.app",
+    ],
     methods: ["GET", "POST"],
   },
 });
@@ -46,14 +50,25 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-app.use(cors({origin: ["http://localhost:5173", "https://jml-portal.netlify.app"]}));
+app.use(
+  cors({ origin: ["http://localhost:5173", "https://jml-portal.netlify.app"] })
+);
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  next();
+});
 
 const resolvers: Resolvers = {
   Query: {
     users: async () => {
       return await prisma.users.findMany();
     },
-    voters: async () => await prisma.voters.findMany(),
+    voters: async () =>
+      await prisma.voters.findMany({
+        take: 20,
+      }),
     voter: async (_, { id }) => {
       return await prisma.voters.findUnique({ where: { id } });
     },
@@ -680,6 +695,12 @@ const resolvers: Resolvers = {
         where: { id },
       });
     },
+    userList: async () => {
+      return await prisma.users.findMany();
+    },
+    userQRCodeList: async () => {
+      return await prisma.userQRCode.findMany();
+    },
   },
   Mutation: {
     signUp: async (_, { user }) => {
@@ -703,9 +724,47 @@ const resolvers: Resolvers = {
     createVoter: async (_, voter) => {
       return await prisma.voters.create({ data: voter });
     },
-    newUser: async (_, user) => {
-      return await prisma.users.create({ data: { ...user } });
+    newUser: async (_, { user }) => {
+      const { username, password, privilege, purpose, role } = user;
+
+      const checked = await prisma.users.findFirst({ where: { username } });
+      if (checked) {
+        throw new GraphQLError("Username already exists");
+      }
+
+      await prisma.$transaction(async (prisma) => {
+        // Create user
+        const createdUser = await prisma.users.create({
+          data: {
+            username,
+            password,
+            status: 1,
+            privilege,
+            purpose,
+            role,
+          },
+        });
+
+        // Generate QR code
+        const generatedCode = await qrcode.toDataURL(createdUser.uid);
+
+        // Create QR code and update user
+        const qrCode = await prisma.userQRCode.create({
+          data: { qrCode: generatedCode },
+        });
+
+        // Update the user with the QR code ID
+        await prisma.users.update({
+          where: { uid: createdUser.uid },
+          data: { userQRCodeId: qrCode.id },
+        });
+
+        console.log({ createdUser });
+      });
+
+      return "OK";
     },
+
     createMunicipal: async (_, { municipal }) => {
       return await prisma.municipals.create({
         data: {
@@ -2468,7 +2527,7 @@ const resolvers: Resolvers = {
               lastname: member.lastname,
               municipalsId: member.municipalsId,
               barangaysId: member.barangaysId,
-              reason: "May katayuan na",
+              reason: `May katayuan na (${handleLevel(member.level)})`,
               level: member.level,
               idNumber: member.idNumber,
               code: 1,
@@ -2569,9 +2628,10 @@ const resolvers: Resolvers = {
       return JSON.stringify(teamMembers);
     },
     composeTeam: async (_, { team }) => {
+      console.log({ team });
+
       const resultList: RejectListedProps[] = [];
       const members = [
-        ...team.members,
         team.barangayCoorId,
         team.purokCoorId,
         team.teamLeaderId,
@@ -2596,6 +2656,10 @@ const resolvers: Resolvers = {
       const membersData = await prisma.voters.findMany({
         where: {
           idNumber: { in: members },
+          municipalsId: team.zipCode,
+          barangay: {
+            number: parseInt(team.barangayId, 10),
+          },
         },
       });
 
@@ -2606,17 +2670,25 @@ const resolvers: Resolvers = {
       const barangayCoor = handleGetInitInfo(team.barangayCoorId);
       const purokCoor = handleGetInitInfo(team.purokCoorId);
       const teamLeader = handleGetInitInfo(team.teamLeaderId);
-      console.log({ barangayCoor, purokCoor, teamLeader });
 
       const handleGetLeaderData = async (
         id: string,
         level: number,
         voterId: string,
         purokId: string,
-        teamId?: string
+        teamId?: string,
+        headIdOne?: string,
+        headIdTwo?: string
       ) => {
         try {
-          console.log("Params: ", teamId, purokId, voterId);
+          console.log(
+            "Params: ",
+            teamId,
+            purokId,
+            voterId,
+            headIdOne,
+            headIdTwo
+          );
 
           // Find existing leader
           const leader = await prisma.teamLeader.findFirst({
@@ -2645,6 +2717,8 @@ const resolvers: Resolvers = {
               hubId: "unknown",
               handle: 0,
               purokId: purokId,
+              barangayCoorId: level === 2 || level === 1 ? headIdOne : null,
+              purokCoorsId: level === 1 ? headIdTwo : null,
             },
           });
 
@@ -2682,7 +2756,6 @@ const resolvers: Resolvers = {
           console.log("New leader created:", level, newLeader);
           console.log("Updated voter record:", level, updatedVoter);
 
-          // Return the new leader with the teamId
           return { ...newLeader, teamId: newTeam.id };
         } catch (error) {
           console.error("Something went wrong:", error);
@@ -2690,13 +2763,13 @@ const resolvers: Resolvers = {
         }
       };
 
-      // Call the function sequentially, ensuring teamId is passed properly
       const barangayCoorData = await handleGetLeaderData(
         team.barangayCoorId,
         3,
         barangayCoor?.id as string,
         barangayCoor?.purokId as string,
-        undefined // No teamId for the top-level leader
+        undefined,
+        undefined
       );
 
       const purokCoorData = await handleGetLeaderData(
@@ -2704,7 +2777,8 @@ const resolvers: Resolvers = {
         2,
         purokCoor?.id as string,
         purokCoor?.purokId as string,
-        barangayCoorData?.teamId as string
+        barangayCoorData?.teamId as string,
+        barangayCoorData?.id
       );
 
       const teamLeaderData = await handleGetLeaderData(
@@ -2712,14 +2786,10 @@ const resolvers: Resolvers = {
         1,
         teamLeader?.id as string,
         teamLeader?.purokId as string,
-        purokCoorData?.teamId as string
+        purokCoorData?.teamId as string,
+        barangayCoorData?.id,
+        purokCoorData?.id
       );
-
-      console.log("Data:", {
-        barangayCoorData,
-        purokCoorData,
-        teamLeaderData,
-      });
 
       const temp = await prisma.validatedTeams.create({
         data: {
@@ -2730,101 +2800,120 @@ const resolvers: Resolvers = {
         },
       });
 
-      for (const member of membersData.filter(
-        (item) =>
-          item.idNumber !== team.barangayCoorId &&
-          item.idNumber !== team.purokCoorId &&
-          item.idNumber !== team.teamLeaderId
-      )) {
+      for (const member of team.members) {
         try {
-          if (member.barangaysId !== barangay.id) {
+          const voter = await prisma.voters.findFirst({
+            where: {
+              idNumber: member,
+              municipalsId: team.zipCode,
+              barangay: {
+                number: parseInt(team.barangayId, 10),
+              },
+            },
+          });
+
+          if (!voter) {
             resultList.push({
-              id: member.id,
-              firstname: member.firstname,
-              lastname: member.lastname,
-              municipalsId: member.municipalsId,
-              barangaysId: member.barangaysId,
+              id: member,
+              firstname: "Unknown",
+              lastname: "Unknown",
+              municipalsId: team.zipCode,
+              barangaysId: barangay.id,
+              reason: "Wala sa master list",
+              level: 0,
+              idNumber: member,
+              code: 1,
+            });
+            continue;
+          }
+          if (voter.barangaysId !== barangay.id) {
+            resultList.push({
+              id: voter.id,
+              firstname: voter.firstname,
+              lastname: voter.lastname,
+              municipalsId: voter.municipalsId,
+              barangaysId: voter.barangaysId,
               reason: "Wala sa angkop na lugar.",
-              level: member.level,
-              idNumber: member.idNumber,
+              level: voter.level,
+              idNumber: voter.idNumber,
               code: 1,
             });
             continue;
           }
-          if (member.level > 0) {
+          if (voter.level > 0) {
             resultList.push({
-              id: member.id,
-              firstname: member.firstname,
-              lastname: member.lastname,
-              municipalsId: member.municipalsId,
-              barangaysId: member.barangaysId,
-              reason: "May katayuan na",
-              level: member.level,
-              idNumber: member.idNumber,
+              id: voter.id,
+              firstname: voter.firstname,
+              lastname: voter.lastname,
+              municipalsId: voter.municipalsId,
+              barangaysId: voter.barangaysId,
+              reason: `May katayuan na (${handleLevel(voter.level)})`,
+              level: voter.level,
+              idNumber: voter.idNumber,
               code: 1,
             });
             continue;
           }
 
-          if (member.teamId) {
+          if (voter.teamId) {
             resultList.push({
-              id: member.id,
-              firstname: member.firstname,
-              lastname: member.lastname,
-              municipalsId: member.municipalsId,
-              barangaysId: member.barangaysId,
+              id: voter.id,
+              firstname: voter.firstname,
+              lastname: voter.lastname,
+              municipalsId: voter.municipalsId,
+              barangaysId: voter.barangaysId,
               reason: "May team na",
-              level: member.level,
-              idNumber: member.idNumber,
+              level: voter.level,
+              idNumber: voter.idNumber,
               code: 1,
             });
             continue;
           }
 
-          if (member.oor === "YES") {
+          if (voter.oor === "YES") {
             resultList.push({
-              id: member.id,
-              firstname: member.firstname,
-              lastname: member.lastname,
-              municipalsId: member.municipalsId,
-              barangaysId: member.barangaysId,
+              id: voter.id,
+              firstname: voter.firstname,
+              lastname: voter.lastname,
+              municipalsId: voter.municipalsId,
+              barangaysId: voter.barangaysId,
               reason: "Wala sa ankop na lugar.",
-              level: member.level,
-              idNumber: member.idNumber,
+              level: voter.level,
+              idNumber: voter.idNumber,
               code: 1,
             });
             continue;
           }
 
-          if (member.status === 0) {
+          if (voter.status === 0) {
             resultList.push({
-              id: member.id,
-              firstname: member.firstname,
-              lastname: member.lastname,
-              municipalsId: member.municipalsId,
-              barangaysId: member.barangaysId,
+              id: voter.id,
+              firstname: voter.firstname,
+              lastname: voter.lastname,
+              municipalsId: voter.municipalsId,
+              barangaysId: voter.barangaysId,
               reason: "Sumakabilang buhay na.",
-              level: member.level,
-              idNumber: member.idNumber,
+              level: voter.level,
+              idNumber: voter.idNumber,
               code: 1,
             });
             continue;
           }
 
           resultList.push({
-            id: member.id,
-            firstname: member.firstname,
-            lastname: member.lastname,
-            municipalsId: member.municipalsId,
-            barangaysId: member.barangaysId,
+            id: voter.id,
+            firstname: voter.firstname,
+            lastname: voter.lastname,
+            municipalsId: voter.municipalsId,
+            barangaysId: voter.barangaysId,
             reason: "OK",
-            level: member.level,
-            idNumber: member.idNumber,
+            level: voter.level,
+            idNumber: voter.idNumber,
             code: 0,
           });
 
           await prisma.voters.update({
-            where: { id: member.id },
+            where: { id: voter.id },
             data: {
               teamId: teamLeaderData?.teamId,
               candidatesId: teamLeaderData?.candidatesId,
@@ -2849,12 +2938,21 @@ const resolvers: Resolvers = {
         };
       });
 
-      const totalIssues = teamMembers.reduce((base, item) => {
-        if (item.remark !== "OK") {
+      const totalIssues = resultList.reduce((base, item) => {
+        if (item.reason !== "OK") {
           return base + 1;
         }
         return base;
       }, 0);
+
+      await prisma.validatedTeams.update({
+        where: {
+          id: temp.id,
+        },
+        data: {
+          issues: totalIssues,
+        },
+      });
 
       await prisma.validatedTeamMembers.createMany({
         data: teamMembers,
@@ -2932,6 +3030,10 @@ const resolvers: Resolvers = {
         },
       });
 
+      return "OK";
+    },
+    removeAllTeams: async () => {
+      await prisma.team.deleteMany();
       return "OK";
     },
   },
@@ -3451,6 +3553,14 @@ const resolvers: Resolvers = {
         where: {
           id: parent.votersId as string,
         },
+      });
+    },
+  },
+  Users: {
+    qrCode: async (parent) => {
+      if (!parent.userQRCodeId) return null;
+      return await prisma.userQRCode.findUnique({
+        where: { id: parent.userQRCodeId },
       });
     },
   },

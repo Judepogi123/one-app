@@ -23,15 +23,54 @@ model AdminUser {
 }
 
 model Users {
-  uid            String           @id @default(uuid())
-  firstname      String
-  lastname       String
-  phoneNumber    String
-  password       String
-  address        String
-  status         String
-  SurveyResponse SurveyResponse[]
-  DeviceLogs     DeviceLogs[]
+  uid                  String                 @id @default(uuid())
+  username             String
+  password             String
+  role                 Int                    @default(2)
+  purpose              Int                    @default(1234)
+  status               Int                    @default(1)
+  timstamp             DateTime               @default(now())
+  privilege            Int[]                  @default([1, 2, 3, 4, 5, 6, 7, 8, 9])
+  activityLogs         UserActivityLogs[]
+  validatedTeam        ValidatedTeams[]
+  SurveyResponse       SurveyResponse[]
+  respondentResponse   RespondentResponse[]
+  DeviceLogs           DeviceLogs[]
+  qrCode               UserQRCode?            @relation(fields: [userQRCodeId], references: [id], onDelete: Cascade)
+  userQRCodeId         String?                @unique
+  notificationsSent    Notification[]         @relation("SenderRelation")
+  notificationsTarget  Notification[]         @relation("TargetRelation")
+  TeamDistributions    TeamDistributions[]
+  TeamLeaderAttendance TeamLeaderAttendance[]
+  VoterRecords         VoterRecords[]
+  TeamRecords          TeamRecords[]
+}
+
+model UserQRCode {
+  id     String @id @default(uuid())
+  qrCode String
+  Users  Users?
+}
+
+model Notification {
+  uid       String   @id @default(uuid())
+  fromUid   String
+  from      Users    @relation("SenderRelation", fields: [fromUid], references: [uid], onDelete: Cascade)
+  targetUid String
+  target    Users    @relation("TargetRelation", fields: [targetUid], references: [uid])
+  viewed    Boolean  @default(false)
+  path      String?
+  title     String
+  message   String
+  timestamp DateTime @default(now())
+}
+
+model UserActivityLogs {
+  id        String   @id @default(uuid())
+  activity  String?  @default("None")
+  timestamp DateTime @default(now())
+  Users     Users?   @relation(fields: [usersUid], references: [uid], onDelete: Cascade)
+  usersUid  String?
 }
 
 model Position {
@@ -128,6 +167,9 @@ model Voters {
   teamId               String?
   TeamLeader           TeamLeader[]
   ValidatedTeamMembers ValidatedTeamMembers[]
+  VoterRecords         VoterRecords[]
+  witnessId            String?
+  Witness              Witness?
 }
 
 model Purok {
@@ -261,22 +303,24 @@ model CutstomList {
 }
 
 model Team {
-  id              String            @id @default(uuid())
-  voters          Voters[]
-  purok           Purok?            @relation(fields: [purokId], references: [id], onDelete: Cascade)
-  purokId         String?
-  barangay        Barangays         @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
-  barangaysId     String
-  municipal       Municipals        @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
-  municipalsId    Int
-  hub             Hub?              @relation(fields: [hubId], references: [id])
-  hubId           String?
-  level           Int               @default(1)
-  TeamLeader      TeamLeader?       @relation(fields: [teamLeaderId], references: [id], onDelete: SetNull)
-  teamLeaderId    String?
-  candidate       Candidates?       @relation(fields: [candidatesId], references: [id])
-  candidatesId    String?
-  TeamRecordsLogs TeamRecordsLogs[]
+  id                String              @id @default(uuid())
+  voters            Voters[]
+  purok             Purok?              @relation(fields: [purokId], references: [id], onDelete: Cascade)
+  purokId           String?
+  barangay          Barangays           @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
+  barangaysId       String
+  municipal         Municipals          @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
+  municipalsId      Int
+  hub               Hub?                @relation(fields: [hubId], references: [id])
+  hubId             String?
+  level             Int                 @default(1)
+  TeamLeader        TeamLeader?         @relation(fields: [teamLeaderId], references: [id], onDelete: SetNull)
+  teamLeaderId      String?
+  candidate         Candidates?         @relation(fields: [candidatesId], references: [id])
+  candidatesId      String?
+  TeamRecordsLogs   TeamRecordsLogs[]
+  TeamRecords       TeamRecords[]
+  TeamDistributions TeamDistributions[]
 }
 
 model TeamLeader {
@@ -302,6 +346,37 @@ model TeamLeader {
   candidatesId         String?
   ValidatedTeams       ValidatedTeams[]
   ValidatedTeamMembers ValidatedTeamMembers[]
+  qrCode               TeamlLeaderQRcodes?    @relation(fields: [teamlLeaderQRcodesId], references: [id], onDelete: Cascade)
+  teamlLeaderQRcodesId String?                @unique
+  barangayCoorId       String?
+  barangayCoor         TeamLeader?            @relation("BarangayCoor", fields: [barangayCoorId], references: [id])
+  barangayCoorFor      TeamLeader[]           @relation("BarangayCoor")
+
+  purokCoorsId String?
+  purokCoors   TeamLeader?  @relation("PurokCoors", fields: [purokCoorsId], references: [id])
+  purokCoorFor TeamLeader[] @relation("PurokCoors")
+
+  teamLeaderId         String?
+  teamLeader           TeamLeader?            @relation("TeamLeader", fields: [teamLeaderId], references: [id])
+  teamLeaderFor        TeamLeader[]           @relation("TeamLeader")
+  TeamLeaderAttendance TeamLeaderAttendance[]
+}
+
+model TeamlLeaderQRcodes {
+  id         String      @id @default(uuid())
+  qrCode     String
+  TeamLeader TeamLeader?
+}
+
+model TeamLeaderAttendance {
+  id           String     @id @default(uuid())
+  for          Int        @default(1)
+  teamLeader   TeamLeader @relation(fields: [teamLeaderId], references: [id])
+  teamLeaderId String
+  date         DateTime
+  status       String
+  user         Users?     @relation(fields: [usersUid], references: [uid])
+  usersUid     String?
 }
 
 model ValidatedTeams {
@@ -317,6 +392,8 @@ model ValidatedTeams {
   timestamp            DateTime               @default(now())
   purokId              String?
   issues               Int?                   @default(0)
+  Users                Users?                 @relation(fields: [usersUid], references: [uid])
+  usersUid             String?
 }
 
 model ValidatedTeamMembers {
@@ -392,10 +469,10 @@ model QRcode {
 }
 
 model SurveyorNumber {
-  id       String @id @default(uuid())
-  username String
-  password String
-  role     Int
+  id                String              @id @default(uuid())
+  username          String
+  password          String
+  role              Int
   ValidatedResponse ValidatedResponse[]
 }
 
@@ -474,21 +551,30 @@ model Quota {
 }
 
 model Queries {
-  id            String        @id @default(uuid())
-  order         Int           @default(autoincrement())
-  queries       String
-  survey        Survey        @relation(fields: [surveyId], references: [id], onDelete: Cascade)
-  surveyId      String
-  type          String?       @default("single")
-  componentType String?       @default("regular")
-  responseType  String?       @default("multiple")
-  style         Int?          @default(1)
-  selectionType String?       @default("select")
-  access        String?       @default("regular")
-  Response      Response[]
-  Option        Option[]
-  QueryAnswer   QueryAnswer[]
-  onTop         Boolean?      @default(false)
+  id               String         @id @default(uuid())
+  order            Int            @default(autoincrement())
+  queries          String
+  survey           Survey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  surveyId         String
+  type             String?        @default("single")
+  componentType    String?        @default("regular")
+  responseType     String?        @default("multiple")
+  style            Int?           @default(1)
+  selectionType    String?        @default("select")
+  access           String?        @default("regular")
+  withCustomOption Boolean?       @default(false)
+  Response         Response[]
+  Option           Option[]
+  customOption     CustomOption[]
+  QueryAnswer      QueryAnswer[]
+  onTop            Boolean?       @default(false)
+}
+
+model CustomOption {
+  id        String   @id @default(cuid())
+  value     String
+  Queries   Queries? @relation(fields: [queriesId], references: [id])
+  queriesId String?
 }
 
 model Option {
@@ -555,7 +641,9 @@ model RespondentResponse {
   validatedResponseId String?
   media               MediaUrl?          @relation(fields: [mediaUrlId], references: [id])
   mediaUrlId          String?
-  valid               Boolean            @default(false)
+  valid               Boolean            @default(true)
+  usersUid            String?
+  Users               Users?             @relation(fields: [usersUid], references: [uid])
 }
 
 model ValidatedResponse {
@@ -625,4 +713,46 @@ model TeamRecordsLogs {
   barangaysId  String
   team         Team       @relation(fields: [teamId], references: [id])
   teamId       String
+}
+
+model TeamRecords {
+  id        String    @id @default(uuid())
+  activity  String
+  team      Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  timestamp DateTime?
+  teamId    String
+  user      Users     @relation(fields: [usersUid], references: [uid])
+  usersUid  String
+}
+
+model TeamDistributions {
+  id        String    @id @default(uuid())
+  activity  String
+  timestamp DateTime?
+  status    Int?      @default(0)
+  team      Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+  operator  Users?    @relation(fields: [usersUid], references: [uid])
+  usersUid  String?
+  witness   Witness[]
+}
+
+model Witness {
+  id                  String             @id
+  voter               Voters             @relation(fields: [votersId], references: [id], onDelete: Cascade)
+  votersId            String             @unique
+  timstamp            DateTime
+  TeamDistributions   TeamDistributions? @relation(fields: [teamDistributionsId], references: [id])
+  teamDistributionsId String?
+}
+
+model VoterRecords {
+  id           String   @id @default(uuid())
+  desc         String
+  questionable Boolean  @default(true)
+  timestamp    DateTime @default(now())
+  voter        Voters   @relation(fields: [votersId], references: [id], onDelete: Cascade)
+  votersId     String
+  user         Users    @relation(fields: [usersUid], references: [uid])
+  usersUid     String
 }
