@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.handleGender = exports.handleSpecialChar = exports.handleGenTagID = void 0;
+exports.handleLevel = exports.handleGender = exports.handleSpecialChar = exports.handleGenTagID = void 0;
 const handleGenTagID = (min = 100000, max = 999999) => {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 };
@@ -24,3 +24,18 @@ const handleGender = (value) => {
     return "Unknown";
 };
 exports.handleGender = handleGender;
+const handleLevel = (value) => {
+    switch (value) {
+        case 0:
+            return "Voter";
+        case 1:
+            return "TL";
+        case 2:
+            return "PC";
+        case 3:
+            return "BC";
+        default:
+            return "Voter";
+    }
+};
+exports.handleLevel = handleLevel;
