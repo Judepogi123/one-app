@@ -958,7 +958,6 @@ const resolvers = {
                         surveyId: surveyResponse.surveyId,
                     },
                 });
-                // Check and create respondent data if not already present
                 for (const res of respondentResponse) {
                     const existingRespondent = yield prisma.respondentResponse.findUnique({
                         where: { id: res.id }, // Assuming 'id' is unique for each respondent
@@ -2385,6 +2384,7 @@ const resolvers = {
             return JSON.stringify(teamMembers);
         }),
         composeTeam: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { team }) {
+            var _b, _c, _d, _e, _f, _g;
             console.log({ team });
             const resultList = [];
             const members = [
@@ -2512,6 +2512,26 @@ const resolvers = {
                             },
                         },
                     });
+                    const votersTeam = yield prisma_1.prisma.team.findUnique({
+                        where: {
+                            id: voter === null || voter === void 0 ? void 0 : voter.teamId,
+                        },
+                        include: {
+                            TeamLeader: {
+                                select: {
+                                    id: true,
+                                    teamId: true,
+                                    voter: {
+                                        select: {
+                                            firstname: true,
+                                            lastname: true,
+                                            level: true,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    });
                     if (!voter) {
                         resultList.push({
                             id: member,
@@ -2538,7 +2558,6 @@ const resolvers = {
                             idNumber: voter.idNumber,
                             code: 1,
                         });
-                        continue;
                     }
                     if (voter.level > 0) {
                         resultList.push({
@@ -2552,7 +2571,6 @@ const resolvers = {
                             idNumber: voter.idNumber,
                             code: 1,
                         });
-                        continue;
                     }
                     if (voter.teamId) {
                         resultList.push({
@@ -2561,12 +2579,11 @@ const resolvers = {
                             lastname: voter.lastname,
                             municipalsId: voter.municipalsId,
                             barangaysId: voter.barangaysId,
-                            reason: "May team na",
+                            reason: `May team na (${(0, data_1.handleLevel)((_c = (_b = votersTeam === null || votersTeam === void 0 ? void 0 : votersTeam.TeamLeader) === null || _b === void 0 ? void 0 : _b.voter) === null || _c === void 0 ? void 0 : _c.level)}): ${(_e = (_d = votersTeam === null || votersTeam === void 0 ? void 0 : votersTeam.TeamLeader) === null || _d === void 0 ? void 0 : _d.voter) === null || _e === void 0 ? void 0 : _e.lastname}, ${(_g = (_f = votersTeam === null || votersTeam === void 0 ? void 0 : votersTeam.TeamLeader) === null || _f === void 0 ? void 0 : _f.voter) === null || _g === void 0 ? void 0 : _g.firstname}`,
                             level: voter.level,
                             idNumber: voter.idNumber,
                             code: 1,
                         });
-                        continue;
                     }
                     if (voter.oor === "YES") {
                         resultList.push({
@@ -2575,12 +2592,11 @@ const resolvers = {
                             lastname: voter.lastname,
                             municipalsId: voter.municipalsId,
                             barangaysId: voter.barangaysId,
-                            reason: "Wala sa ankop na lugar.",
+                            reason: "Wala sa ankop na lugar (OR).",
                             level: voter.level,
                             idNumber: voter.idNumber,
                             code: 1,
                         });
-                        continue;
                     }
                     if (voter.status === 0) {
                         resultList.push({
@@ -2594,7 +2610,6 @@ const resolvers = {
                             idNumber: voter.idNumber,
                             code: 1,
                         });
-                        continue;
                     }
                     resultList.push({
                         id: voter.id,
@@ -2634,24 +2649,38 @@ const resolvers = {
                     remark: item.reason,
                 };
             });
+            console.log({ teamMembers });
+            const records = resultList.map((item) => {
+                return {
+                    desc: item.reason,
+                    votersId: item.id,
+                    usersUid: undefined,
+                    questionable: true,
+                };
+            });
             const totalIssues = resultList.reduce((base, item) => {
                 if (item.reason !== "OK") {
                     return base + 1;
                 }
                 return base;
             }, 0);
-            yield prisma_1.prisma.validatedTeams.update({
-                where: {
-                    id: temp.id,
-                },
-                data: {
-                    issues: totalIssues,
-                },
-            });
-            yield prisma_1.prisma.validatedTeamMembers.createMany({
-                data: teamMembers,
-                skipDuplicates: true,
-            });
+            yield Promise.all([
+                prisma_1.prisma.voterRecords.createMany({
+                    data: records,
+                }),
+                prisma_1.prisma.validatedTeams.update({
+                    where: {
+                        id: temp.id,
+                    },
+                    data: {
+                        issues: totalIssues,
+                    },
+                }),
+                prisma_1.prisma.validatedTeamMembers.createMany({
+                    data: teamMembers,
+                    skipDuplicates: true,
+                }),
+            ]);
             return JSON.stringify(teamMembers);
         }),
         clearTeamRecords: () => __awaiter(void 0, void 0, void 0, function* () {
@@ -2723,6 +2752,15 @@ const resolvers = {
             yield prisma_1.prisma.team.deleteMany();
             return "OK";
         }),
+        createCustomOption: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
+            yield prisma_1.prisma.customOption.create({
+                data: {
+                    value: "0",
+                    queriesId: id,
+                },
+            });
+            return "OK";
+        }),
     },
     Voter: {
         votersCount: () => __awaiter(void 0, void 0, void 0, function* () {
@@ -2759,6 +2797,13 @@ const resolvers = {
         leader: (parent) => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.teamLeader.findFirst({
                 where: { votersId: parent.id },
+            });
+        }),
+        record: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma_1.prisma.voterRecords.findMany({
+                where: {
+                    votersId: parent.id,
+                },
             });
         }),
     },
@@ -2920,6 +2965,13 @@ const resolvers = {
             return yield prisma_1.prisma.barangays.findMany({
                 where: { municipalId: zipCode },
                 orderBy: { name: "asc" },
+            });
+        }),
+        customOption: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma_1.prisma.customOption.findMany({
+                where: {
+                    queriesId: parent.id,
+                },
             });
         }),
     },
@@ -3160,6 +3212,26 @@ const resolvers = {
             }
             return yield prisma_1.prisma.voters.findFirst({
                 where: { id: parent.votersId },
+            });
+        }),
+        barangayCoor: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            if (parent.barangayCoorId === null) {
+                return null;
+            }
+            return yield prisma_1.prisma.teamLeader.findFirst({
+                where: {
+                    id: parent.barangayCoorId,
+                },
+            });
+        }),
+        purokCoors: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            if (parent.purokCoorsId === null) {
+                return null;
+            }
+            return yield prisma_1.prisma.teamLeader.findFirst({
+                where: {
+                    id: parent.purokCoorsId,
+                },
             });
         }),
     },

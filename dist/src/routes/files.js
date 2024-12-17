@@ -87,83 +87,122 @@ exports.default = (io) => {
         const barangayId = req.body.barangayId;
         const draftID = req.body.draftID;
         if (!data) {
-            res.status(400).send("Empty list!");
-            return;
+            return res.status(400).send("Empty list!");
         }
         try {
             let rejectList = [];
             let successCounter = 0;
-            for (let row of Object.values(data).flat()) {
-                if (!row) {
-                    continue;
+            const votersData = Object.values(data).flat().filter(Boolean);
+            const voterNames = votersData.map((row) => ({
+                firstname: row.firstname,
+                lastname: row.lastname,
+            }));
+            // Fetch all existing voters once
+            const existingVoters = yield prisma_1.prisma.voters.findMany({
+                where: {
+                    OR: voterNames,
+                    barangaysId: barangayId,
+                    municipalsId: parseInt(zipCode, 10),
+                },
+                include: {
+                    barangay: true,
+                    municipal: true,
+                },
+            });
+            // Map to quickly lookup existing voters
+            const existingVoterMap = new Map();
+            existingVoters.forEach((voter) => {
+                const key = `${voter.firstname}_${voter.lastname}`;
+                if (!existingVoterMap.has(key)) {
+                    existingVoterMap.set(key, []);
                 }
-                successCounter++;
-                io.emit("draftedCounter", successCounter);
+                existingVoterMap.get(key).push(voter);
+            });
+            const purokCache = new Map();
+            const newVotersToInsert = [];
+            const voterRecordsToInsert = [];
+            for (const row of votersData) {
                 try {
-                    const voterExisted = yield prisma_1.prisma.voters.findFirst({
-                        where: {
-                            firstname: row.firstname,
-                            lastname: row.lastname,
-                            barangaysId: barangayId,
-                            municipalsId: parseInt(zipCode, 10),
-                        },
-                    });
-                    if (voterExisted) {
+                    const key = `${row.firstname}_${row.lastname}`;
+                    const existingVoter = existingVoterMap.get(key);
+                    // Check for existing voters
+                    if ((existingVoter === null || existingVoter === void 0 ? void 0 : existingVoter.length) > 0) {
                         rejectList.push(Object.assign(Object.assign({}, row), { saveStatus: "Existed" }));
-                        continue;
+                        voterRecordsToInsert.push({
+                            votersId: existingVoter[0].id,
+                            desc: `Multiple entry in Barangay ${existingVoter[0].barangay.name}-${existingVoter[0].municipal.name}`,
+                            questionable: true,
+                        });
                     }
-                    let purok = yield prisma_1.prisma.purok.findFirst({
-                        where: {
-                            purokNumber: `${row.Address}`,
-                            barangaysId: barangayId,
-                            municipalsId: parseInt(zipCode, 10),
-                            draftID: draftID,
-                        },
-                    });
+                    // Handle Purok creation with caching
+                    const purokKey = `${row.Address}_${barangayId}_${zipCode}_${draftID}`;
+                    let purok = purokCache.get(purokKey);
                     if (!purok) {
-                        purok = yield prisma_1.prisma.purok.create({
-                            data: {
+                        purok = yield prisma_1.prisma.purok.findFirst({
+                            where: {
                                 purokNumber: `${row.Address}`,
-                                municipalsId: parseInt(zipCode, 10),
                                 barangaysId: barangayId,
+                                municipalsId: parseInt(zipCode, 10),
                                 draftID: draftID,
                             },
                         });
+                        if (!purok) {
+                            purok = yield prisma_1.prisma.purok.create({
+                                data: {
+                                    purokNumber: `${row.Address}`,
+                                    municipalsId: parseInt(zipCode, 10),
+                                    barangaysId: barangayId,
+                                    draftID: draftID,
+                                },
+                            });
+                        }
+                        purokCache.set(purokKey, purok);
                     }
-                    yield prisma_1.prisma.voters.create({
-                        data: {
-                            lastname: row.lastname,
-                            firstname: row.firstname,
-                            gender: row.Gender,
-                            birthYear: `${row.Birthday}`,
-                            barangaysId: barangayId,
-                            municipalsId: parseInt(zipCode, 10),
-                            newBatchDraftId: draftID,
-                            calcAge: !row.Birthday
-                                ? 0
-                                : (_a = (0, date_1.extractYear)(row.Birthday)) !== null && _a !== void 0 ? _a : 0,
-                            purokId: purok.id,
-                            pwd: row.PWD,
-                            oor: row.OR,
-                            inc: row.INC,
-                            illi: row.IL,
-                            inPurok: true,
-                            hubId: null,
-                            houseHoldId: undefined,
-                            mobileNumber: "Unknown",
-                            senior: row.SC === "YES" ? true : false,
-                            status: row.DL === "YES" ? 0 : 1,
-                            candidatesId: row.candidateId,
-                            precintsId: undefined,
-                            youth: row["18-30"] === "YES" ? true : false,
-                            idNumber: `${row.No}`,
-                        },
+                    // Queue for batch insertion
+                    newVotersToInsert.push({
+                        lastname: row.lastname,
+                        firstname: row.firstname,
+                        gender: row.Gender,
+                        birthYear: `${row.Birthday}`,
+                        barangaysId: barangayId,
+                        municipalsId: parseInt(zipCode, 10),
+                        newBatchDraftId: draftID,
+                        calcAge: row.Birthday ? (_a = (0, date_1.extractYear)(row.Birthday)) !== null && _a !== void 0 ? _a : 0 : 0,
+                        purokId: purok.id,
+                        pwd: row.PWD,
+                        oor: row.OR,
+                        inc: row.INC,
+                        illi: row.IL,
+                        inPurok: true,
+                        hubId: null,
+                        houseHoldId: undefined,
+                        mobileNumber: "Unknown",
+                        senior: row.SC === "YES" ? true : false,
+                        status: row.DL === "YES" ? 0 : 1,
+                        candidatesId: row.candidateId,
+                        precintsId: undefined,
+                        youth: row["18-30"] === "YES" ? true : false,
+                        idNumber: `${row.No}`,
                     });
+                    successCounter++;
+                    io.emit("draftedCounter", successCounter);
                 }
                 catch (error) {
                     console.log(row["Voter's Name"], error);
                     continue;
                 }
+            }
+            // Batch insert voters and voter records
+            if (newVotersToInsert.length > 0) {
+                yield prisma_1.prisma.voters.createMany({
+                    data: newVotersToInsert,
+                    skipDuplicates: true,
+                });
+            }
+            if (voterRecordsToInsert.length > 0) {
+                yield prisma_1.prisma.voterRecords.createMany({
+                    data: voterRecordsToInsert,
+                });
             }
             res.status(200).json({
                 message: "Success",
@@ -173,9 +212,7 @@ exports.default = (io) => {
         }
         catch (error) {
             console.log(error);
-            res
-                .status(500)
-                .send({ status: "Internal server error", message: `${error}` });
+            res.status(500).send({ status: "Internal server error", message: `${error}` });
         }
     }));
     router.post("/update-voters", upload.single("file"), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
