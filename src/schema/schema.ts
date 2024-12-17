@@ -84,7 +84,18 @@ type Users {
     candidatesId: String
     teamId: String
     leader: TeamLeader
+    validated: ValidatedTeamMembers
+    record: [VoterRecord!]
   }
+
+  type VoterRecord {
+  id: ID
+  desc: String
+  questionable: Boolean
+  timestamp: String
+  voter: Voter
+  votersId: String
+}
 
   type Municipal {
     id: Int!
@@ -198,23 +209,37 @@ type Hub {
 
 type TeamLeader {
   id: ID!
-  voters: [Voter!]
+  voter: Voter
+  votersId: String
   hubId: String!
-  municipal: Municipal
+  hub: [Hub!]!
+  municipal: Municipal!
   municipalsId: Int!
   barangay: Barangay!
   barangaysId: String!
-  purokCoor: PurokCoor!
-  purokCoorId: String!
+  purokCoor: PurokCoor
+  purokCoorId: String
+  purok: Purok!
   purokId: String!
-  votersId: String
-  voter: Voter
-  hub: [Hub!]!
-  teams: [Team!]!
+  team: [Team!]!
+  teamId: String
+  handle: Int
   level: Int!
-  teamId: String!
+  candidate: Candidates
   candidatesId: String
+  validatedTeams: [ValidatedTeams!]!
+  validatedTeamMembers: [ValidatedTeamMembers!]!
+  barangayCoorId: String
+  barangayCoor: TeamLeader
+  barangayCoorFor: [TeamLeader!]!
+  purokCoorsId: String
+  purokCoors: TeamLeader
+  purokCoorFor: [TeamLeader!]!
+  teamLeaderId: String
+  teamLeader: TeamLeader
+  teamLeaderFor: [TeamLeader!]!
 }
+
 
 type Team {
   id: ID!
@@ -472,6 +497,7 @@ type BarangayCoor {
     removeTeam(id: String!):String!
     removeAllTeams: String!
     createAccount(account: NewAccountInput!): String!
+    createCustomOption(id: String!): String!
   }
 
   type Candidates {
@@ -573,6 +599,14 @@ type Queries {
   respondentOption(id: String!): [Response!]
   onTop: Boolean!
   barangayList(zipCode: Int!): [Barangay!]
+  customOption: [CustomOption!]
+}
+
+type CustomOption {
+  id: ID!               
+  value: String!       
+  Queries: Queries    
+  queriesId: String
 }
 
 type Option {

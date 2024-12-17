@@ -30,7 +30,9 @@ import {
   Prisma,
   ValidatedTeams,
   ValidatedTeamMembers,
-  UserQRCode
+  UserQRCode,
+  CustomOption,
+  VoterRecords
 } from "@prisma/client";
 
 const prisma = new PrismaClient({
@@ -68,5 +70,7 @@ export {
   Prisma,
   ValidatedTeams,
   ValidatedTeamMembers,
-  UserQRCode
+  UserQRCode,
+  CustomOption,
+  VoterRecords
 };

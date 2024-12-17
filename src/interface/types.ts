@@ -28,6 +28,8 @@ import {
   Validation,
   ValidatedTeams,
   UserQRCode,
+  CustomOption,
+  VoterRecords
 } from "../../prisma/prisma";
 import {
   BarangayOptionResponse,
@@ -674,6 +676,7 @@ export type Resolvers = {
     >;
     removeTeam: ResolverFn<{}, { id: string }, {}, string>;
     removeAllTeams: ResolverFn<{}, {}, {}, string>;
+    createCustomOption: ResolverFn<{}, { id: string }, {}, string>;
     //removeValidateTeamleader: ResolverFn<{}, {}, {}, string>;
   };
   Voter: {
@@ -688,6 +691,7 @@ export type Resolvers = {
     municipal: ResolverFn<Voters, {}, {}, Municipals | null>;
     qrCodes: ResolverFn<Voters, {}, {}, QRcode[]>;
     leader: ResolverFn<Voters, {}, {}, TeamLeader | null>;
+    record: ResolverFn<Voters, {}, {}, VoterRecords[]>;
   };
   Municipal: {
     barangays: ResolverFn<Municipals, {}, {}, Barangays[]>;
@@ -758,6 +762,7 @@ export type Resolvers = {
     options: ResolverFn<Queries, {}, {}, Option[]>;
     respondentOption: ResolverFn<Queries, { id: string }, {}, DataResponse[]>;
     barangayList: ResolverFn<{}, { zipCode: number }, {}, Barangays[]>;
+    customOption: ResolverFn<Queries, {}, {}, CustomOption[]>;
   };
   Option: {
     fileUrl: ResolverFn<Option, {}, {}, MediaUrl | null>;
@@ -860,6 +865,8 @@ export type Resolvers = {
   };
   TeamLeader: {
     voter: ResolverFn<TeamLeader, {}, {}, Voters | null>;
+    barangayCoor: ResolverFn<TeamLeader, {}, {}, TeamLeader | null>;
+    purokCoors: ResolverFn<TeamLeader, {}, {}, TeamLeader | null>;
   };
   Candidates: {
     supporters: ResolverFn<Candidates, {}, {}, number>;

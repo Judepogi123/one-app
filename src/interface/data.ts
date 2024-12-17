@@ -1,4 +1,10 @@
-import { Voters, Barangays, Municipals, TeamLeader } from "../../prisma/prisma";
+import {
+  Voters,
+  Barangays,
+  Municipals,
+  TeamLeader,
+  Users,
+} from "../../prisma/prisma";
 
 export interface RowProps {
   __EMPTY: string;
@@ -157,4 +163,14 @@ export interface ValidatedTeamMembers {
   teamLeaderId: string | null;
   validatedTeamsId: string | null;
   remark: string | null;
+}
+
+export interface VoterRecordsProps {
+  desc: string;
+  questionable: boolean;
+  timestamp?: string;
+  voter?: Voters | null;
+  votersId: string;
+  user?: Users | null;
+  usersUid?: string;
 }

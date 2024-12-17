@@ -571,27 +571,29 @@ model Queries {
 }
 
 model CustomOption {
-  id        String   @id @default(cuid())
-  value     String
-  Queries   Queries? @relation(fields: [queriesId], references: [id])
-  queriesId String?
+  id          String        @id @default(cuid())
+  value       String
+  Queries     Queries?      @relation(fields: [queriesId], references: [id])
+  queriesId   String?
+  QueryAnswer QueryAnswer[]
 }
 
 model Option {
-  id          String        @id @default(cuid())
-  order       Int           @default(autoincrement())
-  title       String?
-  desc        String?
-  mediaUrlId  String?
-  queries     Queries       @relation(fields: [queryId], references: [id], onDelete: Cascade)
-  queryId     String
-  onExit      Boolean       @default(false)
-  onTop       Boolean?      @default(false)
-  inlcuded    Boolean?      @default(false)
-  forAll      Boolean?      @default(false)
-  Response    Response[]
-  MediaUrl    MediaUrl[]
-  QueryAnswer QueryAnswer[]
+  id           String        @id @default(cuid())
+  order        Int           @default(autoincrement())
+  title        String?
+  desc         String?
+  mediaUrlId   String?
+  queries      Queries       @relation(fields: [queryId], references: [id], onDelete: Cascade)
+  queryId      String
+  onExit       Boolean       @default(false)
+  onTop        Boolean?      @default(false)
+  inlcuded     Boolean?      @default(false)
+  forAll       Boolean?      @default(false)
+  customizable Boolean?      @default(false)
+  Response     Response[]
+  MediaUrl     MediaUrl[]
+  QueryAnswer  QueryAnswer[]
 }
 
 model MediaUrl {
@@ -680,13 +682,15 @@ model Response {
 }
 
 model QueryAnswer {
-  id         String   @id
-  query      Queries  @relation(fields: [queriesId], references: [id], onDelete: Cascade)
-  queriesId  String
-  option     Option   @relation(fields: [optionId], references: [id], onDelete: Cascade)
-  optionId   String
-  response   Response @relation(fields: [responseId], references: [id], onDelete: Cascade)
-  responseId String
+  id             String        @id
+  query          Queries       @relation(fields: [queriesId], references: [id], onDelete: Cascade)
+  queriesId      String
+  customOption   CustomOption? @relation(fields: [customOptionId], references: [id])
+  option         Option        @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  optionId       String
+  response       Response      @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  responseId     String
+  customOptionId String?
 }
 
 model DeviceLogs {
@@ -721,8 +725,8 @@ model TeamRecords {
   team      Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
   timestamp DateTime?
   teamId    String
-  user      Users     @relation(fields: [usersUid], references: [uid])
-  usersUid  String
+  user      Users?    @relation(fields: [usersUid], references: [uid])
+  usersUid  String?
 }
 
 model TeamDistributions {
@@ -751,8 +755,8 @@ model VoterRecords {
   desc         String
   questionable Boolean  @default(true)
   timestamp    DateTime @default(now())
-  voter        Voters   @relation(fields: [votersId], references: [id], onDelete: Cascade)
-  votersId     String
-  user         Users    @relation(fields: [usersUid], references: [uid])
-  usersUid     String
+  voter        Voters?  @relation(fields: [votersId], references: [id], onDelete: Cascade)
+  votersId     String?
+  user         Users?   @relation(fields: [usersUid], references: [uid])
+  usersUid     String?
 }

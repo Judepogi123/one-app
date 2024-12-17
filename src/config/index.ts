@@ -29,6 +29,7 @@ import {
   RespondentResponseProps,
   RejectListedProps,
   ValidatedTeamMembers,
+  VoterRecordsProps,
 } from "../interface/data";
 
 const app = express();
@@ -1064,7 +1065,6 @@ const resolvers: Resolvers = {
           },
         });
 
-        // Check and create respondent data if not already present
         for (const res of respondentResponse) {
           const existingRespondent = await prisma.respondentResponse.findUnique(
             {
@@ -2812,6 +2812,27 @@ const resolvers: Resolvers = {
             },
           });
 
+          const votersTeam = await prisma.team.findUnique({
+            where: {
+              id: voter?.teamId as string,
+            },
+            include: {
+              TeamLeader: {
+                select: {
+                  id: true,
+                  teamId: true,
+                  voter: {
+                    select: {
+                      firstname: true,
+                      lastname: true,
+                      level: true,
+                    },
+                  },
+                },
+              },
+            },
+          });
+
           if (!voter) {
             resultList.push({
               id: member,
@@ -2838,7 +2859,6 @@ const resolvers: Resolvers = {
               idNumber: voter.idNumber,
               code: 1,
             });
-            continue;
           }
           if (voter.level > 0) {
             resultList.push({
@@ -2852,7 +2872,6 @@ const resolvers: Resolvers = {
               idNumber: voter.idNumber,
               code: 1,
             });
-            continue;
           }
 
           if (voter.teamId) {
@@ -2862,12 +2881,15 @@ const resolvers: Resolvers = {
               lastname: voter.lastname,
               municipalsId: voter.municipalsId,
               barangaysId: voter.barangaysId,
-              reason: "May team na",
+              reason: `May team na (${handleLevel(
+                votersTeam?.TeamLeader?.voter?.level as number
+              )}): ${votersTeam?.TeamLeader?.voter?.lastname}, ${
+                votersTeam?.TeamLeader?.voter?.firstname
+              }`,
               level: voter.level,
               idNumber: voter.idNumber,
               code: 1,
             });
-            continue;
           }
 
           if (voter.oor === "YES") {
@@ -2877,12 +2899,11 @@ const resolvers: Resolvers = {
               lastname: voter.lastname,
               municipalsId: voter.municipalsId,
               barangaysId: voter.barangaysId,
-              reason: "Wala sa ankop na lugar.",
+              reason: "Wala sa ankop na lugar (OR).",
               level: voter.level,
               idNumber: voter.idNumber,
               code: 1,
             });
-            continue;
           }
 
           if (voter.status === 0) {
@@ -2897,7 +2918,6 @@ const resolvers: Resolvers = {
               idNumber: voter.idNumber,
               code: 1,
             });
-            continue;
           }
 
           resultList.push({
@@ -2938,6 +2958,17 @@ const resolvers: Resolvers = {
         };
       });
 
+      console.log({ teamMembers });
+
+      const records: VoterRecordsProps[] = resultList.map((item) => {
+        return {
+          desc: item.reason,
+          votersId: item.id,
+          usersUid: undefined,
+          questionable: true,
+        };
+      });
+
       const totalIssues = resultList.reduce((base, item) => {
         if (item.reason !== "OK") {
           return base + 1;
@@ -2945,19 +2976,23 @@ const resolvers: Resolvers = {
         return base;
       }, 0);
 
-      await prisma.validatedTeams.update({
-        where: {
-          id: temp.id,
-        },
-        data: {
-          issues: totalIssues,
-        },
-      });
-
-      await prisma.validatedTeamMembers.createMany({
-        data: teamMembers,
-        skipDuplicates: true,
-      });
+      await Promise.all([
+        prisma.voterRecords.createMany({
+          data: records,
+        }),
+        prisma.validatedTeams.update({
+          where: {
+            id: temp.id,
+          },
+          data: {
+            issues: totalIssues,
+          },
+        }),
+        prisma.validatedTeamMembers.createMany({
+          data: teamMembers,
+          skipDuplicates: true,
+        }),
+      ]);
 
       return JSON.stringify(teamMembers);
     },
@@ -3036,6 +3071,15 @@ const resolvers: Resolvers = {
       await prisma.team.deleteMany();
       return "OK";
     },
+    createCustomOption: async (_, { id }) => {
+      await prisma.customOption.create({
+        data: {
+          value: "0",
+          queriesId: id,
+        },
+      });
+      return "OK";
+    },
   },
   Voter: {
     votersCount: async () => {
@@ -3072,6 +3116,13 @@ const resolvers: Resolvers = {
     leader: async (parent) => {
       return await prisma.teamLeader.findFirst({
         where: { votersId: parent.id },
+      });
+    },
+    record: async (parent) => {
+      return await prisma.voterRecords.findMany({
+        where: {
+          votersId: parent.id,
+        },
       });
     },
   },
@@ -3236,6 +3287,13 @@ const resolvers: Resolvers = {
       return await prisma.barangays.findMany({
         where: { municipalId: zipCode },
         orderBy: { name: "asc" },
+      });
+    },
+    customOption: async (parent) => {
+      return await prisma.customOption.findMany({
+        where: {
+          queriesId: parent.id,
+        },
       });
     },
   },
@@ -3495,6 +3553,26 @@ const resolvers: Resolvers = {
       }
       return await prisma.voters.findFirst({
         where: { id: parent.votersId },
+      });
+    },
+    barangayCoor: async (parent) => {
+      if (parent.barangayCoorId === null) {
+        return null;
+      }
+      return await prisma.teamLeader.findFirst({
+        where: {
+          id: parent.barangayCoorId,
+        },
+      });
+    },
+    purokCoors: async (parent) => {
+      if (parent.purokCoorsId === null) {
+        return null;
+      }
+      return await prisma.teamLeader.findFirst({
+        where: {
+          id: parent.purokCoorsId,
+        },
       });
     },
   },
