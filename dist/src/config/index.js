@@ -500,15 +500,19 @@ const resolvers = {
                 filter.OR = [
                     { lastname: { contains: query, mode: "insensitive" } },
                     { firstname: { contains: query, mode: "insensitive" } },
+                    { idNumber: { contains: query, mode: "insensitive" } },
                 ];
             }
             const result = yield prisma_1.prisma.voters.findMany({
                 where: filter,
-                skip: skip,
+                skip: skip !== null && skip !== void 0 ? skip : 0,
                 take: take,
             });
             const count = yield prisma_1.prisma.voters.count({
                 where: filter,
+                orderBy: {
+                    idNumber: "desc",
+                },
             });
             console.log("Filter: ", filter);
             return { voters: result, results: count };
@@ -2591,7 +2595,7 @@ const resolvers = {
                     if (!voter) {
                         if (!processedVoters.has(member)) {
                             resultList.push({
-                                id: member,
+                                id: undefined,
                                 firstname: "Unknown",
                                 lastname: "Unknown",
                                 municipalsId: team.zipCode,
@@ -2745,6 +2749,7 @@ const resolvers = {
             yield Promise.all([
                 prisma_1.prisma.voterRecords.createMany({
                     data: records,
+                    skipDuplicates: true
                 }),
                 prisma_1.prisma.validatedTeams.update({
                     where: {

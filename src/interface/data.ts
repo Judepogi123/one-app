@@ -126,7 +126,6 @@ export interface RejectListProps {
 export interface RejectListedProps
   extends Pick<
     Voters,
-    | "id"
     | "firstname"
     | "lastname"
     | "idNumber"
@@ -134,6 +133,8 @@ export interface RejectListedProps
     | "municipalsId"
     | "level"
   > {
+    id?: string
+    votersId?: string
   reason: string;
   code: number;
 }
@@ -170,7 +171,7 @@ export interface VoterRecordsProps {
   questionable: boolean;
   timestamp?: string;
   voter?: Voters | null;
-  votersId: string;
+  votersId?: string;
   user?: Users | null;
   usersUid?: string;
 }
