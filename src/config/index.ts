@@ -67,12 +67,20 @@ const resolvers: Resolvers = {
       return await prisma.users.findMany();
     },
     voters: async () =>
-      await prisma.voters.findMany(),
+      await prisma.voters.findMany({
+        where: {
+          saveStatus: "listed",
+        },
+      }),
     voter: async (_, { id }) => {
       return await prisma.voters.findUnique({ where: { id } });
     },
     votersCount: async () => {
-      return await prisma.voters.count();
+      return await prisma.voters.count({
+        where: {
+          saveStatus: "listed",
+        },
+      });
     },
     searchDraftVoter: async (_, { query }) => {
       return await prisma.voters.findMany({
@@ -2854,6 +2862,8 @@ const resolvers: Resolvers = {
         },
       });
 
+      const processedVoters = new Set<string>();
+
       for (const member of team.members) {
         try {
           const voter = await prisma.voters.findFirst({
@@ -2892,103 +2902,126 @@ const resolvers: Resolvers = {
           }
 
           if (!voter) {
-            resultList.push({
-              id: member,
-              firstname: "Unknown",
-              lastname: "Unknown",
-              municipalsId: team.zipCode,
-              barangaysId: barangay.id,
-              reason: "Wala sa master list",
-              level: 0,
-              idNumber: member,
-              code: 1,
-            });
+            if (!processedVoters.has(member)) {
+              resultList.push({
+                id: member,
+                firstname: "Unknown",
+                lastname: "Unknown",
+                municipalsId: team.zipCode,
+                barangaysId: barangay.id,
+                reason: "Wala sa master list",
+                level: 0,
+                idNumber: member,
+                code: 1,
+              });
+              processedVoters.add(member);
+            }
             continue;
           }
+
           if (voter.barangaysId !== barangay.id) {
-            resultList.push({
-              id: voter.id,
-              firstname: voter.firstname,
-              lastname: voter.lastname,
-              municipalsId: voter.municipalsId,
-              barangaysId: voter.barangaysId,
-              reason: "Wala sa angkop na lugar.",
-              level: voter.level,
-              idNumber: voter.idNumber,
-              code: 1,
-            });
+            if (!processedVoters.has(voter.id)) {
+              resultList.push({
+                id: voter.id,
+                firstname: voter.firstname,
+                lastname: voter.lastname,
+                municipalsId: voter.municipalsId,
+                barangaysId: voter.barangaysId,
+                reason: "Wala sa angkop na lugar.",
+                level: voter.level,
+                idNumber: voter.idNumber,
+                code: 1,
+              });
+              processedVoters.add(voter.id);
+            }
           }
+
           if (voter.level > 0) {
-            resultList.push({
-              id: voter.id,
-              firstname: voter.firstname,
-              lastname: voter.lastname,
-              municipalsId: voter.municipalsId,
-              barangaysId: voter.barangaysId,
-              reason: `May katayuan na (${handleLevel(voter.level)})`,
-              level: voter.level,
-              idNumber: voter.idNumber,
-              code: 1,
-            });
+            if (!processedVoters.has(voter.id)) {
+              resultList.push({
+                id: voter.id,
+                firstname: voter.firstname,
+                lastname: voter.lastname,
+                municipalsId: voter.municipalsId,
+                barangaysId: voter.barangaysId,
+                reason: `May katayuan na (${handleLevel(voter.level)})`,
+                level: voter.level,
+                idNumber: voter.idNumber,
+                code: 1,
+              });
+              processedVoters.add(voter.id);
+            }
           }
 
           if (voter.teamId) {
-            resultList.push({
-              id: voter.id,
-              firstname: voter.firstname,
-              lastname: voter.lastname,
-              municipalsId: voter.municipalsId,
-              barangaysId: voter.barangaysId,
-              reason: `May team na (${handleLevel(
-                votersTeam?.TeamLeader?.voter?.level as number
-              )}): ${votersTeam?.TeamLeader?.voter?.lastname}, ${
-                votersTeam?.TeamLeader?.voter?.firstname
-              }`,
-              level: voter.level,
-              idNumber: voter.idNumber,
-              code: 1,
-            });
+            if (!processedVoters.has(voter.id)) {
+              resultList.push({
+                id: voter.id,
+                firstname: voter.firstname,
+                lastname: voter.lastname,
+                municipalsId: voter.municipalsId,
+                barangaysId: voter.barangaysId,
+                reason: `May team na (${handleLevel(
+                  votersTeam?.TeamLeader?.voter?.level as number
+                )}): ${votersTeam?.TeamLeader?.voter?.lastname}, ${
+                  votersTeam?.TeamLeader?.voter?.firstname
+                }`,
+                level: voter.level,
+                idNumber: voter.idNumber,
+                code: 1,
+              });
+              processedVoters.add(voter.id);
+            }
           }
 
           if (voter.oor === "YES") {
-            resultList.push({
-              id: voter.id,
-              firstname: voter.firstname,
-              lastname: voter.lastname,
-              municipalsId: voter.municipalsId,
-              barangaysId: voter.barangaysId,
-              reason: "Wala sa ankop na lugar (OR).",
-              level: voter.level,
-              idNumber: voter.idNumber,
-              code: 1,
-            });
+            if (!processedVoters.has(voter.id)) {
+              resultList.push({
+                id: voter.id,
+                firstname: voter.firstname,
+                lastname: voter.lastname,
+                municipalsId: voter.municipalsId,
+                barangaysId: voter.barangaysId,
+                reason: "Wala sa ankop na lugar (OR).",
+                level: voter.level,
+                idNumber: voter.idNumber,
+                code: 1,
+              });
+              processedVoters.add(voter.id);
+            }
           }
 
           if (voter.status === 0) {
+            if (!processedVoters.has(voter.id)) {
+              resultList.push({
+                id: voter.id,
+                firstname: voter.firstname,
+                lastname: voter.lastname,
+                municipalsId: voter.municipalsId,
+                barangaysId: voter.barangaysId,
+                reason: "Sumakabilang buhay na.",
+                level: voter.level,
+                idNumber: voter.idNumber,
+                code: 1,
+              });
+              processedVoters.add(voter.id);
+            }
+          }
+
+          if (!processedVoters.has(voter.id)) {
             resultList.push({
               id: voter.id,
               firstname: voter.firstname,
               lastname: voter.lastname,
               municipalsId: voter.municipalsId,
               barangaysId: voter.barangaysId,
-              reason: "Sumakabilang buhay na.",
+              reason: "OK",
               level: voter.level,
               idNumber: voter.idNumber,
-              code: 1,
+              code: 0,
             });
+            processedVoters.add(voter.id);
           }
-
-          resultList.push({
-            id: voter.id,
-            firstname: voter.firstname,
-            lastname: voter.lastname,
-            municipalsId: voter.municipalsId,
-            barangaysId: voter.barangaysId,
-            reason: "OK",
-            level: voter.level,
-            idNumber: voter.idNumber,
-            code: 0,
-          });
 
           await prisma.voters.update({
             where: { id: voter.id },
