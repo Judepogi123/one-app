@@ -2684,8 +2684,6 @@ const resolvers: Resolvers = {
         };
       });
 
-      console.log("resultLIst", teamMembers);
-
       await prisma.validatedTeamMembers.createMany({
         data: teamMembers,
         skipDuplicates: true,
@@ -2755,8 +2753,6 @@ const resolvers: Resolvers = {
             headIdOne,
             headIdTwo
           );
-
-          // Find existing leader
           const leader = await prisma.teamLeader.findFirst({
             where: {
               voter: {
@@ -2771,13 +2767,12 @@ const resolvers: Resolvers = {
             return { ...leader, teamId: leader.teamId };
           }
 
-          // Create a new leader
           const newLeader = await prisma.teamLeader.create({
             data: {
               votersId: voterId,
               municipalsId: team.zipCode,
               barangaysId: barangay.id,
-              teamId: null, // Initially null, will be updated later
+              teamId: null,
               candidatesId: supporting?.id,
               level,
               hubId: "unknown",
@@ -2788,7 +2783,6 @@ const resolvers: Resolvers = {
             },
           });
 
-          // Create a new team and assign the leader
           const newTeam = await prisma.team.create({
             data: {
               barangaysId: barangay.id,
@@ -2800,7 +2794,6 @@ const resolvers: Resolvers = {
             },
           });
 
-          // Update the teamId for the new leader
           await prisma.teamLeader.update({
             where: { id: newLeader.id },
             data: {
