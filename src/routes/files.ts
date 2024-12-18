@@ -45,7 +45,6 @@ export default (io: any) => {
 
           processedData[sheetName] = data.map((row: DataProps) => {
             const newRow: Partial<DataProps> = {};
-            console.log("ROw: ", `${row.No}`);
 
             const supporting = candidates.map((candidate) =>
               row[candidate.code as string] ? candidate.id : undefined
@@ -93,21 +92,26 @@ export default (io: any) => {
     const zipCode = req.body.zipCode;
     const barangayId = req.body.barangayId;
     const draftID = req.body.draftID;
-  
+
     if (!data) {
       return res.status(400).send("Empty list!");
     }
-  
+
+    //console.log(JSON.stringify(data, null, 2), "Data end");
     try {
       let rejectList: DataProps[] = [];
       let successCounter = 0;
-  
-      const votersData = Object.values(data as DataProps[]).flat().filter(Boolean);
+
+      const votersData = Object.values(data as DataProps[])
+        .flat()
+        .filter(Boolean);
       const voterNames = votersData.map((row) => ({
         firstname: row.firstname,
         lastname: row.lastname,
       }));
-  
+      console.log("Logged 1");
+      
+
       // Fetch all existing voters once
       const existingVoters = await prisma.voters.findMany({
         where: {
@@ -120,7 +124,17 @@ export default (io: any) => {
           municipal: true,
         },
       });
-  
+      console.log("Logged 2");
+      // const existingOverAll = await prisma.voters.findMany({
+      //   where: {
+      //     OR: voterNames,
+      //   },
+      //   include: {
+      //     barangay: true,
+      //     municipal: true,
+      //   },
+      // });
+
       // Map to quickly lookup existing voters
       const existingVoterMap = new Map();
       existingVoters.forEach((voter) => {
@@ -130,34 +144,54 @@ export default (io: any) => {
         }
         existingVoterMap.get(key).push(voter);
       });
-  
+      console.log("Logged 3");
       const purokCache = new Map<string, any>();
       const newVotersToInsert = [];
       const voterRecordsToInsert = [];
-  
+
       for (const row of votersData) {
+        console.log("Logged 4");
         try {
           const key = `${row.firstname}_${row.lastname}`;
           const existingVoter = existingVoterMap.get(key);
-  
+
           // Check for existing voters
-          if (existingVoter?.length > 0) {
+          if (existingVoter?.length > 1) {
             rejectList.push({
               ...row,
-              saveStatus: "Existed",
+              saveStatus: `Multiple entry in Barangay ${existingVoter[0].barangay.name}-${existingVoter[0].municipal.name}`,
             });
-  
+
             voterRecordsToInsert.push({
               votersId: existingVoter[0].id,
               desc: `Multiple entry in Barangay ${existingVoter[0].barangay.name}-${existingVoter[0].municipal.name}`,
               questionable: true,
             });
+            continue;
           }
-  
+
+          // if (existingOverAll?.length > 1) {
+          //   rejectList.push({
+          //     ...row,
+          //     saveStatus: `Found in ${existingOverAll.map(
+          //       (item) => `${item.barangay.name}-${item.municipal.name}, `
+          //     )}`,
+          //   });
+
+          //   voterRecordsToInsert.push({
+          //     votersId: existingOverAll[0].id,
+          //     desc: `Found in ${existingOverAll.map(
+          //       (item) => `${item.barangay.name}-${item.municipal.name}, `
+          //     )}`,
+          //     questionable: true,
+          //   });
+          //   continue;
+          // }
+
           // Handle Purok creation with caching
           const purokKey = `${row.Address}_${barangayId}_${zipCode}_${draftID}`;
           let purok = purokCache.get(purokKey);
-  
+
           if (!purok) {
             purok = await prisma.purok.findFirst({
               where: {
@@ -167,7 +201,7 @@ export default (io: any) => {
                 draftID: draftID,
               },
             });
-  
+
             if (!purok) {
               purok = await prisma.purok.create({
                 data: {
@@ -178,10 +212,10 @@ export default (io: any) => {
                 },
               });
             }
-  
+
             purokCache.set(purokKey, purok);
           }
-  
+
           // Queue for batch insertion
           newVotersToInsert.push({
             lastname: row.lastname,
@@ -191,7 +225,9 @@ export default (io: any) => {
             barangaysId: barangayId,
             municipalsId: parseInt(zipCode, 10),
             newBatchDraftId: draftID,
-            calcAge: row.Birthday ? extractYear(row.Birthday as string) ?? 0 : 0,
+            calcAge: row.Birthday
+              ? extractYear(row.Birthday as string) ?? 0
+              : 0,
             purokId: purok.id,
             pwd: row.PWD,
             oor: row.OR,
@@ -208,7 +244,7 @@ export default (io: any) => {
             youth: row["18-30"] === "YES" ? true : false,
             idNumber: `${row.No}`,
           });
-  
+
           successCounter++;
           io.emit("draftedCounter", successCounter);
         } catch (error) {
@@ -216,7 +252,8 @@ export default (io: any) => {
           continue;
         }
       }
-  
+      console.log("Logged 5");
+
       // Batch insert voters and voter records
       if (newVotersToInsert.length > 0) {
         await prisma.voters.createMany({
@@ -224,13 +261,13 @@ export default (io: any) => {
           skipDuplicates: true,
         });
       }
-  
+
       if (voterRecordsToInsert.length > 0) {
         await prisma.voterRecords.createMany({
           data: voterRecordsToInsert,
         });
       }
-  
+
       res.status(200).json({
         message: "Success",
         rejectList: rejectList || [],
@@ -238,10 +275,11 @@ export default (io: any) => {
       });
     } catch (error) {
       console.log(error);
-      res.status(500).send({ status: "Internal server error", message: `${error}` });
+      res
+        .status(500)
+        .send({ status: "Internal server error", message: `${error}` });
     }
   });
-  
 
   router.post(
     "/update-voters",

@@ -174,3 +174,19 @@ export interface VoterRecordsProps {
   user?: Users | null;
   usersUid?: string;
 }
+export interface Team {
+  id: string;
+  purokId: string;
+  barangaysId: string;
+  municipalsId: number;
+  hubId?: string | null;
+  level: number;
+  teamLeaderId: string;
+  candidatesId?: string | null;
+}
+
+export interface TeamProps extends Omit<Team,"">{
+  _count: {
+    voters: number
+  }[];
+}

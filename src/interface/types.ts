@@ -34,6 +34,7 @@ import {
 import {
   BarangayOptionResponse,
   RespondentResponseProps,
+  TeamProps,
   ValidatedTeamMembers,
 } from "./data";
 
@@ -237,6 +238,7 @@ export type Resolvers = {
         query: string;
         skip: number;
         candidate: string;
+        withIssues: boolean
       },
       {},
       Team[]

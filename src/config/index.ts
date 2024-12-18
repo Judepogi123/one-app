@@ -67,9 +67,7 @@ const resolvers: Resolvers = {
       return await prisma.users.findMany();
     },
     voters: async () =>
-      await prisma.voters.findMany({
-        take: 20,
-      }),
+      await prisma.voters.findMany(),
     voter: async (_, { id }) => {
       return await prisma.voters.findUnique({ where: { id } });
     },
@@ -597,16 +595,57 @@ const resolvers: Resolvers = {
     },
     teamList: async (
       _,
-      { zipCode, barangayId, purokId, level, query, skip, candidate }
+      {
+        zipCode,
+        barangayId,
+        purokId,
+        level,
+        query,
+        skip,
+        candidate,
+        withIssues,
+      }
     ) => {
       const filter: any = {};
-      console.log("level: ", level, skip);
+      let select: any = {
+        id: true,
+        purokId: true,
+        barangaysId: true,
+        municipalsId: true,
+        hubId: true,
+        level: true,
+        teamLeaderId: true,
+        candidatesId: true,
+        _count: {
+          select: {
+            voters: {
+              where: {
+                VoterRecords: {
+                  some: {},
+                },
+              },
+            },
+          },
+        },
+      };
+      console.log("level: ", level, skip, query);
 
       const levelList: any = [
         { name: "TL", value: 1 },
         { name: "PC", value: 2 },
         { name: "BC", value: 3 },
       ];
+      if (query) {
+        filter.TeamLeader = {
+          voter: {
+            OR: [
+              { lastname: { contains: query, mode: "insensitive" } },
+              { firstname: { contains: query, mode: "insensitive" } },
+              { idNumber: { contains: query, mode: "insensitive" } },
+            ],
+          },
+        };
+      }
       const teamLevel = levelList.find(
         (x: { name: string }) => x.name === level
       );
@@ -620,23 +659,38 @@ const resolvers: Resolvers = {
       if (purokId !== "all") {
         filter.purokId = purokId;
       }
-      if (level !== "all" && teamLevel) {
+      if (level !== "all") {
         filter.level = teamLevel.value;
       }
-      if (query) {
-        filter.TeamLeader = {
-          voter: {
-            OR: [
-              { lastname: { contains: query, mode: "insensitive" } },
-              { firstname: { contains: query, mode: "insensitive" } },
-            ],
-          },
-        };
+      if (!withIssues) {
+        select = {};
       }
+
       const teams = await prisma.team.findMany({
         where: filter,
         skip: skip ?? 0,
         take: 50,
+        select: {
+          id: true,
+          purokId: true,
+          barangaysId: true,
+          municipalsId: true,
+          hubId: true,
+          level: true,
+          teamLeaderId: true,
+          candidatesId: true,
+          _count: {
+            select: {
+              voters: {
+                where: {
+                  VoterRecords: {
+                    some: {},
+                  },
+                },
+              },
+            },
+          },
+        },
       });
 
       return teams;
@@ -2812,26 +2866,30 @@ const resolvers: Resolvers = {
             },
           });
 
-          const votersTeam = await prisma.team.findUnique({
-            where: {
-              id: voter?.teamId as string,
-            },
-            include: {
-              TeamLeader: {
-                select: {
-                  id: true,
-                  teamId: true,
-                  voter: {
-                    select: {
-                      firstname: true,
-                      lastname: true,
-                      level: true,
+          let votersTeam = null;
+
+          if (voter?.teamId) {
+            votersTeam = await prisma.team.findFirst({
+              where: {
+                id: voter.teamId,
+              },
+              include: {
+                TeamLeader: {
+                  select: {
+                    id: true,
+                    teamId: true,
+                    voter: {
+                      select: {
+                        firstname: true,
+                        lastname: true,
+                        level: true,
+                      },
                     },
                   },
                 },
               },
-            },
-          });
+            });
+          }
 
           if (!voter) {
             resultList.push({
@@ -2958,16 +3016,16 @@ const resolvers: Resolvers = {
         };
       });
 
-      console.log({ teamMembers });
-
-      const records: VoterRecordsProps[] = resultList.map((item) => {
-        return {
-          desc: item.reason,
-          votersId: item.id,
-          usersUid: undefined,
-          questionable: true,
-        };
-      });
+      const records: VoterRecordsProps[] = resultList
+        .filter((item) => item.reason !== "OK")
+        .map((item) => {
+          return {
+            desc: item.reason,
+            votersId: item.id,
+            usersUid: undefined,
+            questionable: true,
+          };
+        });
 
       const totalIssues = resultList.reduce((base, item) => {
         if (item.reason !== "OK") {
@@ -2993,7 +3051,7 @@ const resolvers: Resolvers = {
           skipDuplicates: true,
         }),
       ]);
-
+      await prisma.$disconnect();
       return JSON.stringify(teamMembers);
     },
     clearTeamRecords: async () => {
@@ -3691,6 +3749,7 @@ const main = async () => {
     });
   } catch (error) {
     console.error("Error:", error);
+    await prisma.$disconnect();
   }
 };
 main();
