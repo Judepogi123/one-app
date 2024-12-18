@@ -259,6 +259,11 @@ type Team {
   votersCount: Int
   candidate: Candidates
   level: Int!
+  _count: VoterRecordsCount
+}
+
+type VoterRecordsCount {
+  voters: Int
 }
 
 type ValdiatedTeams {
@@ -326,7 +331,7 @@ type ValdiatedTeams {
     getAllTeamLeader: [TeamLeader!]
     getVotersList(level: String!, take: Int, skip: Int, zipCode: String, barangayId: String,purokId: String, query: String, pwd: String, illi: String,inc: String,oor: String,dead: String,youth: String,senior: String,gender: String): VotersList
     getPurokList(id: String!): [Purok!]
-    teamList(zipCode: String!, barangayId: String!, purokId: String!, level: String!,query: String!, skip: Int!, candidate: String): [Team!]
+    teamList(zipCode: String!, barangayId: String!, purokId: String!, level: String!,query: String!, skip: Int!, candidate: String, withIssues: Boolean): [Team!]
     candidates: [Candidates!]
     team(id: String!): Team
     getAllTL: [TeamLeader!]

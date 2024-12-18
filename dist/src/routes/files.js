@@ -43,7 +43,6 @@ exports.default = (io) => {
                 const data = xlsx_1.default.utils.sheet_to_json(worksheet);
                 processedData[sheetName] = data.map((row) => {
                     const newRow = {};
-                    console.log("ROw: ", `${row.No}`);
                     const supporting = candidates.map((candidate) => row[candidate.code] ? candidate.id : undefined);
                     const candidateId = supporting.filter(Boolean);
                     if (row["Voter's Name"]) {
@@ -89,14 +88,18 @@ exports.default = (io) => {
         if (!data) {
             return res.status(400).send("Empty list!");
         }
+        //console.log(JSON.stringify(data, null, 2), "Data end");
         try {
             let rejectList = [];
             let successCounter = 0;
-            const votersData = Object.values(data).flat().filter(Boolean);
+            const votersData = Object.values(data)
+                .flat()
+                .filter(Boolean);
             const voterNames = votersData.map((row) => ({
                 firstname: row.firstname,
                 lastname: row.lastname,
             }));
+            console.log("Logged 1");
             // Fetch all existing voters once
             const existingVoters = yield prisma_1.prisma.voters.findMany({
                 where: {
@@ -109,6 +112,16 @@ exports.default = (io) => {
                     municipal: true,
                 },
             });
+            console.log("Logged 2");
+            // const existingOverAll = await prisma.voters.findMany({
+            //   where: {
+            //     OR: voterNames,
+            //   },
+            //   include: {
+            //     barangay: true,
+            //     municipal: true,
+            //   },
+            // });
             // Map to quickly lookup existing voters
             const existingVoterMap = new Map();
             existingVoters.forEach((voter) => {
@@ -118,22 +131,41 @@ exports.default = (io) => {
                 }
                 existingVoterMap.get(key).push(voter);
             });
+            console.log("Logged 3");
             const purokCache = new Map();
             const newVotersToInsert = [];
             const voterRecordsToInsert = [];
             for (const row of votersData) {
+                console.log("Logged 4");
                 try {
                     const key = `${row.firstname}_${row.lastname}`;
                     const existingVoter = existingVoterMap.get(key);
                     // Check for existing voters
-                    if ((existingVoter === null || existingVoter === void 0 ? void 0 : existingVoter.length) > 0) {
-                        rejectList.push(Object.assign(Object.assign({}, row), { saveStatus: "Existed" }));
+                    if ((existingVoter === null || existingVoter === void 0 ? void 0 : existingVoter.length) > 1) {
+                        rejectList.push(Object.assign(Object.assign({}, row), { saveStatus: `Multiple entry in Barangay ${existingVoter[0].barangay.name}-${existingVoter[0].municipal.name}` }));
                         voterRecordsToInsert.push({
                             votersId: existingVoter[0].id,
                             desc: `Multiple entry in Barangay ${existingVoter[0].barangay.name}-${existingVoter[0].municipal.name}`,
                             questionable: true,
                         });
+                        continue;
                     }
+                    // if (existingOverAll?.length > 1) {
+                    //   rejectList.push({
+                    //     ...row,
+                    //     saveStatus: `Found in ${existingOverAll.map(
+                    //       (item) => `${item.barangay.name}-${item.municipal.name}, `
+                    //     )}`,
+                    //   });
+                    //   voterRecordsToInsert.push({
+                    //     votersId: existingOverAll[0].id,
+                    //     desc: `Found in ${existingOverAll.map(
+                    //       (item) => `${item.barangay.name}-${item.municipal.name}, `
+                    //     )}`,
+                    //     questionable: true,
+                    //   });
+                    //   continue;
+                    // }
                     // Handle Purok creation with caching
                     const purokKey = `${row.Address}_${barangayId}_${zipCode}_${draftID}`;
                     let purok = purokCache.get(purokKey);
@@ -167,7 +199,9 @@ exports.default = (io) => {
                         barangaysId: barangayId,
                         municipalsId: parseInt(zipCode, 10),
                         newBatchDraftId: draftID,
-                        calcAge: row.Birthday ? (_a = (0, date_1.extractYear)(row.Birthday)) !== null && _a !== void 0 ? _a : 0 : 0,
+                        calcAge: row.Birthday
+                            ? (_a = (0, date_1.extractYear)(row.Birthday)) !== null && _a !== void 0 ? _a : 0
+                            : 0,
                         purokId: purok.id,
                         pwd: row.PWD,
                         oor: row.OR,
@@ -192,6 +226,7 @@ exports.default = (io) => {
                     continue;
                 }
             }
+            console.log("Logged 5");
             // Batch insert voters and voter records
             if (newVotersToInsert.length > 0) {
                 yield prisma_1.prisma.voters.createMany({
@@ -212,7 +247,9 @@ exports.default = (io) => {
         }
         catch (error) {
             console.log(error);
-            res.status(500).send({ status: "Internal server error", message: `${error}` });
+            res
+                .status(500)
+                .send({ status: "Internal server error", message: `${error}` });
         }
     }));
     router.post("/update-voters", upload.single("file"), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
