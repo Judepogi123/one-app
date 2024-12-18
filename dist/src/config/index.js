@@ -2749,7 +2749,6 @@ const resolvers = {
             yield Promise.all([
                 prisma_1.prisma.voterRecords.createMany({
                     data: records,
-                    skipDuplicates: true
                 }),
                 prisma_1.prisma.validatedTeams.update({
                     where: {

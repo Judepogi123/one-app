@@ -3075,7 +3075,6 @@ const resolvers: Resolvers = {
       await Promise.all([
         prisma.voterRecords.createMany({
           data: records,
-          skipDuplicates: true
         }),
         prisma.validatedTeams.update({
           where: {
