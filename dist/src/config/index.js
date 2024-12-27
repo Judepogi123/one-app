@@ -342,7 +342,6 @@ const resolvers = {
                     desc: true,
                 },
             });
-            // Step 3: Fetch response counts in bulk for all barangays and options
             const responseCounts = yield prisma_1.prisma.response.groupBy({
                 by: ["barangaysId", "optionId"],
                 where: {
@@ -353,9 +352,8 @@ const resolvers = {
                     _all: true,
                 },
             });
-            // Step 4: Process and format the data
             const results = barangayList.map((barangay) => {
-                // Find response counts for this barangay
+
                 const optionsWithCounts = optionsList.map((option) => {
                     const countData = responseCounts.find((rc) => rc.barangaysId === barangay.id && rc.optionId === option.id);
                     return {
@@ -428,7 +426,6 @@ const resolvers = {
             return data;
         }),
         getRankOption: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { optionId }) {
-            // Step 1: Group the responses by `barangaysId`
             const topBarangays = yield prisma_1.prisma.response.groupBy({
                 by: ["barangaysId"],
                 where: {
@@ -444,7 +441,6 @@ const resolvers = {
                 },
                 take: 15,
             });
-            // Step 2: Fetch the barangay details in a separate query
             const barangayIds = topBarangays.map((barangay) => barangay.barangaysId);
             const barangayDetails = yield prisma_1.prisma.barangays.findMany({
                 where: {
@@ -1049,7 +1045,7 @@ const resolvers = {
                         municipalsId: item.municipalsId,
                         surveyId: item.surveyId,
                         surveyResponseId: item.surveyResponseId,
-                        optionId: item.optionId || undefined,
+                        optionId: item.optionId || null,
                         queryId: item.queryId,
                         respondentResponseId: item.respondentResponseId,
                     };

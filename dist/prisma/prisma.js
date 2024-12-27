@@ -8,3 +8,4 @@ const prisma = new client_1.PrismaClient({
     log: ["info"],
 });
 exports.prisma = prisma;
+
