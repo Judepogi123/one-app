@@ -1168,7 +1168,7 @@ const resolvers: Resolvers = {
             municipalsId: item.municipalsId,
             surveyId: item.surveyId,
             surveyResponseId: item.surveyResponseId,
-            optionId: item.optionId,
+            optionId: item.optionId || undefined,
             queryId: item.queryId,
             respondentResponseId: item.respondentResponseId,
           };
