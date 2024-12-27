@@ -20,6 +20,7 @@ import precint from "../routes/precint";
 import voters from "../routes/voter";
 import purok from "../routes/purok";
 import pdfFile from "../../routes/pdfFile";
+import image from "../../src/routes/image";
 //utils
 import { handleGenTagID, handleLevel } from "../utils/data";
 import { GraphQLError } from "graphql";
@@ -263,10 +264,10 @@ const resolvers: Resolvers = {
 
           // Assuming each response has an `option` relation, push options into the corresponding group
           grouped[queryId].option.push({
-            id: response.option.id,
+            id: response.option?.id as string,
             queryId: queryId,
-            title: response.option.title as string,
-            desc: response.option.desc as string,
+            title: response.option?.title as string,
+            desc: response.option?.desc as string,
           });
 
           return grouped;
@@ -919,6 +920,8 @@ const resolvers: Resolvers = {
       return prisma.survey.findFirst({ where: { tagID, drafted: false } });
     },
     createSurvey: async (_, { survey }) => {
+      console.log({ survey });
+
       const checkTagID = async () => {
         let genID = handleGenTagID();
         const tagID = await prisma.survey.findFirst({
@@ -952,6 +955,7 @@ const resolvers: Resolvers = {
           type: query.type,
           onTop: query.onTop,
           style: query.style,
+          withCustomOption: query.withCustomOption,
         },
       });
     },
@@ -1036,6 +1040,7 @@ const resolvers: Resolvers = {
       });
     },
     createOptionWithMedia: async (_, { media, option }) => {
+      console.log({ option });
       let mediaUrlId = null;
 
       const createdOption = await prisma.option.create({
@@ -1045,6 +1050,7 @@ const resolvers: Resolvers = {
           queryId: option.queryId,
           onExit: option.onExit,
           onTop: option.onTop,
+          customizable: option.customizable,
         },
       });
 
@@ -1110,6 +1116,80 @@ const resolvers: Resolvers = {
           respondentResponseId: response.respondentResponseId,
         },
       });
+    },
+    harvestResponse: async (
+      _,
+      { response, surveyResponse, respondentResponse, customOptions }
+    ) => {
+      console.log({
+        response,
+        surveyResponse,
+        respondentResponse,
+        customOptions,
+      });
+
+      await prisma.surveyResponse.createMany({
+        data: surveyResponse.map((item) => {
+          return {
+            id: item.id,
+            municipalsId: item.municipalsId,
+            barangaysId: item.barangaysId,
+            surveyId: item.surveyId,
+            usersUid: item.accountID,
+          };
+        }),
+        skipDuplicates: true,
+      });
+
+      await prisma.respondentResponse.createMany({
+        data: respondentResponse.map((item) => {
+          return {
+            id: item.id,
+            ageBracketId: item.ageBracketId,
+            genderId: item.genderId,
+            barangaysId: item.barangaysId,
+            municipalsId: item.municipalsId,
+            surveyId: item.surveyId,
+            usersUid: item.accountID,
+            surveyResponseId: item.surveyResponseId,
+            valid: item.valid,
+          };
+        }),
+        skipDuplicates: true,
+      });
+
+      await prisma.response.createMany({
+        data: response.map((item) => {
+          return {
+            id: item.id,
+            ageBracketId: item.ageBracketId,
+            genderId: item.genderId,
+            barangaysId: item.barangaysId,
+            municipalsId: item.municipalsId,
+            surveyId: item.surveyId,
+            surveyResponseId: item.surveyResponseId,
+            optionId: item.optionId,
+            queryId: item.queryId,
+            respondentResponseId: item.respondentResponseId,
+          };
+        }),
+        skipDuplicates: true,
+      });
+
+      if (customOptions.length) {
+        await prisma.customOption.createMany({
+          data: customOptions.map((item) => {
+            return {
+              id: item.id,
+              value: item.value,
+              queriesId: item.queriesId,
+              respondentResponseId: item.respondentResponseId,
+            };
+          }),
+          skipDuplicates: true,
+        });
+      }
+      return "OK";
     },
     submitResponse: async (
       _,
@@ -3054,7 +3134,6 @@ const resolvers: Resolvers = {
             votersId: item.id,
             usersUid: undefined,
             questionable: true,
-            
           };
         });
 
@@ -3354,6 +3433,25 @@ const resolvers: Resolvers = {
     ageCount: async () => {
       return await prisma.ageBracket.findMany();
     },
+    result: async (parent) => {
+      const result = await prisma.queries.findMany({
+        where: {
+          surveyId: parent.id,
+        },
+        include:{
+          Option:{
+            include:{
+              Response:{
+                where: {
+                  surveyId: parent.id,
+                },
+              }
+            }
+          }
+        }
+      });
+      return "OK";
+    },
   },
   Queries: {
     options: async (parent) => {
@@ -3378,10 +3476,21 @@ const resolvers: Resolvers = {
         orderBy: { name: "asc" },
       });
     },
-    customOption: async (parent) => {
+    customOption: async (parent, { zipCode, barangayId, surveyId }) => {
+      console.log({ zipCode, barangayId, surveyId });
+
+      const filter: any = {};
+      if (barangayId !== "all") {
+        filter.barangaysId = barangayId;
+      }
       return await prisma.customOption.findMany({
         where: {
           queriesId: parent.id,
+          RespondentResponse:{
+            municipalsId: zipCode,
+            surveyId: surveyId,
+            ...filter
+          }
         },
       });
     },
@@ -3459,6 +3568,17 @@ const resolvers: Resolvers = {
     barangays: async () => {
       return await prisma.barangays.findMany({ where: { municipalId: 4905 } });
     },
+    results: async (parent) => {
+      const responses = await prisma.respondentResponse.findMany({
+        where: {
+          Response: {
+            some: { optionId: parent.id },
+          },
+        },
+        include: {},
+      });
+      return 0;
+    },
   },
   RespondentResponse: {
     age: async (parent) => {
@@ -3489,6 +3609,16 @@ const resolvers: Resolvers = {
     respondentResponses: async (parent) => {
       return prisma.respondentResponse.findMany({
         where: { surveyResponseId: parent.id },
+      });
+    },
+    users: async (parent) => {
+      if (!parent.usersUid) {
+        return null;
+      }
+      return await prisma.users.findUnique({
+        where: {
+          uid: parent.usersUid,
+        },
       });
     },
   },
@@ -3577,8 +3707,11 @@ const resolvers: Resolvers = {
   },
   Response: {
     option: async (parent) => {
+      if (!parent) {
+        return [];
+      }
       return await prisma.option.findMany({
-        where: { id: parent.optionId },
+        where: { id: parent.optionId as string },
       });
     },
     queries: async (parent) => {
@@ -3671,6 +3804,37 @@ const resolvers: Resolvers = {
         where: { candidatesId: parent.id },
       });
     },
+    inTeam: async (parent) => {
+      const figureHeads = await prisma.teamLeader.findMany({
+        where: {
+          candidatesId: parent.id,
+        },
+      });
+      const voters = await prisma.voters.count({
+        where: {
+          candidatesId: parent.id,
+          teamId: { not: null },
+          level: 0,
+        },
+      });
+
+      const voterWithoutTeam = await prisma.voters.count({
+        where: {
+          candidatesId: parent.id,
+          teamId: null,
+          level: 0,
+        },
+      });
+
+      return {
+        figureHeads: figureHeads.length,
+        bc: figureHeads.filter((item) => item.level === 3).length,
+        pc: figureHeads.filter((item) => item.level === 2).length,
+        tl: figureHeads.filter((item) => item.level === 1).length,
+        withTeams: voters,
+        voterWithoutTeam: voterWithoutTeam,
+      };
+    },
   },
   ValidatedTeams: {
     teamLeader: async (parent) => {
@@ -3746,6 +3910,7 @@ const main = async () => {
     );
 
     app.use("/upload", fileRoutes);
+    app.use("/upload", image);
     app.use("/precint", precint);
     app.use("/voters", voters);
     app.use("/purok", purok);

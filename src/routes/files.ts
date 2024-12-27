@@ -1,5 +1,7 @@
 import express, { Request, Response } from "express";
 import multer from "multer";
+import PDFDocument from "pdfkit";
+import fs from "fs";
 import path from "path";
 import XLSX from "xlsx";
 
@@ -8,7 +10,7 @@ import { extractYear } from "../utils/date";
 import { handleSpecialChar, handleGender } from "../utils/data";
 
 //database
-import { prisma, Candidates, Voters } from "../../prisma/prisma";
+import { prisma } from "../../prisma/prisma";
 //props
 import { DataProps, RejectListProps, UpdateDataProps } from "../interface/data";
 
@@ -110,7 +112,6 @@ export default (io: any) => {
         lastname: row.lastname,
       }));
       console.log("Logged 1");
-      
 
       // Fetch all existing voters once
       const existingVoters = await prisma.voters.findMany({
@@ -428,6 +429,27 @@ export default (io: any) => {
       }
     }
   );
+
+  router.post("/export-pdf", async (req, res) => {
+    const data = req.body;
+    const { surveyCode } = data;
+    try {
+      const doc = new PDFDocument();
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename=${surveyCode}.pdf`);
+
+      doc.pipe(res);
+      doc
+        .font("fonts/PalatinoBold.ttf")
+        .fontSize(25)
+        .text("Some text with an embedded font!", 100, 100);
+      doc.end();
+    } catch (error) {
+      res.status(500).send({
+        message: "Something went wrong on the server. Please try again",
+      });
+    }
+  });
 
   return router;
 };

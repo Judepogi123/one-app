@@ -11,7 +11,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
-
 Object.defineProperty(exports, "__esModule", { value: true });
 const server_1 = require("@apollo/server");
 const express4_1 = require("@apollo/server/express4");
@@ -31,6 +30,7 @@ const precint_1 = __importDefault(require("../routes/precint"));
 const voter_1 = __importDefault(require("../routes/voter"));
 const purok_1 = __importDefault(require("../routes/purok"));
 const pdfFile_1 = __importDefault(require("../../routes/pdfFile"));
+const image_1 = __importDefault(require("../../src/routes/image"));
 //utils
 const data_1 = require("../utils/data");
 const graphql_1 = require("graphql");
@@ -239,6 +239,7 @@ const resolvers = {
             });
             // Group the responses by `queryId`
             const groupedByQueries = responses.reduce((grouped, response) => {
+                var _a, _b, _c;
                 const queryId = response.queries.id;
                 if (!grouped[queryId]) {
                     grouped[queryId] = {
@@ -255,10 +256,10 @@ const resolvers = {
                 }
                 // Assuming each response has an `option` relation, push options into the corresponding group
                 grouped[queryId].option.push({
-                    id: response.option.id,
+                    id: (_a = response.option) === null || _a === void 0 ? void 0 : _a.id,
                     queryId: queryId,
-                    title: response.option.title,
-                    desc: response.option.desc,
+                    title: (_b = response.option) === null || _b === void 0 ? void 0 : _b.title,
+                    desc: (_c = response.option) === null || _c === void 0 ? void 0 : _c.desc,
                 });
                 return grouped;
             }, {});
@@ -812,6 +813,7 @@ const resolvers = {
             return prisma_1.prisma.survey.findFirst({ where: { tagID, drafted: false } });
         }),
         createSurvey: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { survey }) {
+            console.log({ survey });
             const checkTagID = () => __awaiter(void 0, void 0, void 0, function* () {
                 let genID = (0, data_1.handleGenTagID)();
                 const tagID = yield prisma_1.prisma.survey.findFirst({
@@ -843,6 +845,7 @@ const resolvers = {
                     type: query.type,
                     onTop: query.onTop,
                     style: query.style,
+                    withCustomOption: query.withCustomOption,
                 },
             });
         }),
@@ -927,6 +930,7 @@ const resolvers = {
             });
         }),
         createOptionWithMedia: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { media, option }) {
+            console.log({ option });
             let mediaUrlId = null;
             const createdOption = yield prisma_1.prisma.option.create({
                 data: {
@@ -935,6 +939,7 @@ const resolvers = {
                     queryId: option.queryId,
                     onExit: option.onExit,
                     onTop: option.onTop,
+                    customizable: option.customizable,
                 },
             });
             if (media) {
@@ -998,6 +1003,73 @@ const resolvers = {
                     respondentResponseId: response.respondentResponseId,
                 },
             });
+        }),
+        harvestResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { response, surveyResponse, respondentResponse, customOptions }) {
+            console.log({
+                response,
+                surveyResponse,
+                respondentResponse,
+                customOptions,
+            });
+            yield prisma_1.prisma.surveyResponse.createMany({
+                data: surveyResponse.map((item) => {
+                    return {
+                        id: item.id,
+                        municipalsId: item.municipalsId,
+                        barangaysId: item.barangaysId,
+                        surveyId: item.surveyId,
+                        usersUid: item.accountID,
+                    };
+                }),
+                skipDuplicates: true,
+            });
+            yield prisma_1.prisma.respondentResponse.createMany({
+                data: respondentResponse.map((item) => {
+                    return {
+                        id: item.id,
+                        ageBracketId: item.ageBracketId,
+                        genderId: item.genderId,
+                        barangaysId: item.barangaysId,
+                        municipalsId: item.municipalsId,
+                        surveyId: item.surveyId,
+                        usersUid: item.accountID,
+                        surveyResponseId: item.surveyResponseId,
+                        valid: item.valid,
+                    };
+                }),
+                skipDuplicates: true,
+            });
+            yield prisma_1.prisma.response.createMany({
+                data: response.map((item) => {
+                    return {
+                        id: item.id,
+                        ageBracketId: item.ageBracketId,
+                        genderId: item.genderId,
+                        barangaysId: item.barangaysId,
+                        municipalsId: item.municipalsId,
+                        surveyId: item.surveyId,
+                        surveyResponseId: item.surveyResponseId,
+                        optionId: item.optionId,
+                        queryId: item.queryId,
+                        respondentResponseId: item.respondentResponseId,
+                    };
+                }),
+                skipDuplicates: true,
+            });
+            if (customOptions.length) {
+                yield prisma_1.prisma.customOption.createMany({
+                    data: customOptions.map((item) => {
+                        return {
+                            id: item.id,
+                            value: item.value,
+                            queriesId: item.queriesId,
+                            respondentResponseId: item.respondentResponseId,
+                        };
+                    }),
+                    skipDuplicates: true,
+                });
+            }
+            return "OK";
         }),
         submitResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { respondentResponse, response, surveyResponse }) {
             return yield prisma_1.prisma.$transaction((prisma) => __awaiter(void 0, void 0, void 0, function* () {
@@ -2433,7 +2505,6 @@ const resolvers = {
                     remark: item.reason,
                 };
             });
-            console.log("resultLIst", teamMembers);
             yield prisma_1.prisma.validatedTeamMembers.createMany({
                 data: teamMembers,
                 skipDuplicates: true,
@@ -2481,7 +2552,6 @@ const resolvers = {
             const handleGetLeaderData = (id, level, voterId, purokId, teamId, headIdOne, headIdTwo) => __awaiter(void 0, void 0, void 0, function* () {
                 try {
                     console.log("Params: ", teamId, purokId, voterId, headIdOne, headIdTwo);
-                    // Find existing leader
                     const leader = yield prisma_1.prisma.teamLeader.findFirst({
                         where: {
                             voter: {
@@ -2494,13 +2564,12 @@ const resolvers = {
                     if (leader) {
                         return Object.assign(Object.assign({}, leader), { teamId: leader.teamId });
                     }
-                    // Create a new leader
                     const newLeader = yield prisma_1.prisma.teamLeader.create({
                         data: {
                             votersId: voterId,
                             municipalsId: team.zipCode,
                             barangaysId: barangay.id,
-                            teamId: null, // Initially null, will be updated later
+                            teamId: null,
                             candidatesId: supporting === null || supporting === void 0 ? void 0 : supporting.id,
                             level,
                             hubId: "unknown",
@@ -2510,7 +2579,6 @@ const resolvers = {
                             purokCoorsId: level === 1 ? headIdTwo : null,
                         },
                     });
-                    // Create a new team and assign the leader
                     const newTeam = yield prisma_1.prisma.team.create({
                         data: {
                             barangaysId: barangay.id,
@@ -2521,7 +2589,6 @@ const resolvers = {
                             level,
                         },
                     });
-                    // Update the teamId for the new leader
                     yield prisma_1.prisma.teamLeader.update({
                         where: { id: newLeader.id },
                         data: {
@@ -3028,6 +3095,25 @@ const resolvers = {
         ageCount: () => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.ageBracket.findMany();
         }),
+        result: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            const result = yield prisma_1.prisma.queries.findMany({
+                where: {
+                    surveyId: parent.id,
+                },
+                include: {
+                    Option: {
+                        include: {
+                            Response: {
+                                where: {
+                                    surveyId: parent.id,
+                                },
+                            }
+                        }
+                    }
+                }
+            });
+            return "OK";
+        }),
     },
     Queries: {
         options: (parent) => __awaiter(void 0, void 0, void 0, function* () {
@@ -3051,10 +3137,16 @@ const resolvers = {
                 orderBy: { name: "asc" },
             });
         }),
-        customOption: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+        customOption: (parent_1, _a) => __awaiter(void 0, [parent_1, _a], void 0, function* (parent, { zipCode, barangayId, surveyId }) {
+            console.log({ zipCode, barangayId, surveyId });
+            const filter = {};
+            if (barangayId !== "all") {
+                filter.barangaysId = barangayId;
+            }
             return yield prisma_1.prisma.customOption.findMany({
                 where: {
                     queriesId: parent.id,
+                    RespondentResponse: Object.assign({ municipalsId: zipCode, surveyId: surveyId }, filter)
                 },
             });
         }),
@@ -3120,6 +3212,17 @@ const resolvers = {
         barangays: () => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.barangays.findMany({ where: { municipalId: 4905 } });
         }),
+        results: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            const responses = yield prisma_1.prisma.respondentResponse.findMany({
+                where: {
+                    Response: {
+                        some: { optionId: parent.id },
+                    },
+                },
+                include: {},
+            });
+            return 0;
+        }),
     },
     RespondentResponse: {
         age: (parent) => __awaiter(void 0, void 0, void 0, function* () {
@@ -3150,6 +3253,16 @@ const resolvers = {
         respondentResponses: (parent) => __awaiter(void 0, void 0, void 0, function* () {
             return prisma_1.prisma.respondentResponse.findMany({
                 where: { surveyResponseId: parent.id },
+            });
+        }),
+        users: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            if (!parent.usersUid) {
+                return null;
+            }
+            return yield prisma_1.prisma.users.findUnique({
+                where: {
+                    uid: parent.usersUid,
+                },
             });
         }),
     },
@@ -3231,6 +3344,9 @@ const resolvers = {
     },
     Response: {
         option: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            if (!parent) {
+                return [];
+            }
             return yield prisma_1.prisma.option.findMany({
                 where: { id: parent.optionId },
             });
@@ -3325,6 +3441,35 @@ const resolvers = {
                 where: { candidatesId: parent.id },
             });
         }),
+        inTeam: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            const figureHeads = yield prisma_1.prisma.teamLeader.findMany({
+                where: {
+                    candidatesId: parent.id,
+                },
+            });
+            const voters = yield prisma_1.prisma.voters.count({
+                where: {
+                    candidatesId: parent.id,
+                    teamId: { not: null },
+                    level: 0,
+                },
+            });
+            const voterWithoutTeam = yield prisma_1.prisma.voters.count({
+                where: {
+                    candidatesId: parent.id,
+                    teamId: null,
+                    level: 0,
+                },
+            });
+            return {
+                figureHeads: figureHeads.length,
+                bc: figureHeads.filter((item) => item.level === 3).length,
+                pc: figureHeads.filter((item) => item.level === 2).length,
+                tl: figureHeads.filter((item) => item.level === 1).length,
+                withTeams: voters,
+                voterWithoutTeam: voterWithoutTeam,
+            };
+        }),
     },
     ValidatedTeams: {
         teamLeader: (parent) => __awaiter(void 0, void 0, void 0, function* () {
@@ -3398,6 +3543,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
         yield server.start();
         app.use("/graphql", (0, cors_1.default)(), express_1.default.json(), (0, express4_1.expressMiddleware)(server));
         app.use("/upload", fileRoutes);
+        app.use("/upload", image_1.default);
         app.use("/precint", precint_1.default);
         app.use("/voters", voter_1.default);
         app.use("/purok", purok_1.default);

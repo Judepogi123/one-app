@@ -29,7 +29,7 @@ import {
   ValidatedTeams,
   UserQRCode,
   CustomOption,
-  VoterRecords
+  VoterRecords,
 } from "../../prisma/prisma";
 import {
   BarangayOptionResponse,
@@ -238,7 +238,7 @@ export type Resolvers = {
         query: string;
         skip: number;
         candidate: string;
-        withIssues: boolean
+        withIssues: boolean;
       },
       {},
       Team[]
@@ -336,6 +336,7 @@ export type Resolvers = {
           type: string;
           onTop: boolean;
           style: number;
+          withCustomOption: boolean;
         };
       },
       {},
@@ -376,6 +377,7 @@ export type Resolvers = {
           queryId: string;
           onExit: boolean;
           onTop: boolean;
+          customizable: boolean;
         };
       },
       {},
@@ -499,6 +501,49 @@ export type Resolvers = {
       },
       {},
       DataResponse
+    >;
+    harvestResponse: ResolverFn<
+      {},
+      {
+        surveyResponse: {
+          id: string;
+          municipalsId: number;
+          barangaysId: string;
+          surveyId: string;
+          accountID: string;
+        }[];
+        respondentResponse: {
+          id: string;
+          municipalsId: number;
+          barangaysId: string;
+          surveyId: string;
+          genderId: string;
+          ageBracketId: string;
+          surveyResponseId: string;
+          accountID: string;
+          valid: boolean;
+        }[];
+        response: {
+          id: string;
+          municipalsId: number;
+          barangaysId: string;
+          surveyId: string;
+          genderId: string;
+          ageBracketId: string;
+          surveyResponseId: string;
+          optionId: string;
+          queryId: string;
+          respondentResponseId: string;
+        }[];
+        customOptions: {
+          id: string;
+          value: string;
+          queriesId: string;
+          respondentResponseId: string;
+        }[];
+      },
+      {},
+      string
     >;
     submitResponse: ResolverFn<
       {},
@@ -759,12 +804,18 @@ export type Resolvers = {
     images: ResolverFn<Survey, {}, {}, MediaUrl[]>;
     responseCount: ResolverFn<Survey, { zipCode: number }, {}, number>;
     ageCount: ResolverFn<Survey, {}, {}, AgeBracket[]>;
+    result: ResolverFn<Survey, {}, {}, string>;
   };
   Queries: {
     options: ResolverFn<Queries, {}, {}, Option[]>;
     respondentOption: ResolverFn<Queries, { id: string }, {}, DataResponse[]>;
     barangayList: ResolverFn<{}, { zipCode: number }, {}, Barangays[]>;
-    customOption: ResolverFn<Queries, {}, {}, CustomOption[]>;
+    customOption: ResolverFn<
+      Queries,
+      { zipCode: number; surveyId: string; barangayId: string },
+      {},
+      CustomOption[]
+    >;
   };
   Option: {
     fileUrl: ResolverFn<Option, {}, {}, MediaUrl | null>;
@@ -799,6 +850,7 @@ export type Resolvers = {
       number
     >;
     barangays: ResolverFn<{}, {}, {}, Barangays[]>;
+    results: ResolverFn<Option, {}, {}, number>;
   };
   RespondentResponse: {
     age: ResolverFn<RespondentResponse, {}, {}, AgeBracket | null>;
@@ -814,6 +866,7 @@ export type Resolvers = {
       {},
       RespondentResponse[]
     >;
+    users: ResolverFn<SurveyResponse, {}, {}, Users | null>;
   };
   Quota: {
     age: ResolverFn<Quota, {}, {}, AgeBracket | null>;
@@ -872,6 +925,19 @@ export type Resolvers = {
   };
   Candidates: {
     supporters: ResolverFn<Candidates, {}, {}, number>;
+    inTeam: ResolverFn<
+      Candidates,
+      {},
+      {},
+      {
+        figureHeads: number;
+        bc: number;
+        pc: number;
+        tl: number;
+        withTeams: number;
+        voterWithoutTeam: number;
+      }
+    >;
   };
   ValidatedTeams: {
     teamLeader: ResolverFn<ValidatedTeams, {}, {}, TeamLeader | null>;

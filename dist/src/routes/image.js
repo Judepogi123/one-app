@@ -19,11 +19,6 @@ const path_1 = __importDefault(require("path"));
 const router = express_1.default.Router();
 const uploadDir = path_1.default.join(__dirname, "uploads");
 const upload = (0, multer_1.default)({ dest: uploadDir });
-const options = {
-    use_filename: true,
-    unique_filename: false,
-    overwrite: true,
-};
 router.post("/image", upload.single("file"), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     if (!req.file) {
         return res.status(400).send("No file uploaded.");
@@ -35,6 +30,7 @@ router.post("/image", upload.single("file"), (req, res) => __awaiter(void 0, voi
         res.status(200).json(url);
     }
     catch (error) {
+        console.log("Error uploading", error);
         res.status(500).send("Internal server error");
     }
 }));

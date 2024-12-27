@@ -571,11 +571,14 @@ model Queries {
 }
 
 model CustomOption {
-  id          String        @id @default(cuid())
-  value       String
-  Queries     Queries?      @relation(fields: [queriesId], references: [id])
-  queriesId   String?
-  QueryAnswer QueryAnswer[]
+  id                   String              @id @default(cuid())
+  value                String
+  Queries              Queries?            @relation(fields: [queriesId], references: [id])
+  queriesId            String?
+  QueryAnswer          QueryAnswer[]
+  RespondentResponse   RespondentResponse? @relation(fields: [respondentResponseId], references: [id])
+  respondentResponseId String?
+  Response             Response[]
 }
 
 model Option {
@@ -646,6 +649,7 @@ model RespondentResponse {
   valid               Boolean            @default(true)
   usersUid            String?
   Users               Users?             @relation(fields: [usersUid], references: [uid])
+  customeOption       CustomOption[]
 }
 
 model ValidatedResponse {
@@ -666,8 +670,8 @@ model Response {
   barangay             Barangays          @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
   barangaysId          String
   municipal            Municipals         @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
-  option               Option             @relation(fields: [optionId], references: [id], onDelete: Cascade)
-  optionId             String
+  option               Option?             @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  optionId             String?
   ageBracket           AgeBracket         @relation(fields: [ageBracketId], references: [id], onDelete: Cascade)
   ageBracketId         String
   gender               Gender             @relation(fields: [genderId], references: [id], onDelete: Cascade)
@@ -679,6 +683,8 @@ model Response {
   respondentResponseId String
   surveyResponseId     String
   QueryAnswer          QueryAnswer[]
+  customOption         CustomOption?       @relation(fields: [customOptionId], references: [id])
+  customOptionId       String?
 }
 
 model QueryAnswer {

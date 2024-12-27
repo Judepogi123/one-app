@@ -506,6 +506,7 @@ type BarangayCoor {
     removeAllTeams: String!
     createAccount(account: NewAccountInput!): String!
     createCustomOption(id: String!): String!
+    harvestResponse(surveyResponse: [NewSurveyResponseInput!]!,respondentResponse:[NewRespondentResponseInput!]!, response:[NewResponseInput!]!, customOptions: [NewCustomOptionsInput!]): String!
   }
 
   type Candidates {
@@ -521,7 +522,17 @@ type BarangayCoor {
   BarangayCoor: [BarangayCoor!]!
   PurokCoor: [PurokCoor!]
   TeamLeader: [TeamLeader!]
-  Team: [Team!]
+  Team: [Team!],
+  inTeam: AllSupporters
+}
+
+type AllSupporters {
+  figureHeads: Int
+  bc: Int
+  pc: Int
+  tl: Int
+  withTeams: Int
+  voterWithoutTeam: Int
 }
 
   type QRcode {
@@ -590,6 +601,7 @@ type BarangayCoor {
   images: [MediaUrl!]!
   responseCount( zipCode: Int!): Int
   ageCount: [AgeBracket!]
+  result: String
 }
 
 type Queries {
@@ -607,14 +619,16 @@ type Queries {
   respondentOption(id: String!): [Response!]
   onTop: Boolean!
   barangayList(zipCode: Int!): [Barangay!]
-  customOption: [CustomOption!]
+  customOption(zipCode: Int!, surveyId: String!, barangayId: String!): [CustomOption]
+  withCustomOption: Boolean
 }
 
 type CustomOption {
-  id: ID!               
-  value: String!       
-  Queries: Queries    
-  queriesId: String
+  id: String!
+  value: String!
+  queriesId: String!
+  queryResponse_id: String!
+  survey_id: String!
 }
 
 type Option {
@@ -635,7 +649,9 @@ type Option {
   overAllCount: Int
   ageCountRank(id: String,ageBracketId: String,barangayId: String!,genderId: String!): Int!
   optionRank(surveyId: String!,zipCode: Int!, barangayId: String!,genderId: String!, optionId: String!): Int
-  barangays:[Barangay!] 
+  barangays:[Barangay!]
+  customizable: Boolean
+  results: Int
 }
 
 type MediaUrl {
@@ -895,6 +911,7 @@ input QuotaUpdate {
     type: String!
     onTop: Boolean!
     style: Int!
+    withCustomOption: Boolean
   }
 
   input NewOptionInput {
@@ -903,6 +920,7 @@ input QuotaUpdate {
     queryId: String!
     onExit: Boolean!
     onTop: Boolean!
+    customizable: Boolean
   }
 
   input NewMediaInput{
@@ -938,6 +956,7 @@ input QuotaUpdate {
   municipalsId: Int!
   barangaysId: String!
   surveyId: String!
+  accountID: String!
 }
 
 input NewRespondentResponseInput {
@@ -948,6 +967,8 @@ input NewRespondentResponseInput {
   genderId: String!
   ageBracketId: String!
   surveyResponseId: String!
+  accountID: String!
+  valid: Boolean
 }
 
 input NewResponseInput {
@@ -959,8 +980,16 @@ input NewResponseInput {
   ageBracketId: String!
   surveyResponseId: String!
   respondentResponseId: String!
-  optionId: String!
+  optionId: String
   queryId: String!
+}
+
+
+input NewCustomOptionsInput {
+  id: ID!
+  value: String!
+  queriesId: String!
+  respondentResponseId: String!
 }
 
   input UpdateOption{

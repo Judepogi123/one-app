@@ -133,8 +133,8 @@ export interface RejectListedProps
     | "municipalsId"
     | "level"
   > {
-    id?: string
-    votersId?: string
+  id?: string;
+  votersId?: string;
   reason: string;
   code: number;
 }
@@ -186,8 +186,16 @@ export interface Team {
   candidatesId?: string | null;
 }
 
-export interface TeamProps extends Omit<Team,"">{
+export interface TeamProps extends Omit<Team, ""> {
   _count: {
-    voters: number
+    voters: number;
+  }[];
+}
+
+export interface ResponseWithCustomeData
+  extends Omit<RespondentResponseProps, ""> {
+  customeOptions: {
+    value: string;
+    id: string;
   }[];
 }

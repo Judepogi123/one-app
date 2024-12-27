@@ -14,6 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const multer_1 = __importDefault(require("multer"));
+const pdfkit_1 = __importDefault(require("pdfkit"));
 const path_1 = __importDefault(require("path"));
 const xlsx_1 = __importDefault(require("xlsx"));
 //utils
@@ -375,6 +376,26 @@ exports.default = (io) => {
             res.status(500).send({
                 status: "Internal server error",
                 message: "Something went wrong on the server. Please try again.",
+            });
+        }
+    }));
+    router.post("/export-pdf", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+        const data = req.body;
+        const { surveyCode } = data;
+        try {
+            const doc = new pdfkit_1.default();
+            res.setHeader("Content-Type", "application/pdf");
+            res.setHeader("Content-Disposition", `attachment; filename=${surveyCode}.pdf`);
+            doc.pipe(res);
+            doc
+                .font("fonts/PalatinoBold.ttf")
+                .fontSize(25)
+                .text("Some text with an embedded font!", 100, 100);
+            doc.end();
+        }
+        catch (error) {
+            res.status(500).send({
+                message: "Something went wrong on the server. Please try again",
             });
         }
     }));
