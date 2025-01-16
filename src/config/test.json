@@ -1,0 +1,90 @@
+{
+  "queries": "dasd",
+  "id": "12345",
+  "options": [
+    {
+      "title": "example",
+      "id": "12345",
+      "Response": [
+        {
+          "gender": "male",
+          "response": [
+            {
+              "id": "12345",
+              "genderid": "dasdqw",
+              "optionId": "2130sdd",
+              "queryId": "4323423"
+            }
+          ]
+        },
+        {
+          "gender": "email",
+          "response": [
+            {
+              "id": "12345",
+              "genderid": "dasdqw",
+              "optionId": "2130sdd",
+              "queryId": "4323423"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "example 2",
+      "id": "12345",
+      "Response": [
+        {
+          "gender": "male",
+          "response": [
+            {
+              "id": "12345",
+              "genderid": "dasdqw",
+              "optionId": "2130sdd",
+              "queryId": "4323423"
+            }
+          ]
+        },
+        {
+          "gender": "email",
+          "response": [
+            {
+              "id": "12345",
+              "genderid": "dasdqw",
+              "optionId": "2130sdd",
+              "queryId": "4323423"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "example 3",
+      "id": "23434",
+      "Response": [
+        {
+          "gender": "male",
+          "response": [
+            {
+              "id": "dasd23452",
+              "genderid": "dasdqw",
+              "optionId": "2130sdd",
+              "queryId": "4323423"
+            }
+          ]
+        },
+        {
+          "gender": "female",
+          "response": [
+            {
+              "id": "dasdasd",
+              "genderid": "dasdqw",
+              "optionId": "2130sdd",
+              "queryId": "4323423"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -257,6 +257,15 @@ export type Resolvers = {
     getTeamRecord: ResolverFn<{}, { id: string }, {}, ValidatedTeams | null>;
     userList: ResolverFn<{}, {}, {}, Users[]>;
     userQRCodeList: ResolverFn<{}, {}, {}, UserQRCode[]>;
+    purokList: ResolverFn<{}, {}, {}, Purok[]>;
+    voterRecords: ResolverFn<{}, {}, {}, VoterRecords[]>;
+    printOptionResponse: ResolverFn<
+      {},
+      { zipCode: number; queryId: string; surveyId: string },
+      {},
+      Queries[]
+    >;
+    candidate: ResolverFn<{}, { id: string }, {}, Candidates | null>;
   };
   Mutation: {
     createVoter: ResolverFn<{}, Voters, {}, Voters>;
@@ -724,6 +733,12 @@ export type Resolvers = {
     removeTeam: ResolverFn<{}, { id: string }, {}, string>;
     removeAllTeams: ResolverFn<{}, {}, {}, string>;
     createCustomOption: ResolverFn<{}, { id: string }, {}, string>;
+    resetTeamList: ResolverFn<
+      {},
+      { zipCode: string; barangayId: string },
+      {},
+      string
+    >;
     //removeValidateTeamleader: ResolverFn<{}, {}, {}, string>;
   };
   Voter: {
@@ -777,6 +792,33 @@ export type Resolvers = {
     >;
     selectedQuery: ResolverFn<Barangays, { id: string }, {}, Option[]>;
     validationList: ResolverFn<Barangays, {}, {}, Validation[]>;
+    supporters: ResolverFn<
+      Barangays,
+      { id: string },
+      {},
+      {
+        figureHeads: number;
+        bc: number;
+        pc: number;
+        tl: number;
+        withTeams: number;
+        voterWithoutTeam: number;
+      }
+    >;
+    teamStat: ResolverFn<
+      Barangays,
+      {},
+      {},
+      {
+        aboveMax: number;
+        belowMax: number;
+        equalToMax: number;
+        aboveMin: number;
+        equalToMin: number;
+        belowMin: number;
+        threeAndBelow: number;
+      }
+    >;
   };
   Purok: {
     purokDraftedVotersCount: ResolverFn<Purok, {}, {}, number>;
@@ -809,7 +851,12 @@ export type Resolvers = {
   Queries: {
     options: ResolverFn<Queries, {}, {}, Option[]>;
     respondentOption: ResolverFn<Queries, { id: string }, {}, DataResponse[]>;
-    barangayList: ResolverFn<{}, { zipCode: number }, {}, Barangays[]>;
+    barangayList: ResolverFn<
+      {},
+      { zipCode: number; candidateId: string },
+      {},
+      Barangays[]
+    >;
     customOption: ResolverFn<
       Queries,
       { zipCode: number; surveyId: string; barangayId: string },

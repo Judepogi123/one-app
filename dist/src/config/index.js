@@ -509,6 +509,9 @@ const resolvers = {
                 where: filter,
                 skip: skip !== null && skip !== void 0 ? skip : 0,
                 take: take,
+                orderBy: {
+                    idNumber: "desc",
+                },
             });
             const count = yield prisma_1.prisma.voters.count({
                 where: filter,
@@ -669,6 +672,21 @@ const resolvers = {
         }),
         userQRCodeList: () => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.userQRCode.findMany();
+        }),
+        purokList: () => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma_1.prisma.purok.findMany();
+        }),
+        voterRecords: () => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma_1.prisma.voterRecords.findMany();
+        }),
+        printOptionResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { surveyId, queryId, zipCode }) {
+            const response = yield prisma_1.prisma.queries.findMany();
+            return response;
+        }),
+        candidate: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
+            return yield prisma_1.prisma.candidates.findUnique({
+                where: { id },
+            });
         }),
     },
     Mutation: {
@@ -1007,68 +1025,140 @@ const resolvers = {
         harvestResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { response, surveyResponse, respondentResponse, customOptions }) {
             console.log({
                 response,
-                surveyResponse,
                 respondentResponse,
-                customOptions,
             });
-            yield prisma_1.prisma.surveyResponse.createMany({
-                data: surveyResponse.map((item) => {
-                    return {
-                        id: item.id,
-                        municipalsId: item.municipalsId,
-                        barangaysId: item.barangaysId,
-                        surveyId: item.surveyId,
-                        usersUid: item.accountID,
-                    };
-                }),
-                skipDuplicates: true,
-            });
-            yield prisma_1.prisma.respondentResponse.createMany({
-                data: respondentResponse.map((item) => {
-                    return {
-                        id: item.id,
-                        ageBracketId: item.ageBracketId,
-                        genderId: item.genderId,
-                        barangaysId: item.barangaysId,
-                        municipalsId: item.municipalsId,
-                        surveyId: item.surveyId,
-                        usersUid: item.accountID,
-                        surveyResponseId: item.surveyResponseId,
-                        valid: item.valid,
-                    };
-                }),
-                skipDuplicates: true,
-            });
-            yield prisma_1.prisma.response.createMany({
-                data: response.map((item) => {
-                    return {
-                        id: item.id,
-                        ageBracketId: item.ageBracketId,
-                        genderId: item.genderId,
-                        barangaysId: item.barangaysId,
-                        municipalsId: item.municipalsId,
-                        surveyId: item.surveyId,
-                        surveyResponseId: item.surveyResponseId,
-                        optionId: item.optionId || null,
-                        queryId: item.queryId,
-                        respondentResponseId: item.respondentResponseId,
-                    };
-                }),
-                skipDuplicates: true,
-            });
-            if (customOptions.length) {
-                yield prisma_1.prisma.customOption.createMany({
-                    data: customOptions.map((item) => {
-                        return {
+            for (let item of surveyResponse) {
+                try {
+                    yield prisma_1.prisma.surveyResponse.create({
+                        data: {
                             id: item.id,
-                            value: item.value,
-                            queriesId: item.queriesId,
-                            respondentResponseId: item.respondentResponseId,
-                        };
-                    }),
-                    skipDuplicates: true,
-                });
+                            municipalsId: item.municipalsId,
+                            barangaysId: item.barangaysId,
+                            surveyId: item.surveyId,
+                            usersUid: item.accountID,
+                        },
+                    });
+                }
+                catch (error) {
+                    continue;
+                }
             }
+            for (let item of respondentResponse) {
+                try {
+                    yield prisma_1.prisma.respondentResponse.create({
+                        data: {
+                            id: item.id,
+                            ageBracketId: item.ageBracketId,
+                            genderId: item.genderId,
+                            barangaysId: item.barangaysId,
+                            municipalsId: item.municipalsId,
+                            surveyId: item.surveyId,
+                            usersUid: item.accountID,
+                            surveyResponseId: item.surveyResponseId,
+                            valid: item.valid,
+                        },
+                    });
+                }
+                catch (error) {
+                    continue;
+                }
+            }
+            for (let item of response) {
+                try {
+                    yield prisma_1.prisma.response.create({
+                        data: {
+                            id: item.id,
+                            ageBracketId: item.ageBracketId,
+                            genderId: item.genderId,
+                            barangaysId: item.barangaysId,
+                            municipalsId: item.municipalsId,
+                            surveyId: item.surveyId,
+                            surveyResponseId: item.surveyResponseId,
+                            optionId: item.optionId || null,
+                            queryId: item.queryId,
+                            respondentResponseId: item.respondentResponseId,
+                        },
+                    });
+                }
+                catch (error) {
+                    continue;
+                }
+            }
+            if (customOptions.length) {
+                for (let item of customOptions) {
+                    try {
+                        yield prisma_1.prisma.customOption.createMany({
+                            data: {
+                                id: item.id,
+                                value: item.value,
+                                queriesId: item.queriesId,
+                                respondentResponseId: item.respondentResponseId,
+                            },
+                        });
+                    }
+                    catch (error) {
+                        continue;
+                    }
+                }
+            }
+            // await prisma.surveyResponse.createMany({
+            //   data: surveyResponse.map((item) => {
+            //     return {
+            //       id: item.id,
+            //       municipalsId: item.municipalsId,
+            //       barangaysId: item.barangaysId,
+            //       surveyId: item.surveyId,
+            //       usersUid: item.accountID,
+            //     };
+            //   }),
+            //   skipDuplicates: true,
+            // });
+            // await prisma.respondentResponse.createMany({
+            //   data: respondentResponse.map((item) => {
+            //     return {
+            //       id: item.id,
+            //       ageBracketId: item.ageBracketId,
+            //       genderId: item.genderId,
+            //       barangaysId: item.barangaysId,
+            //       municipalsId: item.municipalsId,
+            //       surveyId: item.surveyId,
+            //       usersUid: item.accountID,
+            //       surveyResponseId: item.surveyResponseId,
+            //       valid: item.valid,
+            //     };
+            //   }),
+            //   skipDuplicates: true,
+            // });
+            // await prisma.response.createMany({
+            //   data: response.map((item) => {
+            //     return {
+            //       id: item.id,
+            //       ageBracketId: item.ageBracketId,
+            //       genderId: item.genderId,
+            //       barangaysId: item.barangaysId,
+            //       municipalsId: item.municipalsId,
+            //       surveyId: item.surveyId,
+            //       surveyResponseId: item.surveyResponseId,
+            //       optionId: item.optionId || null,
+            //       queryId: item.queryId,
+            //       respondentResponseId: item.respondentResponseId,
+            //     };
+            //   }),
+            //   skipDuplicates: true,
+            // });
+            // if (customOptions.length) {
+            //   await prisma.customOption.createMany({
+            //     data: customOptions.map((item) => {
+            //       return {
+            //         id: item.id,
+            //         value: item.value,
+            //         queriesId: item.queriesId,
+            //         respondentResponseId: item.respondentResponseId,
+            //       };
+            //     }),
+            //     skipDuplicates: true,
+            //   });
+            // }
             return "OK";
         }),
         submitResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { respondentResponse, response, surveyResponse }) {
@@ -1089,7 +1179,7 @@ const resolvers = {
                 });
                 for (const res of respondentResponse) {
                     const existingRespondent = yield prisma.respondentResponse.findUnique({
-                        where: { id: res.id }, // Assuming 'id' is unique for each respondent
+                        where: { id: res.id },
                     });
                     if (!existingRespondent) {
                         yield prisma.respondentResponse.create({
@@ -1185,6 +1275,7 @@ const resolvers = {
             }
             const accessToken = jsonwebtoken_1.default.sign({ user: adminUser.phoneNumber }, secretToken, { expiresIn: "8h" });
             const { phoneNumber, lastname, firstname, uid } = adminUser;
+            yield prisma_1.prisma.$disconnect();
             return { phoneNumber, lastname, firstname, uid, accessToken };
         }),
         createQuota: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { quota, gender }) {
@@ -2382,11 +2473,6 @@ const resolvers = {
             const barangayCoorData = yield handleLeaderInfo(team.barangayCoorId, 3, undefined, barangayCoor === null || barangayCoor === void 0 ? void 0 : barangayCoor.purokId, barangayCoor === null || barangayCoor === void 0 ? void 0 : barangayCoor.id);
             const purokCoorData = yield handleLeaderInfo(team.purokCoorId, 2, barangayCoorData === null || barangayCoorData === void 0 ? void 0 : barangayCoorData.teamId, purokCoor === null || purokCoor === void 0 ? void 0 : purokCoor.purokId, purokCoor === null || purokCoor === void 0 ? void 0 : purokCoor.id);
             const teamLeaderData = yield handleLeaderInfo(team.teamLeaderId, 1, purokCoorData === null || purokCoorData === void 0 ? void 0 : purokCoorData.teamId, purokCoorData === null || purokCoorData === void 0 ? void 0 : purokCoorData.purokId, teamLeader === null || teamLeader === void 0 ? void 0 : teamLeader.id);
-            console.log("Headers: ", {
-                teamLeaderData,
-                purokCoorData,
-                barangayCoorData,
-            });
             const temp = yield prisma_1.prisma.validatedTeams.create({
                 data: {
                     purokId: purokCoor === null || purokCoor === void 0 ? void 0 : purokCoor.purokId,
@@ -2512,8 +2598,8 @@ const resolvers = {
             return JSON.stringify(teamMembers);
         }),
         composeTeam: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { team }) {
-            var _b, _c, _d, _e, _f, _g;
             console.log({ team });
+            let successCount = 0;
             const resultList = [];
             const members = [
                 team.barangayCoorId,
@@ -2551,7 +2637,6 @@ const resolvers = {
             const teamLeader = handleGetInitInfo(team.teamLeaderId);
             const handleGetLeaderData = (id, level, voterId, purokId, teamId, headIdOne, headIdTwo) => __awaiter(void 0, void 0, void 0, function* () {
                 try {
-                    console.log("Params: ", teamId, purokId, voterId, headIdOne, headIdTwo);
                     const leader = yield prisma_1.prisma.teamLeader.findFirst({
                         where: {
                             voter: {
@@ -2595,7 +2680,7 @@ const resolvers = {
                             teamId: newTeam.id,
                         },
                     });
-                    const updatedVoter = yield prisma_1.prisma.voters.update({
+                    yield prisma_1.prisma.voters.update({
                         where: {
                             id: voterId,
                         },
@@ -2605,8 +2690,6 @@ const resolvers = {
                             candidatesId: supporting === null || supporting === void 0 ? void 0 : supporting.id,
                         },
                     });
-                    console.log("New leader created:", level, newLeader);
-                    console.log("Updated voter record:", level, updatedVoter);
                     return Object.assign(Object.assign({}, newLeader), { teamId: newTeam.id });
                 }
                 catch (error) {
@@ -2626,6 +2709,7 @@ const resolvers = {
                 },
             });
             const processedVoters = new Set();
+            const alreadyInTeam = [];
             for (const member of team.members) {
                 try {
                     const voter = yield prisma_1.prisma.voters.findFirst({
@@ -2693,35 +2777,40 @@ const resolvers = {
                             processedVoters.add(voter.id);
                         }
                     }
-                    if (voter.level > 0) {
-                        if (!processedVoters.has(voter.id)) {
-                            resultList.push({
-                                id: voter.id,
-                                firstname: voter.firstname,
-                                lastname: voter.lastname,
-                                municipalsId: voter.municipalsId,
-                                barangaysId: voter.barangaysId,
-                                reason: `May katayuan na (${(0, data_1.handleLevel)(voter.level)})`,
-                                level: voter.level,
-                                idNumber: voter.idNumber,
-                                code: 1,
-                            });
-                            processedVoters.add(voter.id);
-                        }
-                    }
+                    // if (voter.level > 0) {
+                    //   if (!processedVoters.has(voter.id)) {
+                    //     resultList.push({
+                    //       id: voter.id,
+                    //       firstname: voter.firstname,
+                    //       lastname: voter.lastname,
+                    //       municipalsId: voter.municipalsId,
+                    //       barangaysId: voter.barangaysId,
+                    //       reason: `May katayuan na (${handleLevel(voter.level)})`,
+                    //       level: voter.level,
+                    //       idNumber: voter.idNumber,
+                    //       code: 1,
+                    //     });
+                    //     processedVoters.add(voter.id);
+                    //   }
+                    // }
                     if (voter.teamId) {
                         if (!processedVoters.has(voter.id)) {
-                            resultList.push({
-                                id: voter.id,
-                                firstname: voter.firstname,
-                                lastname: voter.lastname,
-                                municipalsId: voter.municipalsId,
-                                barangaysId: voter.barangaysId,
-                                reason: `May team na (${(0, data_1.handleLevel)((_c = (_b = votersTeam === null || votersTeam === void 0 ? void 0 : votersTeam.TeamLeader) === null || _b === void 0 ? void 0 : _b.voter) === null || _c === void 0 ? void 0 : _c.level)}): ${(_e = (_d = votersTeam === null || votersTeam === void 0 ? void 0 : votersTeam.TeamLeader) === null || _d === void 0 ? void 0 : _d.voter) === null || _e === void 0 ? void 0 : _e.lastname}, ${(_g = (_f = votersTeam === null || votersTeam === void 0 ? void 0 : votersTeam.TeamLeader) === null || _f === void 0 ? void 0 : _f.voter) === null || _g === void 0 ? void 0 : _g.firstname}`,
-                                level: voter.level,
-                                idNumber: voter.idNumber,
-                                code: 1,
-                            });
+                            // resultList.push({
+                            //   id: voter.id,
+                            //   firstname: voter.firstname,
+                            //   lastname: voter.lastname,
+                            //   municipalsId: voter.municipalsId,
+                            //   barangaysId: voter.barangaysId,
+                            //   reason: `May team na (${handleLevel(
+                            //     votersTeam?.TeamLeader?.voter?.level as number
+                            //   )}): ${votersTeam?.TeamLeader?.voter?.lastname}, ${
+                            //     votersTeam?.TeamLeader?.voter?.firstname
+                            //   }`,
+                            //   level: voter.level,
+                            //   idNumber: voter.idNumber,
+                            //   code: 1,
+                            // });
+                            alreadyInTeam.push(voter);
                             processedVoters.add(voter.id);
                         }
                     }
@@ -2814,7 +2903,7 @@ const resolvers = {
                 }
                 return base;
             }, 0);
-            yield Promise.all([
+            yield prisma_1.prisma.$transaction([
                 prisma_1.prisma.voterRecords.createMany({
                     data: records,
                 }),
@@ -2829,6 +2918,15 @@ const resolvers = {
                 prisma_1.prisma.validatedTeamMembers.createMany({
                     data: teamMembers,
                     skipDuplicates: true,
+                }),
+                prisma_1.prisma.duplicateteamMembers.createMany({
+                    data: alreadyInTeam.map((item) => ({
+                        votersId: item.id,
+                        teamId: item.teamId,
+                        foundTeamId: teamLeaderData === null || teamLeaderData === void 0 ? void 0 : teamLeaderData.teamId,
+                        municipalsId: item.municipalsId,
+                        barangaysId: item.barangaysId,
+                    })),
                 }),
             ]);
             yield prisma_1.prisma.$disconnect();
@@ -2910,6 +3008,40 @@ const resolvers = {
                     queriesId: id,
                 },
             });
+            return "OK";
+        }),
+        resetTeamList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode, barangayId }) {
+            console.log({ zipCode, barangayId });
+            const filter = {};
+            if (zipCode) {
+                filter.municipalsId = parseInt(zipCode, 10);
+            }
+            if (barangayId) {
+                filter.barangay = {
+                    number: parseInt(barangayId, 10),
+                };
+            }
+            yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.voters.updateMany({
+                    where: Object.assign({ teamId: { not: null } }, filter),
+                    data: {
+                        teamId: null,
+                        candidatesId: null,
+                        level: 0,
+                    },
+                }),
+                prisma_1.prisma.team.deleteMany({
+                    where: filter,
+                }),
+                prisma_1.prisma.teamLeader.deleteMany({
+                    where: Object.assign({}, filter),
+                }),
+                prisma_1.prisma.voterRecords.deleteMany({
+                    where: {
+                        voter: filter,
+                    },
+                }),
+            ]);
             return "OK";
         }),
     },
@@ -3046,6 +3178,61 @@ const resolvers = {
                 },
             });
         }),
+        supporters: (parent_1, _a) => __awaiter(void 0, [parent_1, _a], void 0, function* (parent, { id }) {
+            const figureHeads = yield prisma_1.prisma.teamLeader.findMany({
+                where: {
+                    barangaysId: parent.id,
+                    candidatesId: id,
+                },
+            });
+            const voters = yield prisma_1.prisma.voters.count({
+                where: {
+                    barangaysId: parent.id,
+                    candidatesId: id,
+                    teamId: { not: null },
+                    level: { not: 1 },
+                },
+            });
+            const voterWithoutTeam = yield prisma_1.prisma.voters.count({
+                where: {
+                    barangaysId: parent.id,
+                    candidatesId: id,
+                    teamId: null,
+                    level: { not: 1 },
+                },
+            });
+            return {
+                figureHeads: figureHeads.length,
+                bc: figureHeads.filter((item) => item.level === 3).length,
+                pc: figureHeads.filter((item) => item.level === 2).length,
+                tl: figureHeads.filter((item) => item.level === 1).length,
+                withTeams: voters,
+                voterWithoutTeam: voterWithoutTeam,
+            };
+        }),
+        teamStat: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            const team = yield prisma_1.prisma.team.findMany({
+                where: {
+                    barangaysId: parent.id, // Filter by barangay ID
+                },
+                include: {
+                    _count: {
+                        select: {
+                            voters: true,
+                        },
+                    },
+                },
+            });
+            return {
+                aboveMax: team.filter((item) => item._count.voters > 10).length,
+                belowMax: team.filter((item) => item._count.voters < 10).length,
+                equalToMax: team.filter((item) => item._count.voters === 10).length,
+                aboveMin: team.filter((item) => item._count.voters > 5).length,
+                equalToMin: team.filter((item) => item._count.voters === 5).length,
+                belowMin: team.filter((item) => item._count.voters < 5).length,
+                threeAndBelow: team.filter((item) => item._count.voters <= 3).length,
+            };
+        }),
     },
     Purok: {
         purokDraftedVotersCount: (parent) => __awaiter(void 0, void 0, void 0, function* () {
@@ -3104,14 +3291,134 @@ const resolvers = {
                     Option: {
                         include: {
                             Response: {
-                                where: {
-                                    surveyId: parent.id,
+                                include: {
+                                    ageBracket: true,
+                                    gender: true,
                                 },
-                            }
-                        }
-                    }
-                }
+                                take: 5,
+                            },
+                        },
+                    },
+                },
             });
+            let surveyResults = {
+                tagID: "",
+                id: "",
+                zipCode: 0,
+                barangay: "",
+                queries: [],
+            };
+            // const newResult = result.map((query) => {
+            //   const matchedQuery = surveyResults.queries.find(
+            //     (quer) => quer.id === query.id
+            //   );
+            //   if (!matchedQuery) {
+            //     // If the query doesn't exist, add it to surveyResults
+            //     const newQuery = {
+            //       id: query.id,
+            //       queries: query.queries,
+            //       options: [],
+            //     };
+            //     query.Option.forEach((option) => {
+            //       const newOption = {
+            //         id: option.id,
+            //         title: option.title,
+            //         queryId: option.queryId,
+            //         response: [],
+            //       };
+            //       // Group responses by ageBracket.segment and gender
+            //       const groupedResponses: Record<
+            //         string,
+            //         {
+            //           id: string;
+            //           ageSegment: string;
+            //           ageSegmentId: string;
+            //           order: 0,
+            //           gender: { id: string; name: string }[];
+            //         }
+            //       > = {};
+            //       option.Response.forEach((response) => {
+            //         const ageSegmentKey = `${response.ageBracket.segment}-${response.ageBracket.id}`;
+            //         if (!groupedResponses[ageSegmentKey]) {
+            //           groupedResponses[ageSegmentKey] = {
+            //             id: response.id,
+            //             ageSegment: response.ageBracket.segment,
+            //             ageSegmentId: response.ageBracket.id,
+            //             order: response.ageBracket.order,
+            //             gender: [],
+            //           };
+            //         }
+            //         // Add gender if it's not already in the list
+            //         if (
+            //           !groupedResponses[ageSegmentKey].gender.some(
+            //             (g) => g.id === response.gender.id
+            //           )
+            //         ) {
+            //           groupedResponses[ageSegmentKey].gender.push(response.gender);
+            //         }
+            //       });
+            //       // Push grouped responses into the option responses
+            //       newOption.response = Object.values(groupedResponses);
+            //       // Add the option to the new query
+            //       newQuery.options.push(newOption);
+            //     });
+            //     // Add the new query to surveyResults
+            //     surveyResults.queries.push(newQuery);
+            //   } else {
+            //     // If the query already exists, update its options
+            //     query.Option.forEach((option) => {
+            //       const newOption = {
+            //         id: option.id,
+            //         title: option.title,
+            //         queryId: option.queryId,
+            //         response: [] as {
+            //           id: string;
+            //           ageSegment: string;
+            //           ageSegmentId: string;
+            //           order: number;
+            //           gender: { id: string; name: string }[];
+            //         }[],
+            //       };
+            //       // Group responses by ageBracket.segment and gender
+            //       const groupedResponses: Record<
+            //         string,
+            //         {
+            //           id: string;
+            //           ageSegment: string;
+            //           ageSegmentId: string;
+            //           order: number;
+            //           gender: { id: string; name: string }[];
+            //         }
+            //       > = {};
+            //       option.Response.forEach((response) => {
+            //         const ageSegmentKey = `${response.ageBracket.segment}-${response.ageBracket.id}`;
+            //         if (!groupedResponses[ageSegmentKey]) {
+            //           groupedResponses[ageSegmentKey] = {
+            //             id: response.id,
+            //             ageSegment: response.ageBracket.segment,
+            //             ageSegmentId: response.ageBracket.id,
+            //             order: response.ageBracket.order,
+            //             gender: [],
+            //           };
+            //         }
+            //         // Add gender if it's not already in the list
+            //         if (
+            //           !groupedResponses[ageSegmentKey].gender.some(
+            //             (g) => g.id === response.gender.id
+            //           )
+            //         ) {
+            //           groupedResponses[ageSegmentKey].gender.push(response.gender);
+            //         }
+            //       });
+            //       // Push grouped responses into the option responses
+            //       newOption.response = Object.values(groupedResponses);
+            //       // Add the option to the new query
+            //       matchedQuery?.options.push(newOption);
+            //     });
+            //   }
+            // });
+            // console.log(newResult);
+            console.log("Resuts: ", JSON.stringify(result, null, 2));
             return "OK";
         }),
     },
@@ -3146,7 +3453,7 @@ const resolvers = {
             return yield prisma_1.prisma.customOption.findMany({
                 where: {
                     queriesId: parent.id,
-                    RespondentResponse: Object.assign({ municipalsId: zipCode, surveyId: surveyId }, filter)
+                    RespondentResponse: Object.assign({ municipalsId: zipCode, surveyId: surveyId }, filter),
                 },
             });
         }),
@@ -3451,14 +3758,14 @@ const resolvers = {
                 where: {
                     candidatesId: parent.id,
                     teamId: { not: null },
-                    level: 0,
+                    level: { not: 1 },
                 },
             });
             const voterWithoutTeam = yield prisma_1.prisma.voters.count({
                 where: {
                     candidatesId: parent.id,
                     teamId: null,
-                    level: 0,
+                    level: { not: 1 },
                 },
             });
             return {

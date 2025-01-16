@@ -4,15 +4,21 @@ import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
 import XLSX from "xlsx";
-
+import ExcelJS from "exceljs";
 //utils
 import { extractYear } from "../utils/date";
 import { handleSpecialChar, handleGender } from "../utils/data";
 
 //database
-import { prisma } from "../../prisma/prisma";
+import { prisma, Voters } from "../../prisma/prisma";
 //props
-import { DataProps, RejectListProps, UpdateDataProps } from "../interface/data";
+import {
+  DataProps,
+  RejectListProps,
+  UpdateDataProps,
+  BarangayProps,
+} from "../interface/data";
+import { GraphQLError } from "graphql";
 
 const uploadDir = path.join(__dirname, "uploads");
 const upload = multer({ dest: uploadDir });
@@ -436,7 +442,10 @@ export default (io: any) => {
     try {
       const doc = new PDFDocument();
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename=${surveyCode}.pdf`);
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=${surveyCode}.pdf`
+      );
 
       doc.pipe(res);
       doc
@@ -448,6 +457,323 @@ export default (io: any) => {
       res.status(500).send({
         message: "Something went wrong on the server. Please try again",
       });
+    }
+  });
+
+  router.post(
+    "/voter-list",
+    upload.single("file"),
+    async (req: Request, res: Response) => {
+      const zipCode = req.body.zipCode;
+      const barangay = req.body.barangay;
+
+      console.log({ data: req.body });
+
+      try {
+        if (!req.file) {
+          return res.status(400).send("No file uploaded.");
+        }
+
+        const filePath = path.join(uploadDir, req.file.filename);
+        const workbook = XLSX.readFile(filePath);
+        const sheets = workbook.SheetNames;
+
+        const processedData: { [sheetName: string]: DataProps[] } = {};
+        const candidates = await prisma.candidates.findMany();
+        const barangayData = await prisma.barangays.findFirst({
+          where: {
+            number: parseInt(barangay, 10),
+          },
+        });
+        if (!barangayData) {
+          throw new GraphQLError("Could not find any barangay with the number");
+        }
+        let delistedCount = 0;
+        let addedCount = 0;
+        const votersToAdd: {
+          lastname: string;
+          firstname: string;
+          gender: string;
+          birthYear: string;
+          barangaysId: string;
+          municipalsId: number;
+          newBatchDraftId: null;
+          calcAge: number;
+          purokId: any;
+          pwd: string;
+          oor: string;
+          inc: string;
+          illi: string;
+          inPurok: boolean;
+          hubId: null;
+          houseHoldId: null;
+          mobileNumber: string;
+          senior: boolean;
+          status: number;
+          candidatesId: string | null;
+          precintsId: null;
+          youth: boolean;
+          idNumber: string;
+          level: number;
+        }[] = [];
+        const destlistedVoters: {
+          votersId: string;
+          municipalsId: number;
+          barangaysId: string;
+        }[] = [];
+        const purokCache = new Map<string, any>();
+        for (const sheetName of sheets) {
+          const worksheet = workbook.Sheets[sheetName];
+          const rows: Partial<DataProps>[] =
+            XLSX.utils.sheet_to_json<Partial<DataProps>>(worksheet);
+
+          if (sheetName === "OVERALL") {
+            console.log("Skip");
+            continue;
+          }
+          if (sheetName === "-") {
+            processedData[sheetName] = await Promise.all(
+              rows.map(async (row: Partial<DataProps>) => {
+                const newRow: Partial<DataProps> = {};
+
+                if (row["Voter's Name"]) {
+                  const [lastname, firstname] = row["Voter's Name"]
+                    .split(",")
+                    .map((name) => name.trim());
+                  newRow.lastname =
+                    handleSpecialChar(",", lastname) || "Unknown";
+                  newRow.firstname = firstname || "Unknown";
+                } else {
+                  newRow.lastname = "Unknown";
+                  newRow.firstname = "Unknown";
+                }
+
+                const [voter, delisted] = await prisma.$transaction([
+                  prisma.voters.findFirst({
+                    where: {
+                      lastname: newRow.lastname,
+                      firstname: newRow.firstname,
+                      municipalsId: parseInt(zipCode, 10),
+                      barangaysId: barangayData.id,
+                    },
+                  }),
+                  prisma.delistedVoter.findFirst({
+                    where: {
+                      voter: {
+                        lastname: newRow.lastname,
+                        firstname: newRow.firstname,
+                        municipalsId: parseInt(zipCode, 10),
+                        barangaysId: barangayData.id,
+                      },
+                    },
+                  }),
+                ]);
+                if (delisted) {
+                  return {
+                    ...row,
+                  } as DataProps;
+                }
+                if (voter) {
+                  delistedCount++;
+                  console.log("Delisted: ", delistedCount);
+                  destlistedVoters.push({
+                    votersId: voter.id,
+                    municipalsId: parseInt(zipCode, 10),
+                    barangaysId: barangayData.id,
+                  });
+                }
+
+                return {
+                  ...row,
+                } as DataProps;
+              })
+            );
+          }
+          if (sheetName === "+") {
+            processedData[sheetName] = await Promise.all(
+              rows.map(async (row: Partial<DataProps>) => {
+                const newRow: Partial<DataProps> = {};
+
+                const supporting = candidates.map((candidate) =>
+                  row[candidate.code as string] ? candidate.id : null
+                );
+                const candidateId = supporting.filter(Boolean);
+
+                const purokKey = `${row.Address}_${barangayData.id}_${zipCode}`;
+                let purok = purokCache.get(purokKey);
+
+                if (!purok) {
+                  purok = await prisma.purok.findFirst({
+                    where: {
+                      purokNumber: `${row.Address}`,
+                      barangaysId: barangayData.id,
+                      municipalsId: parseInt(zipCode, 10),
+                    },
+                  });
+
+                  if (!purok) {
+                    purok = await prisma.purok.create({
+                      data: {
+                        purokNumber: `${row.Address}`,
+                        municipalsId: parseInt(zipCode, 10),
+                        barangaysId: barangayData.id,
+                        draftID: "",
+                      },
+                    });
+                  }
+
+                  purokCache.set(purokKey, purok);
+                }
+
+                if (row["Voter's Name"]) {
+                  const [lastname, firstname] = row["Voter's Name"]
+                    .split(",")
+                    .map((name) => name.trim());
+                  newRow.lastname =
+                    handleSpecialChar(",", lastname) || "Unknown";
+                  newRow.firstname = firstname || "Unknown";
+                } else {
+                  newRow.lastname = "Unknown";
+                  newRow.firstname = "Unknown";
+                }
+
+                const voter = await prisma.voters.findFirst({
+                  where: {
+                    lastname: newRow.lastname,
+                    firstname: newRow.firstname,
+                    municipalsId: parseInt(zipCode, 10),
+                    barangaysId: barangayData.id,
+                  },
+                });
+                if (!voter) {
+                  votersToAdd.push({
+                    lastname: newRow.lastname,
+                    firstname: newRow.firstname,
+                    gender: handleGender(row.Gender),
+                    birthYear: `${row.Birthday}`,
+                    barangaysId: barangayData.id,
+                    municipalsId: parseInt(zipCode, 10),
+                    newBatchDraftId: null,
+                    calcAge: row.Birthday
+                      ? extractYear(row.Birthday as string) ?? 0
+                      : 0,
+                    purokId: purok.id,
+                    pwd: row.PWD ? "YES" : "NO",
+                    oor: row.OR ? "YES" : "NO",
+                    inc: row.INC ? "YES" : "NO",
+                    illi: row.IL ? "YES" : "NO",
+                    inPurok: true,
+                    hubId: null,
+                    houseHoldId: null,
+                    mobileNumber: "Unknown",
+                    senior: row.SC === "YES" ? true : false,
+                    status: row.DL === "YES" ? 0 : 1,
+                    candidatesId: candidateId[0],
+                    precintsId: null,
+                    youth: row["18-30"] ? true : false,
+                    idNumber: `${row.No}`,
+                    level: 0,
+                  });
+                }
+
+                return {
+                  ...row,
+                } as DataProps;
+              })
+            );
+          }
+        }
+        if (votersToAdd.length) {
+          console.log({ votersToAdd });
+
+          await prisma.voters.createMany({
+            data: votersToAdd,
+          });
+        }
+
+        if (destlistedVoters.length) {
+          console.log({ destlistedVoters });
+          await prisma.delistedVoter.createMany({
+            data: destlistedVoters,
+          });
+        }
+
+        res.status(200).json({
+          message: "File processed successfully",
+          addedCount: addedCount,
+          delistedCount: delistedCount,
+        });
+      } catch (error) {
+        console.error("Error processing file:", error);
+        res.status(500).send("Internal Server Error");
+      }
+    }
+  );
+
+  router.post("/supporter-report", async (req: Request, res: Response) => {
+    const zipCode = req.body.zipCode;
+    const id = req.body.id;
+    const candidate = req.body.candidate;
+    const barangayList = req.body.barangayList;
+    const parsedData: BarangayProps[] = JSON.parse(barangayList);
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      workbook.created = new Date();
+
+      // Add a worksheet with header and footer settings
+      const worksheet = workbook.addWorksheet("Supporters", {
+        pageSetup: {
+          paperSize: 9,
+          orientation: "landscape",
+          fitToPage: true,
+          showGridLines: true,
+        },
+        headerFooter: {
+          firstHeader: `&L&B${candidate} Supporter Report`,
+          firstFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+          oddHeader: `&L&B${candidate} Supporter Report`,
+          oddFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+        },
+      });
+
+      // Define worksheet columns
+      worksheet.columns = [
+        { header: "Barangay", key: "barangay", width: 15 },
+        { header: "Figure Heads", key: "figureHead", width: 20 },
+        { header: "BC", key: "bc", width: 10 },
+        { header: "PC", key: "pc", width: 10 },
+        { header: "TL", key: "tl", width: 10 },
+      ];
+
+      const sheetData = parsedData.map((item) => {
+        return {
+          barangay: item.name,
+          figureHead: item.supporters.figureHeads,
+          bc: item.supporters.bc,
+          pc: item.supporters.pc,
+          tl: item.supporters.tl,
+        };
+      });
+      console.log(sheetData);
+
+      worksheet.addRows(sheetData);
+
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader(
+        "Content-Disposition",
+        "attachment; filename=SupporterReport.xlsx"
+      );
+
+      // Write the workbook directly to the response stream
+      await workbook.xlsx.write(res);
+      res.end();
+    } catch (error) {
+      console.error("Error generating report:", error);
+      res.status(500).send("Internal Server Error");
     }
   });
 

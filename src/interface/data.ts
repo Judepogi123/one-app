@@ -6,6 +6,43 @@ import {
   Users,
 } from "../../prisma/prisma";
 
+
+export interface BarangayProps {
+  name: string;
+  id: string;
+  number: number;
+  barangayVotersCount: number;
+  purokCount: number;
+  sampleSize: number;
+  population: number;
+
+  surveyor: number;
+  activeSurveyor: number;
+  femaleSize: number;
+  maleSize: number;
+  supporters: AllSupporters;
+  teamStat: TeamStatProps
+}
+
+interface AllSupporters {
+  figureHeads: number;
+  bc: number;
+  pc: number;
+  tl: number;
+  withTeams: number;
+  voterWithoutTeam: number;
+}
+
+export interface TeamStatProps {
+  aboveMax: number;
+  belowMax: number;
+  equalToMax: number;
+  aboveMin: number;
+  equalToMin: number;
+  belowMin: number;
+  threeAndBelow: number;
+}
+
 export interface RowProps {
   __EMPTY: string;
   __EMPTY_1: string;
@@ -197,5 +234,31 @@ export interface ResponseWithCustomeData
   customeOptions: {
     value: string;
     id: string;
+  }[];
+}
+
+export interface SurveyResults {
+  tagID: string;
+  id: string;
+  zipCode: number;
+  barangay: string;
+  queries: {
+    id: string;
+    queries: string;
+    options: {
+      id: string | null;
+      title: string | null;
+      queryId: string | null;
+      response: {
+        id: string | null;
+        ageSegment: string | null;
+        ageSegmentId: string | null;
+        order: number;
+        gender: {
+          id: string;
+          name: string;
+        }[];
+      }[];
+    }[];
   }[];
 }

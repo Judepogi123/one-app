@@ -4,4 +4,3 @@ exports.resolvers = void 0;
 exports.resolvers = {
     Query: {},
 };
-

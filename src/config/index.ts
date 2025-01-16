@@ -9,7 +9,13 @@ import argon2 from "argon2";
 import jwt from "jsonwebtoken";
 import qrcode from "qrcode";
 
-import { prisma, Candidates, Position, Prisma } from "../../prisma/prisma";
+import {
+  prisma,
+  Candidates,
+  Position,
+  Prisma,
+  Voters,
+} from "../../prisma/prisma";
 import { typeDefs } from "../schema/schema";
 import { Resolvers } from "../interface/types";
 import bodyParser from "body-parser";
@@ -31,6 +37,7 @@ import {
   RejectListedProps,
   ValidatedTeamMembers,
   VoterRecordsProps,
+  SurveyResults,
 } from "../interface/data";
 
 const app = express();
@@ -587,6 +594,9 @@ const resolvers: Resolvers = {
         where: filter,
         skip: skip ?? 0,
         take: take,
+        orderBy: {
+          idNumber: "desc",
+        },
       });
 
       const count = await prisma.voters.count({
@@ -769,6 +779,21 @@ const resolvers: Resolvers = {
     userQRCodeList: async () => {
       return await prisma.userQRCode.findMany();
     },
+    purokList: async () => {
+      return await prisma.purok.findMany();
+    },
+    voterRecords: async () => {
+      return await prisma.voterRecords.findMany();
+    },
+    printOptionResponse: async (_, { surveyId, queryId, zipCode }) => {
+      const response = await prisma.queries.findMany();
+      return response;
+    },
+    candidate: async (_, { id }) => {
+      return await prisma.candidates.findUnique({
+        where: { id },
+      });
+    },
   },
   Mutation: {
     signUp: async (_, { user }) => {
@@ -832,7 +857,6 @@ const resolvers: Resolvers = {
 
       return "OK";
     },
-
     createMunicipal: async (_, { municipal }) => {
       return await prisma.municipals.create({
         data: {
@@ -1123,72 +1147,144 @@ const resolvers: Resolvers = {
     ) => {
       console.log({
         response,
-        surveyResponse,
         respondentResponse,
-        customOptions,
       });
 
-      await prisma.surveyResponse.createMany({
-        data: surveyResponse.map((item) => {
-          return {
-            id: item.id,
-            municipalsId: item.municipalsId,
-            barangaysId: item.barangaysId,
-            surveyId: item.surveyId,
-            usersUid: item.accountID,
-          };
-        }),
-        skipDuplicates: true,
-      });
+      for (let item of surveyResponse) {
+        try {
+          await prisma.surveyResponse.create({
+            data: {
+              id: item.id,
+              municipalsId: item.municipalsId,
+              barangaysId: item.barangaysId,
+              surveyId: item.surveyId,
+              usersUid: item.accountID,
+            },
+          });
+        } catch (error) {
+          continue;
+        }
+      }
 
-      await prisma.respondentResponse.createMany({
-        data: respondentResponse.map((item) => {
-          return {
-            id: item.id,
-            ageBracketId: item.ageBracketId,
-            genderId: item.genderId,
-            barangaysId: item.barangaysId,
-            municipalsId: item.municipalsId,
-            surveyId: item.surveyId,
-            usersUid: item.accountID,
-            surveyResponseId: item.surveyResponseId,
-            valid: item.valid,
-          };
-        }),
-        skipDuplicates: true,
-      });
+      for (let item of respondentResponse) {
+        try {
+          await prisma.respondentResponse.create({
+            data: {
+              id: item.id,
+              ageBracketId: item.ageBracketId,
+              genderId: item.genderId,
+              barangaysId: item.barangaysId,
+              municipalsId: item.municipalsId,
+              surveyId: item.surveyId,
+              usersUid: item.accountID,
+              surveyResponseId: item.surveyResponseId,
+              valid: item.valid,
+            },
+          });
+        } catch (error) {
+          continue;
+        }
+      }
 
-      await prisma.response.createMany({
-        data: response.map((item) => {
-          return {
-            id: item.id,
-            ageBracketId: item.ageBracketId,
-            genderId: item.genderId,
-            barangaysId: item.barangaysId,
-            municipalsId: item.municipalsId,
-            surveyId: item.surveyId,
-            surveyResponseId: item.surveyResponseId,
-            optionId: item.optionId || null,
-            queryId: item.queryId,
-            respondentResponseId: item.respondentResponseId,
-          };
-        }),
-        skipDuplicates: true,
-      });
+      for (let item of response) {
+        try {
+          await prisma.response.create({
+            data: {
+              id: item.id,
+              ageBracketId: item.ageBracketId,
+              genderId: item.genderId,
+              barangaysId: item.barangaysId,
+              municipalsId: item.municipalsId,
+              surveyId: item.surveyId,
+              surveyResponseId: item.surveyResponseId,
+              optionId: item.optionId || null,
+              queryId: item.queryId,
+              respondentResponseId: item.respondentResponseId,
+            },
+          });
+        } catch (error) {
+          continue;
+        }
+      }
 
       if (customOptions.length) {
-        await prisma.customOption.createMany({
-          data: customOptions.map((item) => {
-            return {
-              id: item.id,
-              value: item.value,
-              queriesId: item.queriesId,
-              respondentResponseId: item.respondentResponseId,
-            };
-          }),
-          skipDuplicates: true,
-        });
+        for (let item of customOptions) {
+          try {
+            await prisma.customOption.createMany({
+              data: {
+                id: item.id,
+                value: item.value,
+                queriesId: item.queriesId,
+                respondentResponseId: item.respondentResponseId,
+              },
+            });
+          } catch (error) {
+            continue;
+          }
+        }
       }
+
+      // await prisma.surveyResponse.createMany({
+      //   data: surveyResponse.map((item) => {
+      //     return {
+      //       id: item.id,
+      //       municipalsId: item.municipalsId,
+      //       barangaysId: item.barangaysId,
+      //       surveyId: item.surveyId,
+      //       usersUid: item.accountID,
+      //     };
+      //   }),
+      //   skipDuplicates: true,
+      // });
+
+      // await prisma.respondentResponse.createMany({
+      //   data: respondentResponse.map((item) => {
+      //     return {
+      //       id: item.id,
+      //       ageBracketId: item.ageBracketId,
+      //       genderId: item.genderId,
+      //       barangaysId: item.barangaysId,
+      //       municipalsId: item.municipalsId,
+      //       surveyId: item.surveyId,
+      //       usersUid: item.accountID,
+      //       surveyResponseId: item.surveyResponseId,
+      //       valid: item.valid,
+      //     };
+      //   }),
+      //   skipDuplicates: true,
+      // });
+
+      // await prisma.response.createMany({
+      //   data: response.map((item) => {
+      //     return {
+      //       id: item.id,
+      //       ageBracketId: item.ageBracketId,
+      //       genderId: item.genderId,
+      //       barangaysId: item.barangaysId,
+      //       municipalsId: item.municipalsId,
+      //       surveyId: item.surveyId,
+      //       surveyResponseId: item.surveyResponseId,
+      //       optionId: item.optionId || null,
+      //       queryId: item.queryId,
+      //       respondentResponseId: item.respondentResponseId,
+      //     };
+      //   }),
+      //   skipDuplicates: true,
+      // });
+
+      // if (customOptions.length) {
+      //   await prisma.customOption.createMany({
+      //     data: customOptions.map((item) => {
+      //       return {
+      //         id: item.id,
+      //         value: item.value,
+      //         queriesId: item.queriesId,
+      //         respondentResponseId: item.respondentResponseId,
+      //       };
+      //     }),
+      //     skipDuplicates: true,
+      //   });
+      // }
       return "OK";
     },
     submitResponse: async (
@@ -1214,7 +1310,7 @@ const resolvers: Resolvers = {
         for (const res of respondentResponse) {
           const existingRespondent = await prisma.respondentResponse.findUnique(
             {
-              where: { id: res.id }, // Assuming 'id' is unique for each respondent
+              where: { id: res.id },
             }
           );
           if (!existingRespondent) {
@@ -1327,7 +1423,7 @@ const resolvers: Resolvers = {
       );
 
       const { phoneNumber, lastname, firstname, uid } = adminUser;
-
+      await prisma.$disconnect();
       return { phoneNumber, lastname, firstname, uid, accessToken };
     },
     createQuota: async (_, { quota, gender }) => {
@@ -2635,12 +2731,6 @@ const resolvers: Resolvers = {
         teamLeader?.id
       );
 
-      console.log("Headers: ", {
-        teamLeaderData,
-        purokCoorData,
-        barangayCoorData,
-      });
-
       const temp = await prisma.validatedTeams.create({
         data: {
           purokId: purokCoor?.purokId as string,
@@ -2773,7 +2863,7 @@ const resolvers: Resolvers = {
     },
     composeTeam: async (_, { team }) => {
       console.log({ team });
-
+      let successCount = 0;
       const resultList: RejectListedProps[] = [];
       const members = [
         team.barangayCoorId,
@@ -2825,14 +2915,6 @@ const resolvers: Resolvers = {
         headIdTwo?: string
       ) => {
         try {
-          console.log(
-            "Params: ",
-            teamId,
-            purokId,
-            voterId,
-            headIdOne,
-            headIdTwo
-          );
           const leader = await prisma.teamLeader.findFirst({
             where: {
               voter: {
@@ -2881,7 +2963,7 @@ const resolvers: Resolvers = {
             },
           });
 
-          const updatedVoter = await prisma.voters.update({
+          await prisma.voters.update({
             where: {
               id: voterId,
             },
@@ -2891,9 +2973,6 @@ const resolvers: Resolvers = {
               candidatesId: supporting?.id,
             },
           });
-
-          console.log("New leader created:", level, newLeader);
-          console.log("Updated voter record:", level, updatedVoter);
 
           return { ...newLeader, teamId: newTeam.id };
         } catch (error) {
@@ -2940,6 +3019,7 @@ const resolvers: Resolvers = {
       });
 
       const processedVoters = new Set<string>();
+      const alreadyInTeam: Voters[] = [];
 
       for (const member of team.members) {
         try {
@@ -3013,40 +3093,41 @@ const resolvers: Resolvers = {
             }
           }
 
-          if (voter.level > 0) {
-            if (!processedVoters.has(voter.id)) {
-              resultList.push({
-                id: voter.id,
-                firstname: voter.firstname,
-                lastname: voter.lastname,
-                municipalsId: voter.municipalsId,
-                barangaysId: voter.barangaysId,
-                reason: `May katayuan na (${handleLevel(voter.level)})`,
-                level: voter.level,
-                idNumber: voter.idNumber,
-                code: 1,
-              });
-              processedVoters.add(voter.id);
-            }
-          }
+          // if (voter.level > 0) {
+          //   if (!processedVoters.has(voter.id)) {
+          //     resultList.push({
+          //       id: voter.id,
+          //       firstname: voter.firstname,
+          //       lastname: voter.lastname,
+          //       municipalsId: voter.municipalsId,
+          //       barangaysId: voter.barangaysId,
+          //       reason: `May katayuan na (${handleLevel(voter.level)})`,
+          //       level: voter.level,
+          //       idNumber: voter.idNumber,
+          //       code: 1,
+          //     });
+          //     processedVoters.add(voter.id);
+          //   }
+          // }
 
           if (voter.teamId) {
             if (!processedVoters.has(voter.id)) {
-              resultList.push({
-                id: voter.id,
-                firstname: voter.firstname,
-                lastname: voter.lastname,
-                municipalsId: voter.municipalsId,
-                barangaysId: voter.barangaysId,
-                reason: `May team na (${handleLevel(
-                  votersTeam?.TeamLeader?.voter?.level as number
-                )}): ${votersTeam?.TeamLeader?.voter?.lastname}, ${
-                  votersTeam?.TeamLeader?.voter?.firstname
-                }`,
-                level: voter.level,
-                idNumber: voter.idNumber,
-                code: 1,
-              });
+              // resultList.push({
+              //   id: voter.id,
+              //   firstname: voter.firstname,
+              //   lastname: voter.lastname,
+              //   municipalsId: voter.municipalsId,
+              //   barangaysId: voter.barangaysId,
+              //   reason: `May team na (${handleLevel(
+              //     votersTeam?.TeamLeader?.voter?.level as number
+              //   )}): ${votersTeam?.TeamLeader?.voter?.lastname}, ${
+              //     votersTeam?.TeamLeader?.voter?.firstname
+              //   }`,
+              //   level: voter.level,
+              //   idNumber: voter.idNumber,
+              //   code: 1,
+              // });
+              alreadyInTeam.push(voter);
               processedVoters.add(voter.id);
             }
           }
@@ -3144,7 +3225,7 @@ const resolvers: Resolvers = {
         return base;
       }, 0);
 
-      await Promise.all([
+      await prisma.$transaction([
         prisma.voterRecords.createMany({
           data: records,
         }),
@@ -3159,6 +3240,15 @@ const resolvers: Resolvers = {
         prisma.validatedTeamMembers.createMany({
           data: teamMembers,
           skipDuplicates: true,
+        }),
+        prisma.duplicateteamMembers.createMany({
+          data: alreadyInTeam.map((item) => ({
+            votersId: item.id,
+            teamId: item.teamId,
+            foundTeamId: teamLeaderData?.teamId,
+            municipalsId: item.municipalsId,
+            barangaysId: item.barangaysId,
+          })),
         }),
       ]);
       await prisma.$disconnect();
@@ -3246,6 +3336,46 @@ const resolvers: Resolvers = {
           queriesId: id,
         },
       });
+      return "OK";
+    },
+    resetTeamList: async (_, { zipCode, barangayId }) => {
+      console.log({ zipCode, barangayId });
+
+      const filter: any = {};
+      if (zipCode) {
+        filter.municipalsId = parseInt(zipCode, 10);
+      }
+      if (barangayId) {
+        filter.barangay = {
+          number: parseInt(barangayId, 10),
+        };
+      }
+      await prisma.$transaction([
+        prisma.voters.updateMany({
+          where: {
+            teamId: { not: null },
+            ...filter,
+          },
+          data: {
+            teamId: null,
+            candidatesId: null,
+            level: 0,
+          },
+        }),
+        prisma.team.deleteMany({
+          where: filter,
+        }),
+        prisma.teamLeader.deleteMany({
+          where: {
+            ...filter,
+          },
+        }),
+        prisma.voterRecords.deleteMany({
+          where: {
+            voter: filter,
+          },
+        }),
+      ]);
       return "OK";
     },
   },
@@ -3382,6 +3512,63 @@ const resolvers: Resolvers = {
         },
       });
     },
+    supporters: async (parent, { id }) => {
+      const figureHeads = await prisma.teamLeader.findMany({
+        where: {
+          barangaysId: parent.id,
+          candidatesId: id,
+        },
+      });
+      const voters = await prisma.voters.count({
+        where: {
+          barangaysId: parent.id,
+          candidatesId: id,
+          teamId: { not: null },
+          level: { not: 1 },
+        },
+      });
+
+      const voterWithoutTeam = await prisma.voters.count({
+        where: {
+          barangaysId: parent.id,
+          candidatesId: id,
+          teamId: null,
+          level: { not: 1 },
+        },
+      });
+      return {
+        figureHeads: figureHeads.length,
+        bc: figureHeads.filter((item) => item.level === 3).length,
+        pc: figureHeads.filter((item) => item.level === 2).length,
+        tl: figureHeads.filter((item) => item.level === 1).length,
+        withTeams: voters,
+        voterWithoutTeam: voterWithoutTeam,
+      };
+    },
+    teamStat: async (parent) => {
+      const team = await prisma.team.findMany({
+        where: {
+          barangaysId: parent.id, // Filter by barangay ID
+        },
+        include: {
+          _count: {
+            select: {
+              voters: true,
+            },
+          },
+        },
+      });
+
+      return {
+        aboveMax: team.filter((item) => item._count.voters > 10).length,
+        belowMax: team.filter((item) => item._count.voters < 10).length,
+        equalToMax: team.filter((item) => item._count.voters === 10).length,
+        aboveMin: team.filter((item) => item._count.voters > 5).length,
+        equalToMin: team.filter((item) => item._count.voters === 5).length,
+        belowMin: team.filter((item) => item._count.voters < 5).length,
+        threeAndBelow: team.filter((item) => item._count.voters <= 3).length,
+      };
+    },
   },
   Purok: {
     purokDraftedVotersCount: async (parent) => {
@@ -3438,18 +3625,158 @@ const resolvers: Resolvers = {
         where: {
           surveyId: parent.id,
         },
-        include:{
-          Option:{
-            include:{
-              Response:{
-                where: {
-                  surveyId: parent.id,
+        include: {
+          Option: {
+            include: {
+              Response: {
+                include: {
+                  ageBracket: true,
+                  gender: true,
                 },
-              }
-            }
-          }
-        }
+                take: 5,
+              },
+            },
+          },
+        },
       });
+
+      let surveyResults: SurveyResults = {
+        tagID: "",
+        id: "",
+        zipCode: 0,
+        barangay: "",
+        queries: [],
+      };
+
+      // const newResult = result.map((query) => {
+      //   const matchedQuery = surveyResults.queries.find(
+      //     (quer) => quer.id === query.id
+      //   );
+
+      //   if (!matchedQuery) {
+      //     // If the query doesn't exist, add it to surveyResults
+      //     const newQuery = {
+      //       id: query.id,
+      //       queries: query.queries,
+      //       options: [],
+      //     };
+
+      //     query.Option.forEach((option) => {
+      //       const newOption = {
+      //         id: option.id,
+      //         title: option.title,
+      //         queryId: option.queryId,
+      //         response: [],
+      //       };
+
+      //       // Group responses by ageBracket.segment and gender
+      //       const groupedResponses: Record<
+      //         string,
+      //         {
+      //           id: string;
+      //           ageSegment: string;
+      //           ageSegmentId: string;
+      //           order: 0,
+      //           gender: { id: string; name: string }[];
+      //         }
+      //       > = {};
+
+      //       option.Response.forEach((response) => {
+      //         const ageSegmentKey = `${response.ageBracket.segment}-${response.ageBracket.id}`;
+
+      //         if (!groupedResponses[ageSegmentKey]) {
+      //           groupedResponses[ageSegmentKey] = {
+      //             id: response.id,
+      //             ageSegment: response.ageBracket.segment,
+      //             ageSegmentId: response.ageBracket.id,
+      //             order: response.ageBracket.order,
+      //             gender: [],
+      //           };
+      //         }
+
+      //         // Add gender if it's not already in the list
+      //         if (
+      //           !groupedResponses[ageSegmentKey].gender.some(
+      //             (g) => g.id === response.gender.id
+      //           )
+      //         ) {
+      //           groupedResponses[ageSegmentKey].gender.push(response.gender);
+      //         }
+      //       });
+
+      //       // Push grouped responses into the option responses
+      //       newOption.response = Object.values(groupedResponses);
+
+      //       // Add the option to the new query
+      //       newQuery.options.push(newOption);
+      //     });
+
+      //     // Add the new query to surveyResults
+      //     surveyResults.queries.push(newQuery);
+      //   } else {
+      //     // If the query already exists, update its options
+      //     query.Option.forEach((option) => {
+      //       const newOption = {
+      //         id: option.id,
+      //         title: option.title,
+      //         queryId: option.queryId,
+      //         response: [] as {
+      //           id: string;
+      //           ageSegment: string;
+      //           ageSegmentId: string;
+      //           order: number;
+      //           gender: { id: string; name: string }[];
+      //         }[],
+      //       };
+
+      //       // Group responses by ageBracket.segment and gender
+      //       const groupedResponses: Record<
+      //         string,
+      //         {
+      //           id: string;
+      //           ageSegment: string;
+      //           ageSegmentId: string;
+      //           order: number;
+      //           gender: { id: string; name: string }[];
+      //         }
+      //       > = {};
+
+      //       option.Response.forEach((response) => {
+      //         const ageSegmentKey = `${response.ageBracket.segment}-${response.ageBracket.id}`;
+
+      //         if (!groupedResponses[ageSegmentKey]) {
+      //           groupedResponses[ageSegmentKey] = {
+      //             id: response.id,
+      //             ageSegment: response.ageBracket.segment,
+      //             ageSegmentId: response.ageBracket.id,
+      //             order: response.ageBracket.order,
+      //             gender: [],
+      //           };
+      //         }
+
+      //         // Add gender if it's not already in the list
+      //         if (
+      //           !groupedResponses[ageSegmentKey].gender.some(
+      //             (g) => g.id === response.gender.id
+      //           )
+      //         ) {
+      //           groupedResponses[ageSegmentKey].gender.push(response.gender);
+      //         }
+      //       });
+
+      //       // Push grouped responses into the option responses
+      //       newOption.response = Object.values(groupedResponses);
+
+      //       // Add the option to the new query
+      //       matchedQuery?.options.push(newOption);
+      //     });
+      //   }
+      // });
+
+      // console.log(newResult);
+
+      console.log("Resuts: ", JSON.stringify(result, null, 2));
+
       return "OK";
     },
   },
@@ -3470,7 +3797,6 @@ const resolvers: Resolvers = {
     },
     barangayList: async (_, { zipCode }) => {
       console.log(zipCode);
-
       return await prisma.barangays.findMany({
         where: { municipalId: zipCode },
         orderBy: { name: "asc" },
@@ -3486,11 +3812,11 @@ const resolvers: Resolvers = {
       return await prisma.customOption.findMany({
         where: {
           queriesId: parent.id,
-          RespondentResponse:{
+          RespondentResponse: {
             municipalsId: zipCode,
             surveyId: surveyId,
-            ...filter
-          }
+            ...filter,
+          },
         },
       });
     },
@@ -3814,7 +4140,7 @@ const resolvers: Resolvers = {
         where: {
           candidatesId: parent.id,
           teamId: { not: null },
-          level: 0,
+          level: { not: 1 },
         },
       });
 
@@ -3822,7 +4148,7 @@ const resolvers: Resolvers = {
         where: {
           candidatesId: parent.id,
           teamId: null,
-          level: 0,
+          level: { not: 1 },
         },
       });
 
