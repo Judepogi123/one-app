@@ -8,7 +8,7 @@ import cors from "cors";
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
 import qrcode from "qrcode";
-
+import path from "path";
 import {
   prisma,
   Candidates,
@@ -48,6 +48,7 @@ const io = new Server(ioserver, {
       "http://localhost:5173",
       "https://jml-client-test.netlify.app",
       "https://jml-portal.netlify.app",
+      "http://3.80.143.15:5173/"
     ],
     methods: ["GET", "POST"],
   },
@@ -62,6 +63,7 @@ app.use(bodyParser.json());
 app.use(
   cors({ origin: ["http://localhost:5173", "https://jml-portal.netlify.app"] })
 );
+app.use(express.static(path.join(__dirname, 'react-app/build')));
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -74,11 +76,13 @@ const resolvers: Resolvers = {
     users: async () => {
       return await prisma.users.findMany();
     },
-    voters: async () =>
+    voters: async (_,{skip}) =>
       await prisma.voters.findMany({
         where: {
           saveStatus: "listed",
         },
+        skip: skip ?? 0,
+        take: 50
       }),
     voter: async (_, { id }) => {
       return await prisma.voters.findUnique({ where: { id } });
@@ -518,8 +522,11 @@ const resolvers: Resolvers = {
     getAllPurokCoor: async () => {
       return await prisma.purokCoor.findMany();
     },
-    getAllTeamLeader: async () => {
-      return await prisma.teamLeader.findMany();
+    getAllTeamLeader: async (_,{skip}) => {
+      return await prisma.teamLeader.findMany({
+        skip: skip ?? 0,
+        take: 20,
+      });
     },
     getVotersList: async (
       _,
@@ -738,8 +745,11 @@ const resolvers: Resolvers = {
         },
       });
     },
-    teams: async () => {
-      return await prisma.team.findMany();
+    teams: async (_,{skip}) => {
+      return await prisma.team.findMany({
+        take: 50,
+        skip: skip?? 0,
+      });
     },
     teamRecord: async (_, { query, skip, municipal, barangay }) => {
       let filter: any = {};
@@ -782,8 +792,10 @@ const resolvers: Resolvers = {
     purokList: async () => {
       return await prisma.purok.findMany();
     },
-    voterRecords: async () => {
-      return await prisma.voterRecords.findMany();
+    voterRecords: async (_, { skip }) => {
+      return await prisma.voterRecords.findMany({
+        skip: skip ?? 0,
+      });
     },
     printOptionResponse: async (_, { surveyId, queryId, zipCode }) => {
       const response = await prisma.queries.findMany();
@@ -792,6 +804,18 @@ const resolvers: Resolvers = {
     candidate: async (_, { id }) => {
       return await prisma.candidates.findUnique({
         where: { id },
+      });
+    },
+    duplicateteamMembers: async (_, { skip }) => {
+      return await prisma.duplicateteamMembers.findMany({
+        skip: skip ?? 0,
+        take: 50,
+      });
+    },
+    delistedVotes: async (_, { skip }) => {
+      return await prisma.delistedVoter.findMany({
+        skip: skip ?? 0,
+        take: 50,
       });
     },
   },

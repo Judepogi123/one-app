@@ -30,6 +30,8 @@ import {
   UserQRCode,
   CustomOption,
   VoterRecords,
+  DelistedVoter,
+  DuplicateteamMembers,
 } from "../../prisma/prisma";
 import {
   BarangayOptionResponse,
@@ -48,7 +50,7 @@ export type ResolverFn<Parent, Args, Context, Result> = (
 export type Resolvers = {
   Query: {
     users: ResolverFn<{}, {}, {}, Users[]>;
-    voters: ResolverFn<{}, {}, {}, Voters[]>;
+    voters: ResolverFn<{}, {skip: number}, {}, Voters[]>;
     voter: ResolverFn<{}, { id: string }, {}, Voters | null>;
     searchDraftVoter: ResolverFn<
       {},
@@ -204,7 +206,7 @@ export type Resolvers = {
     getSelectedVoters: ResolverFn<{}, { list: string[] }, {}, Voters[]>;
     getRankOption: ResolverFn<{}, { optionId: string }, {}, string>;
     getAllPurokCoor: ResolverFn<{}, {}, {}, PurokCoor[]>;
-    getAllTeamLeader: ResolverFn<{}, {}, {}, TeamLeader[]>;
+    getAllTeamLeader: ResolverFn<{}, { skip: number }, {}, TeamLeader[]>;
     getVotersList: ResolverFn<
       {},
       {
@@ -247,7 +249,7 @@ export type Resolvers = {
     team: ResolverFn<{}, { id: string }, {}, Team | null>;
     validationList: ResolverFn<{}, { id: string }, {}, Validation[]>;
     getAllTL: ResolverFn<{}, {}, {}, TeamLeader[]>;
-    teams: ResolverFn<{}, {}, {}, Team[]>;
+    teams: ResolverFn<{}, { skip: number }, {}, Team[]>;
     teamRecord: ResolverFn<
       {},
       { query: string; barangay: string; municipal: string; skip: number },
@@ -258,7 +260,7 @@ export type Resolvers = {
     userList: ResolverFn<{}, {}, {}, Users[]>;
     userQRCodeList: ResolverFn<{}, {}, {}, UserQRCode[]>;
     purokList: ResolverFn<{}, {}, {}, Purok[]>;
-    voterRecords: ResolverFn<{}, {}, {}, VoterRecords[]>;
+    voterRecords: ResolverFn<{}, { skip: number }, {}, VoterRecords[]>;
     printOptionResponse: ResolverFn<
       {},
       { zipCode: number; queryId: string; surveyId: string },
@@ -266,6 +268,13 @@ export type Resolvers = {
       Queries[]
     >;
     candidate: ResolverFn<{}, { id: string }, {}, Candidates | null>;
+    duplicateteamMembers: ResolverFn<
+      {},
+      { skip: number },
+      {},
+      DuplicateteamMembers[]
+    >;
+    delistedVotes: ResolverFn<{}, { skip: number }, {}, DelistedVoter[]>;
   };
   Mutation: {
     createVoter: ResolverFn<{}, Voters, {}, Voters>;
