@@ -21,6 +21,7 @@ const cors_1 = __importDefault(require("cors"));
 const argon2_1 = __importDefault(require("argon2"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const qrcode_1 = __importDefault(require("qrcode"));
+const path_1 = __importDefault(require("path"));
 const prisma_1 = require("../../prisma/prisma");
 const schema_1 = require("../schema/schema");
 const body_parser_1 = __importDefault(require("body-parser"));
@@ -42,6 +43,7 @@ const io = new socket_io_1.Server(ioserver, {
             "http://localhost:5173",
             "https://jml-client-test.netlify.app",
             "https://jml-portal.netlify.app",
+            "http://3.80.143.15:5173/",
         ],
         methods: ["GET", "POST"],
     },
@@ -52,7 +54,15 @@ app.use(express_1.default.json({ limit: "10mb" }));
 app.use(express_1.default.urlencoded({ limit: "10mb", extended: true }));
 app.use(body_parser_1.default.urlencoded({ extended: false }));
 app.use(body_parser_1.default.json());
-app.use((0, cors_1.default)({ origin: ["http://localhost:5173", "https://jml-portal.netlify.app"] }));
+app.use((0, cors_1.default)({
+    origin: [
+        "http://localhost:5173",
+        "https://jml-client-test.netlify.app",
+        "https://jml-portal.netlify.app",
+        "http://3.80.143.15:5173/",
+    ],
+}));
+app.use(express_1.default.static(path_1.default.join(__dirname, "react-app/build")));
 app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -64,11 +74,13 @@ const resolvers = {
         users: () => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.users.findMany();
         }),
-        voters: () => __awaiter(void 0, void 0, void 0, function* () {
+        voters: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip }) {
             return yield prisma_1.prisma.voters.findMany({
                 where: {
                     saveStatus: "listed",
                 },
+                skip: skip !== null && skip !== void 0 ? skip : 0,
+                take: 50,
             });
         }),
         voter: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
@@ -457,8 +469,11 @@ const resolvers = {
         getAllPurokCoor: () => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.purokCoor.findMany();
         }),
-        getAllTeamLeader: () => __awaiter(void 0, void 0, void 0, function* () {
-            return yield prisma_1.prisma.teamLeader.findMany();
+        getAllTeamLeader: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip }) {
+            return yield prisma_1.prisma.teamLeader.findMany({
+                skip: skip !== null && skip !== void 0 ? skip : 0,
+                take: 20,
+            });
         }),
         getVotersList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { level, take, skip, query, zipCode, barangayId, purokId, pwd, illi, inc, oor, dead, youth, senior, gender, }) {
             const filter = { saveStatus: "listed" };
@@ -633,8 +648,11 @@ const resolvers = {
                 },
             });
         }),
-        teams: () => __awaiter(void 0, void 0, void 0, function* () {
-            return yield prisma_1.prisma.team.findMany();
+        teams: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip }) {
+            return yield prisma_1.prisma.team.findMany({
+                take: 50,
+                skip: skip !== null && skip !== void 0 ? skip : 0,
+            });
         }),
         teamRecord: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { query, skip, municipal, barangay }) {
             let filter = {};
@@ -676,8 +694,10 @@ const resolvers = {
         purokList: () => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.purok.findMany();
         }),
-        voterRecords: () => __awaiter(void 0, void 0, void 0, function* () {
-            return yield prisma_1.prisma.voterRecords.findMany();
+        voterRecords: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip }) {
+            return yield prisma_1.prisma.voterRecords.findMany({
+                skip: skip !== null && skip !== void 0 ? skip : 0,
+            });
         }),
         printOptionResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { surveyId, queryId, zipCode }) {
             const response = yield prisma_1.prisma.queries.findMany();
@@ -686,6 +706,18 @@ const resolvers = {
         candidate: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
             return yield prisma_1.prisma.candidates.findUnique({
                 where: { id },
+            });
+        }),
+        duplicateteamMembers: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip }) {
+            return yield prisma_1.prisma.duplicateteamMembers.findMany({
+                skip: skip !== null && skip !== void 0 ? skip : 0,
+                take: 50,
+            });
+        }),
+        delistedVotes: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip }) {
+            return yield prisma_1.prisma.delistedVoter.findMany({
+                skip: skip !== null && skip !== void 0 ? skip : 0,
+                take: 50,
             });
         }),
     },

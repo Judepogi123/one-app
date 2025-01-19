@@ -48,7 +48,7 @@ const io = new Server(ioserver, {
       "http://localhost:5173",
       "https://jml-client-test.netlify.app",
       "https://jml-portal.netlify.app",
-      "http://3.80.143.15:5173/"
+      "http://3.80.143.15:5173/",
     ],
     methods: ["GET", "POST"],
   },
@@ -61,9 +61,16 @@ app.use(express.urlencoded({ limit: "10mb", extended: true }));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(
-  cors({ origin: ["http://localhost:5173", "https://jml-portal.netlify.app"] })
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://jml-client-test.netlify.app",
+      "https://jml-portal.netlify.app",
+      "http://3.80.143.15:5173/",
+    ],
+  })
 );
-app.use(express.static(path.join(__dirname, 'react-app/build')));
+app.use(express.static(path.join(__dirname, "react-app/build")));
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -76,13 +83,13 @@ const resolvers: Resolvers = {
     users: async () => {
       return await prisma.users.findMany();
     },
-    voters: async (_,{skip}) =>
+    voters: async (_, { skip }) =>
       await prisma.voters.findMany({
         where: {
           saveStatus: "listed",
         },
         skip: skip ?? 0,
-        take: 50
+        take: 50,
       }),
     voter: async (_, { id }) => {
       return await prisma.voters.findUnique({ where: { id } });
@@ -522,7 +529,7 @@ const resolvers: Resolvers = {
     getAllPurokCoor: async () => {
       return await prisma.purokCoor.findMany();
     },
-    getAllTeamLeader: async (_,{skip}) => {
+    getAllTeamLeader: async (_, { skip }) => {
       return await prisma.teamLeader.findMany({
         skip: skip ?? 0,
         take: 20,
@@ -745,10 +752,10 @@ const resolvers: Resolvers = {
         },
       });
     },
-    teams: async (_,{skip}) => {
+    teams: async (_, { skip }) => {
       return await prisma.team.findMany({
         take: 50,
-        skip: skip?? 0,
+        skip: skip ?? 0,
       });
     },
     teamRecord: async (_, { query, skip, municipal, barangay }) => {

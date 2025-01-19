@@ -260,6 +260,7 @@ type Team {
   municipalsId: Int!
   votersCount: Int
   candidate: Candidates
+  candidatesId: String
   level: Int!
   _count: VoterRecordsCount
 }
@@ -277,7 +278,7 @@ type ValdiatedTeams {
   type Query {
     users: [Users!]!
     user(uid: ID!): Users
-    voters: [Voter!]!
+    voters(skip: Int): [Voter!]!
     voter(id: String!): Voter
     searchDraftVoter(query: SearchDraftQueryInput!): [Voter]!
     searchVoter(query: String!,skip: Int!,take: Int): [Voter!]
@@ -300,7 +301,7 @@ type ValdiatedTeams {
     purokCount: Int!
     purok(id: String!): Purok!
     purokList: [Purok!]
-    voterRecords: [VoterRecords!]
+    voterRecords(skip: Int): [VoterRecords!]
     barangayVotersList(barangayList: NewPurokInput!): [Voter]!
     draftedVoters(voter: DraftedVoters!): [Voter]!
     drafts: [NewBatchDraft!]!
@@ -333,7 +334,7 @@ type ValdiatedTeams {
     getSelectedVoters(list: [String!]): [Voter!]
     getRankOption(optionId: String!): String!
     getAllPurokCoor: [PurokCoor!]
-    getAllTeamLeader: [TeamLeader!]
+    getAllTeamLeader(skip: Int): [TeamLeader!]
     getVotersList(level: String!, take: Int, skip: Int, zipCode: String, barangayId: String,purokId: String, query: String, pwd: String, illi: String,inc: String,oor: String,dead: String,youth: String,senior: String,gender: String): VotersList
     getPurokList(id: String!): [Purok!]
     teamList(zipCode: String!, barangayId: String!, purokId: String!, level: String!,query: String!, skip: Int!, candidate: String, withIssues: Boolean): [Team!]
@@ -341,13 +342,15 @@ type ValdiatedTeams {
     candidate(id: String!):Candidates
     team(id: String!): Team
     getAllTL: [TeamLeader!]
-    teams:[Team!]
+    teams(skip: Int):[Team!]
     validationList(id: ID!):[Validation!]
     option(id: String!):Option!
     teamRecord(query: String!, barangay: String!, municipal: String!, skip: Int!): [ValidatedTeams!]
     getTeamRecord(id: String!): ValidatedTeams
     userList: [Users!]
     userQRCodeList: [UserQRCode!]
+    duplicateteamMembers(skip: Int): [DuplicateteamMembers!]
+    delistedVotes(skip: Int): [DelistedVoter!]
   }
 
   type Validation {
@@ -1082,4 +1085,104 @@ input NewCustomOptionsInput {
   }
 
   scalar Upload
+
+  type DuplicateteamMembers {
+  id: ID!
+  voter: Voter
+  votersId: String
+  team: Team
+  teamFounIn: Team
+  timstamp: String
+  teamId: String
+  foundTeamId: String
+  barangay: Barangay!
+  barangaysId: String!
+  municpal: Municipal!
+  municipalsId: Int!
+}
+
+type DelistedVoter {
+  id: ID!
+  voter: Voter
+  votersId: String
+  timstamp: String
+  municipal: Municipal!
+  municipalsId: Int!
+  barangay: Barangay!
+  barangaysId: String!
+  validated: DelistedVoterValidated
+  delistedVoterValidatedId: String
+}
+
+type DelistedVoterValidated {
+  id: ID!
+  voter: Voter!
+  votersId: String!
+  timstamp: String
+  validated: Boolean
+  DelistedVoter: [DelistedVoter!]!
+}
+
+type UntrackedVoter {
+  id: ID!
+  note: String
+  voter: Voter
+  votersId: String
+  team: Team
+  timstamp: String
+  teamId: String
+  user: Users
+  usersUid: String
+  barangay: Barangay
+  barangaysId: String
+  municpal: Municipal
+  municipalsId: Int
+}
+
+type Appointments {
+  id: ID!
+  appointment: String
+  activity: Int
+  timestamp: String
+  voter: Voter
+  team: Team
+  teamId: String
+  barangay: Barangay!
+  barangaysId: String!
+  municipal: Municipal!
+  municipalsId: Int!
+  purok: Purok
+  user: Users
+  usersUid: String
+  purokId: String
+  data: String
+  votersId: String
+}
+
+type ValidationTimeInput {
+  id: ID!
+  minutes: Int
+  name: String
+  action: Int
+  barangay: Barangay
+  municipal: Municipal
+  team: Team
+  user: Users
+  usersUid: String
+  teamId: String
+  barangaysId: String
+  municipalsId: Int
+}
+
+type ValidationNotes {
+  id: ID!
+  action: String
+  timestamp: String
+  title: String
+  desc: String
+  contact: String
+  user: Users
+  usersUid: String
+}
+
 `;
