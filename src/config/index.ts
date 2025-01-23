@@ -49,6 +49,8 @@ const io = new Server(ioserver, {
       "https://jml-client-test.netlify.app",
       "https://jml-portal.netlify.app",
       "http://3.80.143.15:5173/",
+      "https://one-app-u7hu.onrender.com/",
+      "https://one-app-u7hu.onrender.com/graphql"
     ],
     methods: ["GET", "POST"],
   },
@@ -67,6 +69,8 @@ app.use(
       "https://jml-client-test.netlify.app",
       "https://jml-portal.netlify.app",
       "http://3.80.143.15:5173/",
+      "https://one-app-u7hu.onrender.com/graphql",
+      "https://one-app-u7hu.onrender.com"
     ],
   })
 );
