@@ -560,6 +560,7 @@ exports.default = (io) => {
                                 youth: row["18-30"] ? true : false,
                                 idNumber: `${row.No}`,
                                 level: 0,
+                                saveStatus: "listed",
                             });
                         }
                         return Object.assign({}, row);
@@ -570,12 +571,14 @@ exports.default = (io) => {
                 console.log({ votersToAdd });
                 yield prisma_1.prisma.voters.createMany({
                     data: votersToAdd,
+                    skipDuplicates: true
                 });
             }
             if (destlistedVoters.length) {
                 console.log({ destlistedVoters });
                 yield prisma_1.prisma.delistedVoter.createMany({
                     data: destlistedVoters,
+                    skipDuplicates: true
                 });
             }
             res.status(200).json({
@@ -609,18 +612,39 @@ exports.default = (io) => {
                 headerFooter: {
                     firstHeader: `&L&B${candidate} Supporter Report`,
                     firstFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
-                    oddHeader: `&L&B${candidate} Supporter Report`,
+                    oddHeader: `&L&B${candidate} 
+          Supporter Report`,
                     oddFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
                 },
             });
             // Define worksheet columns
             worksheet.columns = [
                 { header: "Barangay", key: "barangay", width: 15 },
-                { header: "Figure Heads", key: "figureHead", width: 20 },
+                { header: "Figure Heads", key: "figureHead", width: 12 },
                 { header: "BC", key: "bc", width: 10 },
                 { header: "PC", key: "pc", width: 10 },
                 { header: "TL", key: "tl", width: 10 },
+                { header: "Voters W/team", key: "withTeam", width: 16 },
+                { header: "Voters W/o team", key: "withoutTeam", width: 16 },
+                { header: "10+", key: "aboveTen", width: 10 },
+                { header: "10", key: "equalTen", width: 10 },
+                { header: "6-10", key: "belowTen", width: 10 },
+                { header: "5", key: "aboveFive", width: 10 },
+                { header: "5", key: "equalFive", width: 10 },
+                { header: "4", key: "belowFive", width: 10 },
+                { header: "1-3", key: "belowEqualThree", width: 10 },
+                { header: "Population", key: "population", width: 8 },
             ];
+            worksheet.getRow(1).eachCell((cell) => {
+                cell.font = { bold: true }; // Make text bold
+                cell.alignment = { horizontal: "center", vertical: "middle" };
+                cell.border = {
+                    top: { style: "thin" },
+                    left: { style: "thin" },
+                    bottom: { style: "thin" },
+                    right: { style: "thin" },
+                }; // Add borders (optional)
+            });
             const sheetData = parsedData.map((item) => {
                 return {
                     barangay: item.name,
@@ -628,10 +652,47 @@ exports.default = (io) => {
                     bc: item.supporters.bc,
                     pc: item.supporters.pc,
                     tl: item.supporters.tl,
+                    withTeam: item.supporters.withTeams,
+                    withoutTeam: item.supporters.voterWithoutTeam,
+                    aboveTen: item.teamStat.aboveMax,
+                    equalTen: item.teamStat.equalToMax,
+                    belowTen: item.teamStat.belowMax,
+                    aboveFive: item.teamStat.aboveMin,
+                    equalFive: item.teamStat.equalToMin,
+                    belowFive: item.teamStat.belowMin,
+                    belowEqualThree: item.teamStat.threeAndBelow,
+                    population: item.barangayVotersCount,
                 };
             });
-            console.log(sheetData);
             worksheet.addRows(sheetData);
+            const footerRow = worksheet.addRow({
+                barangay: "Total", // Label for the footer row
+                figureHead: sheetData.reduce((sum, row) => sum + (row.figureHead || 0), 0),
+                bc: sheetData.reduce((sum, row) => sum + (row.bc || 0), 0),
+                pc: sheetData.reduce((sum, row) => sum + (row.pc || 0), 0),
+                tl: sheetData.reduce((sum, row) => sum + (row.tl || 0), 0),
+                withTeam: sheetData.reduce((sum, row) => sum + (row.withTeam || 0), 0),
+                withoutTeam: sheetData.reduce((sum, row) => sum + (row.withoutTeam || 0), 0),
+                aboveTen: sheetData.reduce((sum, row) => sum + (row.aboveTen || 0), 0),
+                equalTen: sheetData.reduce((sum, row) => sum + (row.equalTen || 0), 0),
+                belowTen: sheetData.reduce((sum, row) => sum + (row.belowTen || 0), 0),
+                aboveFive: sheetData.reduce((sum, row) => sum + (row.aboveFive || 0), 0),
+                equalFive: sheetData.reduce((sum, row) => sum + (row.equalFive || 0), 0),
+                belowFive: sheetData.reduce((sum, row) => sum + (row.belowFive || 0), 0),
+                belowEqualThree: sheetData.reduce((sum, row) => sum + (row.belowEqualThree || 0), 0),
+                population: sheetData.reduce((sum, row) => sum + (row.population || 0), 0),
+            });
+            // Style the footer row
+            footerRow.eachCell((cell, colNumber) => {
+                cell.font = { bold: true }; // Make text bold
+                cell.alignment = { horizontal: "center", vertical: "middle" }; // Center-align
+                cell.border = {
+                    top: { style: "thin" },
+                    left: { style: "thin" },
+                    bottom: { style: "thin" },
+                    right: { style: "thin" },
+                };
+            });
             res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             res.setHeader("Content-Disposition", "attachment; filename=SupporterReport.xlsx");
             // Write the workbook directly to the response stream
@@ -642,6 +703,143 @@ exports.default = (io) => {
             console.error("Error generating report:", error);
             res.status(500).send("Internal Server Error");
         }
+    }));
+    router.post("/supporter-report-barangay", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
+        if (!req.body) {
+            res.status(403).send({
+                message: "No data provided",
+            });
+        }
+        const temp = JSON.parse(req.body.barangay);
+        try {
+            const workbook = new exceljs_1.default.Workbook();
+            workbook.created = new Date();
+            const worksheetNames = new Set(); // To track existing worksheet names
+            console.log("All PC: ", temp.leaders.length);
+            console.log("All PC handle: ", temp.leaders.reduce((acc, num) => acc + (num.teamList.length || 0), 0));
+            for (let item of temp.leaders) {
+                const totalVoters = item.teamList.reduce((acc, team) => acc + (team.votersCount || 0), 0);
+                console.log("Team: ", totalVoters);
+                // Generate the initial worksheet name
+                let worksheetName = `${(_a = item.voter) === null || _a === void 0 ? void 0 : _a.idNumber}-${(_b = item.voter) === null || _b === void 0 ? void 0 : _b.lastname}, ${(_c = item.voter) === null || _c === void 0 ? void 0 : _c.firstname}`;
+                // Ensure the name is unique
+                let counter = 1;
+                while (worksheetNames.has(worksheetName)) {
+                    worksheetName = `${(_d = item.voter) === null || _d === void 0 ? void 0 : _d.idNumber}-${(_e = item.voter) === null || _e === void 0 ? void 0 : _e.lastname}, ${(_f = item.voter) === null || _f === void 0 ? void 0 : _f.firstname} (${counter})`;
+                    counter++;
+                }
+                // Add the unique name to the set
+                worksheetNames.add(worksheetName);
+                // Create the worksheet with the unique name
+                const worksheet = workbook.addWorksheet(worksheetName, {
+                    pageSetup: {
+                        paperSize: 9,
+                        orientation: "portrait",
+                        fitToPage: true,
+                        showGridLines: true,
+                    },
+                    headerFooter: {
+                        firstHeader: `&L&B${(_g = item.voter) === null || _g === void 0 ? void 0 : _g.lastname}, ${(_h = item.voter) === null || _h === void 0 ? void 0 : _h.firstname} (Purok)`,
+                        firstFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+                        oddHeader: `&L&B  ${temp.name} PC: ${(_j = item.voter) === null || _j === void 0 ? void 0 : _j.lastname}, ${(_k = item.voter) === null || _k === void 0 ? void 0 : _k.firstname} (${(_l = item.voter) === null || _l === void 0 ? void 0 : _l.idNumber})
+             Handled TL list`,
+                        oddFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+                    },
+                });
+                worksheet.columns = [
+                    { header: "ID", key: "id", width: 6 },
+                    { header: "Fullname", key: "fullname", width: 40 },
+                    { header: "Members", key: "members", width: 10 },
+                    { header: "Merge 1", key: "merge1", width: 10 },
+                    { header: "Merge 2", key: "merge2", width: 10 },
+                    { header: "Merge 3", key: "merge3", width: 10 },
+                ];
+                worksheet.getRow(1).eachCell((cell) => {
+                    cell.font = { bold: true };
+                    cell.alignment = { horizontal: "center", vertical: "middle" };
+                    cell.border = {
+                        top: { style: "thin" },
+                        left: { style: "thin" },
+                        bottom: { style: "thin" },
+                        right: { style: "thin" },
+                    };
+                });
+                const sheetData = item.teamList.map((team) => {
+                    var _a, _b, _c, _d, _e, _f;
+                    return {
+                        id: (_b = (_a = team.teamLeader) === null || _a === void 0 ? void 0 : _a.voter) === null || _b === void 0 ? void 0 : _b.idNumber,
+                        fullname: `${(_d = (_c = team.teamLeader) === null || _c === void 0 ? void 0 : _c.voter) === null || _d === void 0 ? void 0 : _d.lastname}, ${(_f = (_e = team.teamLeader) === null || _e === void 0 ? void 0 : _e.voter) === null || _f === void 0 ? void 0 : _f.firstname}`,
+                        members: team.votersCount,
+                        merge1: "",
+                        merge2: "",
+                        merge3: "",
+                    };
+                });
+                const addedRows = worksheet.addRows(sheetData);
+                const footers = worksheet.addRow({
+                    id: "Total",
+                    fullname: item.teamList.length,
+                    members: sheetData.reduce((sum, row) => sum + (row.members || 0), 0),
+                    merge1: "",
+                    merge2: "",
+                    merge3: "",
+                });
+                footers.eachCell((cell, colNumber) => {
+                    cell.font = { bold: true }; // Make text bold
+                    cell.alignment = { horizontal: "center", vertical: "middle" }; // Center-align
+                    cell.border = {
+                        top: { style: "thin" },
+                        left: { style: "thin" },
+                        bottom: { style: "thin" },
+                        right: { style: "thin" },
+                    };
+                });
+                addedRows.forEach((row) => {
+                    const cellValue = row.getCell("members").value;
+                    if (typeof cellValue === "number" && cellValue < 5) {
+                        row.eachCell((cell) => {
+                            cell.font = {
+                                color: { argb: "FFFFA500" },
+                            };
+                        });
+                    }
+                });
+            }
+            res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            res.setHeader("Content-Disposition", "attachment; filename=SupporterReport.xlsx");
+            yield workbook.xlsx.write(res);
+        }
+        catch (error) {
+            console.log(error);
+            res.status(500).send({ message: "Internal Server Error" });
+        }
+        // try {
+        //   const area = await prisma.barangays.findMany({
+        //     where: {
+        //       municipalId: parseInt(zipCode, 10),
+        //     },
+        //     include: {
+        //       TeamLeader: {
+        //         select: {
+        //           _count: {},
+        //         },
+        //       },
+        //     },
+        //   });
+        //   const team = await prisma.team.findMany({
+        //     where: {
+        //       barangaysId: { in: area.map((item) => item.id) }, // Filter by barangay ID
+        //     },
+        //     include: {
+        //       _count: {
+        //         select: {
+        //           voters: true,
+        //         },
+        //       },
+        //     },
+        //   });
+        // } catch (error) {}
     }));
     return router;
 };

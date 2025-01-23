@@ -477,9 +477,6 @@ const resolvers = {
         }),
         getVotersList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { level, take, skip, query, zipCode, barangayId, purokId, pwd, illi, inc, oor, dead, youth, senior, gender, }) {
             const filter = { saveStatus: "listed" };
-            if (level !== "all") {
-                filter.level = parseInt(level, 10);
-            }
             if (zipCode !== "all") {
                 filter.municipalsId = parseInt(zipCode, 10);
             }
@@ -513,6 +510,9 @@ const resolvers = {
             if (gender !== "all") {
                 filter.gender = gender;
             }
+            if (level !== "all") {
+                filter.level = parseInt(level, 10);
+            }
             if (query) {
                 filter.OR = [
                     { lastname: { contains: query, mode: "insensitive" } },
@@ -523,18 +523,14 @@ const resolvers = {
             const result = yield prisma_1.prisma.voters.findMany({
                 where: filter,
                 skip: skip !== null && skip !== void 0 ? skip : 0,
-                take: take,
+                take,
                 orderBy: {
-                    idNumber: "desc",
+                    idNumber: "asc",
                 },
             });
-            const count = yield prisma_1.prisma.voters.count({
-                where: filter,
-                orderBy: {
-                    idNumber: "desc",
-                },
-            });
+            const count = yield prisma_1.prisma.voters.count({ where: filter });
             console.log("Filter: ", filter);
+            console.log("Result: ", result);
             return { voters: result, results: count };
         }),
         getPurokList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
@@ -2844,6 +2840,7 @@ const resolvers = {
                             // });
                             alreadyInTeam.push(voter);
                             processedVoters.add(voter.id);
+                            continue;
                         }
                     }
                     if (voter.oor === "YES") {
@@ -3076,6 +3073,68 @@ const resolvers = {
             ]);
             return "OK";
         }),
+        teamMerger: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { firstId, secondId }) {
+            console.log({ firstId, secondId });
+            const [first, second, teamSecond] = yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.teamLeader.findUnique({
+                    where: { id: firstId },
+                    include: {
+                        voter: {
+                            select: {
+                                firstname: true,
+                                lastname: true,
+                            },
+                        },
+                    },
+                }),
+                prisma_1.prisma.teamLeader.findUnique({
+                    where: { id: secondId },
+                    include: {
+                        voter: {
+                            select: {
+                                firstname: true,
+                                lastname: true,
+                            },
+                        },
+                    },
+                }),
+                prisma_1.prisma.team.findFirst({
+                    where: { teamLeaderId: secondId },
+                }),
+            ]);
+            if (!first || !second || !teamSecond) {
+                throw new graphql_1.GraphQLError("Could not find any team leader or associated team");
+            }
+            console.log({ first, second, teamSecond });
+            // Update voters and reassign them to the first team
+            yield prisma_1.prisma.$transaction([
+                // Reassign voters of the second team to the first team
+                prisma_1.prisma.voters.updateMany({
+                    where: {
+                        teamId: teamSecond.id, // Voters associated with the second team
+                    },
+                    data: {
+                        teamId: first.teamId, // Reassign to the first team
+                    },
+                }),
+                // Update the second team to now belong to the first team leader
+                prisma_1.prisma.team.update({
+                    where: {
+                        id: teamSecond.id,
+                    },
+                    data: {
+                        teamLeaderId: firstId,
+                    },
+                }),
+                // Delete the second team leader
+                prisma_1.prisma.teamLeader.delete({
+                    where: {
+                        id: secondId,
+                    },
+                }),
+            ]);
+            return "OK";
+        }),
     },
     Voter: {
         votersCount: () => __awaiter(void 0, void 0, void 0, function* () {
@@ -3142,7 +3201,11 @@ const resolvers = {
     Barangay: {
         barangayVotersCount: (parent) => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.voters.count({
-                where: { municipalsId: parent.municipalId, barangaysId: parent.id },
+                where: {
+                    municipalsId: parent.municipalId,
+                    barangaysId: parent.id,
+                    saveStatus: "listed",
+                },
             });
         }),
         purokCount: (parent) => __awaiter(void 0, void 0, void 0, function* () {
@@ -3257,13 +3320,22 @@ const resolvers = {
             });
             return {
                 aboveMax: team.filter((item) => item._count.voters > 10).length,
-                belowMax: team.filter((item) => item._count.voters < 10).length,
+                belowMax: team.filter((item) => item._count.voters < 10 && item._count.voters > 5).length,
                 equalToMax: team.filter((item) => item._count.voters === 10).length,
                 aboveMin: team.filter((item) => item._count.voters > 5).length,
                 equalToMin: team.filter((item) => item._count.voters === 5).length,
-                belowMin: team.filter((item) => item._count.voters < 5).length,
+                belowMin: team.filter((item) => item._count.voters === 4).length,
                 threeAndBelow: team.filter((item) => item._count.voters <= 3).length,
             };
+        }),
+        leaders: (parent_1, _a) => __awaiter(void 0, [parent_1, _a], void 0, function* (parent, { skip, candidateId }) {
+            return yield prisma_1.prisma.teamLeader.findMany({
+                where: {
+                    barangaysId: parent.id,
+                    level: 2,
+                    candidatesId: candidateId,
+                },
+            });
         }),
     },
     Purok: {
@@ -3743,6 +3815,22 @@ const resolvers = {
                 },
             });
         }),
+        _count: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            const count = yield prisma_1.prisma.voters.count({
+                where: {
+                    teamId: parent.id,
+                },
+            });
+            return { voters: count }; // Return an object with the 'voters' field
+        }),
+        votersCount: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            const count = yield prisma_1.prisma.voters.count({
+                where: {
+                    teamId: parent.id,
+                },
+            });
+            return count;
+        }),
     },
     TeamLeader: {
         voter: (parent) => __awaiter(void 0, void 0, void 0, function* () {
@@ -3770,6 +3858,17 @@ const resolvers = {
             return yield prisma_1.prisma.teamLeader.findFirst({
                 where: {
                     id: parent.purokCoorsId,
+                },
+            });
+        }),
+        teamList: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma_1.prisma.team.findMany({
+                where: {
+                    TeamLeader: {
+                        voter: {
+                            teamId: parent.teamId,
+                        },
+                    },
                 },
             });
         }),

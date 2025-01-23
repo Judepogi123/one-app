@@ -15,13 +15,13 @@ export interface BarangayProps {
   purokCount: number;
   sampleSize: number;
   population: number;
-
   surveyor: number;
   activeSurveyor: number;
   femaleSize: number;
   maleSize: number;
   supporters: AllSupporters;
   teamStat: TeamStatProps
+  leaders: TeamLeaderProps[]
 }
 
 interface AllSupporters {
@@ -33,6 +33,40 @@ interface AllSupporters {
   voterWithoutTeam: number;
 }
 
+export interface VotersProps {
+  id: string;
+  lastname: string;
+  firstname: string;
+  idNumber: string;
+  gender?: string;
+  barangay: BarangayProps;
+  status: number;
+  calcAge: number;
+  birthYear: string;
+  level: number;
+  barangaysId: string;
+  municipalsId: number;
+  precintsId?: string | null;
+  saveStatus: string;
+  mobileNumber?: string | null;
+  houseHoldId?: string | null;
+  newBatchDraftId?: string | null;
+  pwd?: string | null;
+  oor?: string | null;
+  inc?: string | null;
+  illi?: string | null;
+  inPurok?: boolean | null;
+  senior?: boolean | null;
+  youth?: boolean | null;
+  hubId?: string | null;
+  qrCode?: string | null;
+  candidatesId?: string | null;
+  qrCodeNumber: number;
+  teamId?: string;
+  leader?: TeamLeaderProps;
+
+}
+
 export interface TeamStatProps {
   aboveMax: number;
   belowMax: number;
@@ -42,6 +76,54 @@ export interface TeamStatProps {
   belowMin: number;
   threeAndBelow: number;
 }
+
+export interface TeamsProps {
+  id: string;
+  voters: VotersProps[];
+  purokId: string;
+  barangay: BarangayProps;
+  barangaysId: string;
+  municipalsId: number;
+  hubId?: string | null;
+  level: number;
+  teamLeaderId: string;
+  candidatesId?: string | null;
+  teamLeader: TeamLeaderProps | null;
+  barangayCoor: TeamLeaderProps | null;
+  purokCoors: TeamLeaderProps | null;
+  _count: {
+    voters: number;
+  };
+  votersCount: number;
+}
+
+export interface TeamLeaderProps {
+  id: string;
+  voter?: VotersProps | null;
+  hubId: string;
+  barangay: BarangayProps;
+  purokCoorId?: string;
+  voterId?: string;
+  municipalsId: number;
+  barangaysId: string;
+  team: TeamsProps[];
+  teamId?: string;
+  votersId?: string;
+  purokId: string;
+  handle?: number;
+  level: number;
+  candidatesId?: string;
+  barangayCoor: {
+    id: string;
+    voter?: VotersProps | null;
+  };
+  purokCoors: {
+    id: string;
+    voter?: VotersProps | null;
+  };
+  teamList: TeamsProps[]
+}
+
 
 export interface RowProps {
   __EMPTY: string;

@@ -556,11 +556,7 @@ const resolvers: Resolvers = {
       }
     ) => {
       const filter: any = { saveStatus: "listed" };
-
-      if (level !== "all") {
-        filter.level = parseInt(level, 10);
-      }
-
+      
       if (zipCode !== "all") {
         filter.municipalsId = parseInt(zipCode, 10);
       }
@@ -596,6 +592,11 @@ const resolvers: Resolvers = {
       if (gender !== "all") {
         filter.gender = gender;
       }
+
+      if(level !== "all"){
+        filter.level = parseInt(level, 10);
+      }
+
       if (query) {
         filter.OR = [
           { lastname: { contains: query, mode: "insensitive" } },
@@ -607,19 +608,16 @@ const resolvers: Resolvers = {
       const result = await prisma.voters.findMany({
         where: filter,
         skip: skip ?? 0,
-        take: take,
+        take,
         orderBy: {
-          idNumber: "desc",
+          idNumber: "asc",
         },
       });
 
-      const count = await prisma.voters.count({
-        where: filter,
-        orderBy: {
-          idNumber: "desc",
-        },
-      });
+      const count = await prisma.voters.count({ where: filter });
+
       console.log("Filter: ", filter);
+      console.log("Result: ", result);
 
       return { voters: result, results: count };
     },
@@ -3160,6 +3158,7 @@ const resolvers: Resolvers = {
               // });
               alreadyInTeam.push(voter);
               processedVoters.add(voter.id);
+              continue;
             }
           }
 
@@ -3409,6 +3408,77 @@ const resolvers: Resolvers = {
       ]);
       return "OK";
     },
+    teamMerger: async (_, { firstId, secondId }) => {
+      console.log({ firstId, secondId });
+
+      const [first, second, teamSecond] = await prisma.$transaction([
+        prisma.teamLeader.findUnique({
+          where: { id: firstId },
+          include: {
+            voter: {
+              select: {
+                firstname: true,
+                lastname: true,
+              },
+            },
+          },
+        }),
+        prisma.teamLeader.findUnique({
+          where: { id: secondId },
+          include: {
+            voter: {
+              select: {
+                firstname: true,
+                lastname: true,
+              },
+            },
+          },
+        }),
+        prisma.team.findFirst({
+          where: { teamLeaderId: secondId },
+        }),
+      ]);
+
+      if (!first || !second || !teamSecond) {
+        throw new GraphQLError(
+          "Could not find any team leader or associated team"
+        );
+      }
+
+      console.log({ first, second, teamSecond });
+
+      // Update voters and reassign them to the first team
+      await prisma.$transaction([
+        // Reassign voters of the second team to the first team
+        prisma.voters.updateMany({
+          where: {
+            teamId: teamSecond.id, // Voters associated with the second team
+          },
+          data: {
+            teamId: first.teamId, // Reassign to the first team
+          },
+        }),
+
+        // Update the second team to now belong to the first team leader
+        prisma.team.update({
+          where: {
+            id: teamSecond.id,
+          },
+          data: {
+            teamLeaderId: firstId,
+          },
+        }),
+
+        // Delete the second team leader
+        prisma.teamLeader.delete({
+          where: {
+            id: secondId,
+          },
+        }),
+      ]);
+
+      return "OK";
+    },
   },
   Voter: {
     votersCount: async () => {
@@ -3475,7 +3545,11 @@ const resolvers: Resolvers = {
   Barangay: {
     barangayVotersCount: async (parent) => {
       return await prisma.voters.count({
-        where: { municipalsId: parent.municipalId, barangaysId: parent.id },
+        where: {
+          municipalsId: parent.municipalId,
+          barangaysId: parent.id,
+          saveStatus: "listed",
+        },
       });
     },
     purokCount: async (parent) => {
@@ -3592,13 +3666,24 @@ const resolvers: Resolvers = {
 
       return {
         aboveMax: team.filter((item) => item._count.voters > 10).length,
-        belowMax: team.filter((item) => item._count.voters < 10).length,
+        belowMax: team.filter(
+          (item) => item._count.voters < 10 && item._count.voters > 5
+        ).length,
         equalToMax: team.filter((item) => item._count.voters === 10).length,
         aboveMin: team.filter((item) => item._count.voters > 5).length,
         equalToMin: team.filter((item) => item._count.voters === 5).length,
-        belowMin: team.filter((item) => item._count.voters < 5).length,
+        belowMin: team.filter((item) => item._count.voters === 4).length,
         threeAndBelow: team.filter((item) => item._count.voters <= 3).length,
       };
+    },
+    leaders: async (parent, { skip, candidateId }) => {
+      return await prisma.teamLeader.findMany({
+        where: {
+          barangaysId: parent.id,
+          level: 2,
+          candidatesId: candidateId,
+        },
+      });
     },
   },
   Purok: {
@@ -4124,6 +4209,22 @@ const resolvers: Resolvers = {
         },
       });
     },
+    _count: async (parent) => {
+      const count = await prisma.voters.count({
+        where: {
+          teamId: parent.id,
+        },
+      });
+      return { voters: count }; // Return an object with the 'voters' field
+    },
+    votersCount: async (parent) => {
+      const count = await prisma.voters.count({
+        where: {
+          teamId: parent.id,
+        },
+      });
+      return count;
+    },
   },
   TeamLeader: {
     voter: async (parent) => {
@@ -4151,6 +4252,17 @@ const resolvers: Resolvers = {
       return await prisma.teamLeader.findFirst({
         where: {
           id: parent.purokCoorsId,
+        },
+      });
+    },
+    teamList: async (parent) => {
+      return await prisma.team.findMany({
+        where: {
+          TeamLeader: {
+            voter: {
+              teamId: parent.teamId,
+            },
+          },
         },
       });
     },

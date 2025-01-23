@@ -140,6 +140,7 @@ type Users {
     validationList:[Validation!]
     supporters(id: String): AllSupporters!
     teamStat: AllTeamStatus!
+    leaders(skip:Int, candidateId: String): [TeamLeader!]
   }
 
   type Precent {
@@ -240,6 +241,7 @@ type TeamLeader {
   teamLeaderId: String
   teamLeader: TeamLeader
   teamLeaderFor: [TeamLeader!]!
+  teamList: [Team!]
 }
 
 
@@ -514,6 +516,7 @@ type BarangayCoor {
     createCustomOption(id: String!): String!
     resetTeamList(zipCode: String!, barangayId: String!): String!
     harvestResponse(surveyResponse: [NewSurveyResponseInput!]!,respondentResponse:[NewRespondentResponseInput!]!, response:[NewResponseInput!]!, customOptions: [NewCustomOptionsInput!]): String!
+    teamMerger(firstId: String, secondId: String):String
   }
 
   type VoterRecords {

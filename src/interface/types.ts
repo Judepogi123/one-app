@@ -50,7 +50,7 @@ export type ResolverFn<Parent, Args, Context, Result> = (
 export type Resolvers = {
   Query: {
     users: ResolverFn<{}, {}, {}, Users[]>;
-    voters: ResolverFn<{}, {skip: number}, {}, Voters[]>;
+    voters: ResolverFn<{}, { skip: number }, {}, Voters[]>;
     voter: ResolverFn<{}, { id: string }, {}, Voters | null>;
     searchDraftVoter: ResolverFn<
       {},
@@ -748,6 +748,7 @@ export type Resolvers = {
       {},
       string
     >;
+    teamMerger: ResolverFn<{},{firstId: string, secondId: string},{}, string>
     //removeValidateTeamleader: ResolverFn<{}, {}, {}, string>;
   };
   Voter: {
@@ -828,6 +829,7 @@ export type Resolvers = {
         threeAndBelow: number;
       }
     >;
+    leaders: ResolverFn<Barangays, {skip: number, candidateId: string}, {}, TeamLeader[]>;
   };
   Purok: {
     purokDraftedVotersCount: ResolverFn<Purok, {}, {}, number>;
@@ -973,11 +975,14 @@ export type Resolvers = {
     purok: ResolverFn<Team, {}, {}, Purok | null>;
     barangay: ResolverFn<Team, {}, {}, Barangays | null>;
     municipal: ResolverFn<Team, {}, {}, Municipals | null>;
+    _count: ResolverFn<Team, {}, {}, { voters: number }>;
+    votersCount: ResolverFn<Team, {}, {}, number>;
   };
   TeamLeader: {
     voter: ResolverFn<TeamLeader, {}, {}, Voters | null>;
     barangayCoor: ResolverFn<TeamLeader, {}, {}, TeamLeader | null>;
     purokCoors: ResolverFn<TeamLeader, {}, {}, TeamLeader | null>;
+    teamList: ResolverFn<TeamLeader, {}, {}, Team[]>;
   };
   Candidates: {
     supporters: ResolverFn<Candidates, {}, {}, number>;
