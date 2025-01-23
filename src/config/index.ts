@@ -804,6 +804,7 @@ const resolvers: Resolvers = {
     voterRecords: async (_, { skip }) => {
       return await prisma.voterRecords.findMany({
         skip: skip ?? 0,
+        take: 50
       });
     },
     printOptionResponse: async (_, { surveyId, queryId, zipCode }) => {

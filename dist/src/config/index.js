@@ -697,6 +697,7 @@ const resolvers = {
         voterRecords: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip }) {
             return yield prisma_1.prisma.voterRecords.findMany({
                 skip: skip !== null && skip !== void 0 ? skip : 0,
+                take: 50
             });
         }),
         printOptionResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { surveyId, queryId, zipCode }) {
