@@ -45,7 +45,7 @@ const io = new socket_io_1.Server(ioserver, {
             "https://jml-portal.netlify.app",
             "http://3.80.143.15:5173/",
             "https://one-app-u7hu.onrender.com/",
-            "https://one-app-u7hu.onrender.com/graphql"
+            "https://one-app-u7hu.onrender.com/graphql",
         ],
         methods: ["GET", "POST"],
     },
@@ -63,7 +63,7 @@ app.use((0, cors_1.default)({
         "https://jml-portal.netlify.app",
         "http://3.80.143.15:5173/",
         "https://one-app-u7hu.onrender.com/graphql",
-        "https://one-app-u7hu.onrender.com"
+        "https://one-app-u7hu.onrender.com",
     ],
 }));
 app.use(express_1.default.static(path_1.default.join(__dirname, "react-app/build")));
@@ -692,13 +692,17 @@ const resolvers = {
         userQRCodeList: () => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.userQRCode.findMany();
         }),
-        purokList: () => __awaiter(void 0, void 0, void 0, function* () {
-            return yield prisma_1.prisma.purok.findMany();
+        purokList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode }) {
+            return yield prisma_1.prisma.purok.findMany({
+                where: {
+                    municipalsId: zipCode,
+                },
+            });
         }),
         voterRecords: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip }) {
             return yield prisma_1.prisma.voterRecords.findMany({
                 skip: skip !== null && skip !== void 0 ? skip : 0,
-                take: 50
+                take: 50,
             });
         }),
         printOptionResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { surveyId, queryId, zipCode }) {

@@ -259,7 +259,7 @@ export type Resolvers = {
     getTeamRecord: ResolverFn<{}, { id: string }, {}, ValidatedTeams | null>;
     userList: ResolverFn<{}, {}, {}, Users[]>;
     userQRCodeList: ResolverFn<{}, {}, {}, UserQRCode[]>;
-    purokList: ResolverFn<{}, {}, {}, Purok[]>;
+    purokList: ResolverFn<{}, {zipCode: number}, {}, Purok[]>;
     voterRecords: ResolverFn<{}, { skip: number }, {}, VoterRecords[]>;
     printOptionResponse: ResolverFn<
       {},

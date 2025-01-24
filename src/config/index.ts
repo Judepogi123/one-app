@@ -50,7 +50,7 @@ const io = new Server(ioserver, {
       "https://jml-portal.netlify.app",
       "http://3.80.143.15:5173/",
       "https://one-app-u7hu.onrender.com/",
-      "https://one-app-u7hu.onrender.com/graphql"
+      "https://one-app-u7hu.onrender.com/graphql",
     ],
     methods: ["GET", "POST"],
   },
@@ -70,7 +70,7 @@ app.use(
       "https://jml-portal.netlify.app",
       "http://3.80.143.15:5173/",
       "https://one-app-u7hu.onrender.com/graphql",
-      "https://one-app-u7hu.onrender.com"
+      "https://one-app-u7hu.onrender.com",
     ],
   })
 );
@@ -87,7 +87,7 @@ const resolvers: Resolvers = {
     users: async () => {
       return await prisma.users.findMany();
     },
-    voters: async (_, { skip, zipCode}) =>
+    voters: async (_, { skip, zipCode }) =>
       await prisma.voters.findMany({
         where: {
           saveStatus: "listed",
@@ -561,7 +561,7 @@ const resolvers: Resolvers = {
       }
     ) => {
       const filter: any = { saveStatus: "listed" };
-      
+
       if (zipCode !== "all") {
         filter.municipalsId = parseInt(zipCode, 10);
       }
@@ -598,7 +598,7 @@ const resolvers: Resolvers = {
         filter.gender = gender;
       }
 
-      if(level !== "all"){
+      if (level !== "all") {
         filter.level = parseInt(level, 10);
       }
 
@@ -799,13 +799,17 @@ const resolvers: Resolvers = {
     userQRCodeList: async () => {
       return await prisma.userQRCode.findMany();
     },
-    purokList: async () => {
-      return await prisma.purok.findMany();
+    purokList: async (_, { zipCode }) => {
+      return await prisma.purok.findMany({
+        where: {
+          municipalsId: zipCode,
+        },
+      });
     },
     voterRecords: async (_, { skip }) => {
       return await prisma.voterRecords.findMany({
         skip: skip ?? 0,
-        take: 50
+        take: 50,
       });
     },
     printOptionResponse: async (_, { surveyId, queryId, zipCode }) => {
