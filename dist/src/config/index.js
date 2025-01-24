@@ -78,10 +78,11 @@ const resolvers = {
         users: () => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.users.findMany();
         }),
-        voters: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip }) {
+        voters: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip, zipCode }) {
             return yield prisma_1.prisma.voters.findMany({
                 where: {
                     saveStatus: "listed",
+                    municipalsId: zipCode,
                 },
                 skip: skip !== null && skip !== void 0 ? skip : 0,
                 take: 50,

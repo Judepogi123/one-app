@@ -87,10 +87,11 @@ const resolvers: Resolvers = {
     users: async () => {
       return await prisma.users.findMany();
     },
-    voters: async (_, { skip }) =>
+    voters: async (_, { skip, zipCode}) =>
       await prisma.voters.findMany({
         where: {
           saveStatus: "listed",
+          municipalsId: zipCode,
         },
         skip: skip ?? 0,
         take: 50,

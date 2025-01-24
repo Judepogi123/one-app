@@ -277,7 +277,7 @@ type ValdiatedTeams {
   type Query {
     users: [Users!]!
     user(uid: ID!): Users
-    voters(skip: Int): [Voter!]!
+    voters(skip: Int, zipCode: Int): [Voter!]!
     voter(id: String!): Voter
     searchDraftVoter(query: SearchDraftQueryInput!): [Voter]!
     searchVoter(query: String!,skip: Int!,take: Int): [Voter!]
@@ -299,7 +299,7 @@ type ValdiatedTeams {
     barangayVotersCount: Int!
     purokCount: Int!
     purok(id: String!): Purok!
-    purokList: [Purok!]
+    purokList(zipCode: Int): [Purok!]
     voterRecords(skip: Int): [VoterRecords!]
     barangayVotersList(barangayList: NewPurokInput!): [Voter]!
     draftedVoters(voter: DraftedVoters!): [Voter]!

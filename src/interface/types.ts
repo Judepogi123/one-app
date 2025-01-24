@@ -50,7 +50,7 @@ export type ResolverFn<Parent, Args, Context, Result> = (
 export type Resolvers = {
   Query: {
     users: ResolverFn<{}, {}, {}, Users[]>;
-    voters: ResolverFn<{}, { skip: number }, {}, Voters[]>;
+    voters: ResolverFn<{}, { skip: number, zipCode: number }, {}, Voters[]>;
     voter: ResolverFn<{}, { id: string }, {}, Voters | null>;
     searchDraftVoter: ResolverFn<
       {},
