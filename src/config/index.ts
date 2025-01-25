@@ -3503,9 +3503,20 @@ const resolvers: Resolvers = {
         newVoterRecord,
         appoinments,
         untrackedList,
-        recordToDelete
+        recordToDelete,
       }
     ) => {
+      console.log({
+        validateDuplicate,
+        votersToTransfer,
+        validatedDelisted,
+        votersToUpdate,
+        newVoterRecord,
+        appoinments,
+        untrackedList,
+        recordToDelete,
+      });
+
       return "OK";
     },
   },

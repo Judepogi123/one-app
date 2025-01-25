@@ -3148,7 +3148,17 @@ const resolvers = {
             ]);
             return "OK";
         }),
-        validationUpdate: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { validateDuplicate, votersToTransfer, validatedDelisted, votersToUpdate, newVoterRecord, appoinments, untrackedList, recordToDelete }) {
+        validationUpdate: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { validateDuplicate, votersToTransfer, validatedDelisted, votersToUpdate, newVoterRecord, appoinments, untrackedList, recordToDelete, }) {
+            console.log({
+                validateDuplicate,
+                votersToTransfer,
+                validatedDelisted,
+                votersToUpdate,
+                newVoterRecord,
+                appoinments,
+                untrackedList,
+                recordToDelete,
+            });
             return "OK";
         }),
     },
