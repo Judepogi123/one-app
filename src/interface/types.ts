@@ -50,7 +50,7 @@ export type ResolverFn<Parent, Args, Context, Result> = (
 export type Resolvers = {
   Query: {
     users: ResolverFn<{}, {}, {}, Users[]>;
-    voters: ResolverFn<{}, { skip: number, zipCode: number }, {}, Voters[]>;
+    voters: ResolverFn<{}, { skip: number; zipCode: number }, {}, Voters[]>;
     voter: ResolverFn<{}, { id: string }, {}, Voters | null>;
     searchDraftVoter: ResolverFn<
       {},
@@ -259,7 +259,7 @@ export type Resolvers = {
     getTeamRecord: ResolverFn<{}, { id: string }, {}, ValidatedTeams | null>;
     userList: ResolverFn<{}, {}, {}, Users[]>;
     userQRCodeList: ResolverFn<{}, {}, {}, UserQRCode[]>;
-    purokList: ResolverFn<{}, {zipCode: number}, {}, Purok[]>;
+    purokList: ResolverFn<{}, { zipCode: number }, {}, Purok[]>;
     voterRecords: ResolverFn<{}, { skip: number }, {}, VoterRecords[]>;
     printOptionResponse: ResolverFn<
       {},
@@ -748,8 +748,77 @@ export type Resolvers = {
       {},
       string
     >;
-    teamMerger: ResolverFn<{},{firstId: string, secondId: string},{}, string>
+    teamMerger: ResolverFn<
+      {},
+      { firstId: string; secondId: string },
+      {},
+      string
+    >;
     //removeValidateTeamleader: ResolverFn<{}, {}, {}, string>;
+    validationUpdate: ResolverFn<
+      {},
+      {
+        validatedDelisted: {
+          id: string;
+          votersId: string;
+        }[];
+        votersToUpdate: {
+          id: string;
+          props: string;
+          type: string;
+          value: string;
+          votersId: string;
+          action: number;
+          teamId: string;
+        }[];
+        votersToTransfer: {
+          id: string;
+          votersId: string;
+          teamId: string;
+          fromteamId: string;
+          toTeamId: string;
+          level: number;
+        }[];
+        untrackedList: {
+          id: string;
+          votersId: string;
+          team_Id: string;
+          municipalsId: string;
+          barangaysId: string;
+          purokId: string;
+          timestamp: string;
+        }[];
+        validateDuplicate: {
+          id: string;
+          duplicateteamMemberId: string;
+          votersId: string;
+          account_id: string;
+        }[];
+        recordToDelete: {
+          id: string;
+          recordId: string;
+          voter_id: string;
+          team_id: string;
+        }[];
+        newVoterRecord: {
+          id: string;
+          voter_record_id: string;
+        }[];
+        appoinments: {
+          id: string;
+          activity: number;
+          appointment: string;
+          team_Id: string;
+          votersId: string;
+          municipalsId: string;
+          barangaysId: string;
+          purokId: string;
+          date: string;
+        }[]
+      },
+      {},
+      string
+    >;
   };
   Voter: {
     votersCount: ResolverFn<{}, {}, {}, number>;
@@ -829,7 +898,12 @@ export type Resolvers = {
         threeAndBelow: number;
       }
     >;
-    leaders: ResolverFn<Barangays, {skip: number, candidateId: string}, {}, TeamLeader[]>;
+    leaders: ResolverFn<
+      Barangays,
+      { skip: number; candidateId: string },
+      {},
+      TeamLeader[]
+    >;
   };
   Purok: {
     purokDraftedVotersCount: ResolverFn<Purok, {}, {}, number>;

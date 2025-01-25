@@ -807,6 +807,7 @@ const resolvers: Resolvers = {
       });
     },
     voterRecords: async (_, { skip }) => {
+      console.log({ skip });
       return await prisma.voterRecords.findMany({
         skip: skip ?? 0,
         take: 50,
@@ -822,12 +823,15 @@ const resolvers: Resolvers = {
       });
     },
     duplicateteamMembers: async (_, { skip }) => {
+      console.log({ skip });
       return await prisma.duplicateteamMembers.findMany({
         skip: skip ?? 0,
         take: 50,
       });
     },
     delistedVotes: async (_, { skip }) => {
+      console.log({ skip });
+
       return await prisma.delistedVoter.findMany({
         skip: skip ?? 0,
         take: 50,
@@ -3487,6 +3491,21 @@ const resolvers: Resolvers = {
         }),
       ]);
 
+      return "OK";
+    },
+    validationUpdate: async (
+      _,
+      {
+        validateDuplicate,
+        votersToTransfer,
+        validatedDelisted,
+        votersToUpdate,
+        newVoterRecord,
+        appoinments,
+        untrackedList,
+        recordToDelete
+      }
+    ) => {
       return "OK";
     },
   },

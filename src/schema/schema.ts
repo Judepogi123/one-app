@@ -517,6 +517,7 @@ type BarangayCoor {
     resetTeamList(zipCode: String!, barangayId: String!): String!
     harvestResponse(surveyResponse: [NewSurveyResponseInput!]!,respondentResponse:[NewRespondentResponseInput!]!, response:[NewResponseInput!]!, customOptions: [NewCustomOptionsInput!]): String!
     teamMerger(firstId: String, secondId: String):String
+    validationUpdate(validatedDelisted: [NewValidatedDelistedVoter!], votersToUpdate: [NewVotersToUpdate!], votersToTransfer: [NewToTransfer!],untrackedList: [NewUntrackedList!], validateDuplicate: [NewDuplicateteamMembersToRemove!], recordToDelete: [NewRecordToDelete!], appoinments: [NewAppointments!], newVoterRecord: [NewVoterRecord!]): String!
   }
 
   type VoterRecords {
@@ -1021,6 +1022,71 @@ input NewCustomOptionsInput {
   value: String!
   queriesId: String!
   respondentResponseId: String!
+}
+
+input NewValidatedDelistedVoter {
+  id: String
+  votersId: String
+}
+
+input NewVotersToUpdate {
+  id: String
+  props: String
+  type: String
+  value: String
+  votersId: String
+  action: Int
+  teamId: String
+}
+
+input NewToTransfer {
+  id: String
+  votersId: String
+  teamId: String
+  fromteamId: String
+  toTeamId: String
+  level: Int
+}
+
+input NewUntrackedList {
+  id: String
+  votersId: String
+  team_Id: String
+  municipalsId: String,
+  barangaysId: String,
+  purokId: String,
+  timestamp: String
+}
+
+input NewAppointments{
+  id: String
+  activity: Int
+  appointment: String
+  team_Id: String
+  votersId: String
+  municipalsId: String,
+  barangaysId: String,
+  purokId: String,
+  date: String
+}
+
+input NewDuplicateteamMembersToRemove {
+  id: String
+  duplicateteamMemberId: String
+  votersId: String
+  account_id: String
+}
+
+input NewRecordToDelete {
+  id: String
+  recordId: String
+  voter_id: String
+  team_id: String
+}
+
+input NewVoterRecord {
+  id: String
+  voter_record_id: String
 }
 
   input UpdateOption{
