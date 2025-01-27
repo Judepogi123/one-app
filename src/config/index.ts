@@ -534,10 +534,13 @@ const resolvers: Resolvers = {
     getAllPurokCoor: async () => {
       return await prisma.purokCoor.findMany();
     },
-    getAllTeamLeader: async (_, { skip }) => {
+    getAllTeamLeader: async (_, { skip, zipCode }) => {
       return await prisma.teamLeader.findMany({
         skip: skip ?? 0,
         take: 20,
+        where: {
+          municipalsId: zipCode,
+        },
       });
     },
     getVotersList: async (
@@ -806,11 +809,15 @@ const resolvers: Resolvers = {
         },
       });
     },
-    voterRecords: async (_, { skip }) => {
-      console.log({ skip });
+    voterRecords: async (_, { skip,zipCode }) => {
       return await prisma.voterRecords.findMany({
         skip: skip ?? 0,
         take: 50,
+        where:{
+          voter:{
+            municipalsId:zipCode
+          }
+        }
       });
     },
     printOptionResponse: async (_, { surveyId, queryId, zipCode }) => {
@@ -822,19 +829,25 @@ const resolvers: Resolvers = {
         where: { id },
       });
     },
-    duplicateteamMembers: async (_, { skip }) => {
+    duplicateteamMembers: async (_, { skip,zipCode }) => {
       console.log({ skip });
       return await prisma.duplicateteamMembers.findMany({
         skip: skip ?? 0,
         take: 50,
+        where:{
+          municipalsId: zipCode
+        }
       });
     },
-    delistedVotes: async (_, { skip }) => {
+    delistedVotes: async (_, { skip,zipCode }) => {
       console.log({ skip });
 
       return await prisma.delistedVoter.findMany({
         skip: skip ?? 0,
         take: 50,
+        where:{
+          municipalsId: zipCode
+        }
       });
     },
   },

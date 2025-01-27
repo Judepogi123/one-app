@@ -474,7 +474,6 @@ exports.default = (io) => {
                         }
                         if (voter) {
                             delistedCount++;
-                            console.log("Delisted: ", delistedCount);
                             destlistedVoters.push({
                                 votersId: voter.id,
                                 municipalsId: parseInt(zipCode, 10),

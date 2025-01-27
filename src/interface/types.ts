@@ -206,7 +206,12 @@ export type Resolvers = {
     getSelectedVoters: ResolverFn<{}, { list: string[] }, {}, Voters[]>;
     getRankOption: ResolverFn<{}, { optionId: string }, {}, string>;
     getAllPurokCoor: ResolverFn<{}, {}, {}, PurokCoor[]>;
-    getAllTeamLeader: ResolverFn<{}, { skip: number }, {}, TeamLeader[]>;
+    getAllTeamLeader: ResolverFn<
+      {},
+      { skip: number; zipCode: number },
+      {},
+      TeamLeader[]
+    >;
     getVotersList: ResolverFn<
       {},
       {
@@ -260,7 +265,12 @@ export type Resolvers = {
     userList: ResolverFn<{}, {}, {}, Users[]>;
     userQRCodeList: ResolverFn<{}, {}, {}, UserQRCode[]>;
     purokList: ResolverFn<{}, { zipCode: number }, {}, Purok[]>;
-    voterRecords: ResolverFn<{}, { skip: number }, {}, VoterRecords[]>;
+    voterRecords: ResolverFn<
+      {},
+      { skip: number; zipCode: number },
+      {},
+      VoterRecords[]
+    >;
     printOptionResponse: ResolverFn<
       {},
       { zipCode: number; queryId: string; surveyId: string },
@@ -270,11 +280,16 @@ export type Resolvers = {
     candidate: ResolverFn<{}, { id: string }, {}, Candidates | null>;
     duplicateteamMembers: ResolverFn<
       {},
-      { skip: number },
+      { skip: number; zipCode: number },
       {},
       DuplicateteamMembers[]
     >;
-    delistedVotes: ResolverFn<{}, { skip: number }, {}, DelistedVoter[]>;
+    delistedVotes: ResolverFn<
+      {},
+      { skip: number; zipCode: number },
+      {},
+      DelistedVoter[]
+    >;
   };
   Mutation: {
     createVoter: ResolverFn<{}, Voters, {}, Voters>;
@@ -802,7 +817,10 @@ export type Resolvers = {
         }[];
         newVoterRecord: {
           id: string;
-          voter_record_id: string;
+          voter_id: string;
+          desc: string;
+          questionable: number;
+          account_id: string;
         }[];
         appoinments: {
           id: string;
@@ -814,7 +832,7 @@ export type Resolvers = {
           barangaysId: string;
           purokId: string;
           date: string;
-        }[]
+        }[];
       },
       {},
       string

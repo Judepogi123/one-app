@@ -300,7 +300,7 @@ type ValdiatedTeams {
     purokCount: Int!
     purok(id: String!): Purok!
     purokList(zipCode: Int): [Purok!]
-    voterRecords(skip: Int): [VoterRecords!]
+    voterRecords(skip: Int, zipCode: Int): [VoterRecords!]
     barangayVotersList(barangayList: NewPurokInput!): [Voter]!
     draftedVoters(voter: DraftedVoters!): [Voter]!
     drafts: [NewBatchDraft!]!
@@ -333,7 +333,7 @@ type ValdiatedTeams {
     getSelectedVoters(list: [String!]): [Voter!]
     getRankOption(optionId: String!): String!
     getAllPurokCoor: [PurokCoor!]
-    getAllTeamLeader(skip: Int): [TeamLeader!]
+    getAllTeamLeader(skip: Int, zipCode: Int): [TeamLeader!]
     getVotersList(level: String!, take: Int, skip: Int, zipCode: String, barangayId: String,purokId: String, query: String, pwd: String, illi: String,inc: String,oor: String,dead: String,youth: String,senior: String,gender: String): VotersList
     getPurokList(id: String!): [Purok!]
     teamList(zipCode: String!, barangayId: String!, purokId: String!, level: String!,query: String!, skip: Int!, candidate: String, withIssues: Boolean): [Team!]
@@ -348,8 +348,8 @@ type ValdiatedTeams {
     getTeamRecord(id: String!): ValidatedTeams
     userList: [Users!]
     userQRCodeList: [UserQRCode!]
-    duplicateteamMembers(skip: Int): [DuplicateteamMembers!]
-    delistedVotes(skip: Int): [DelistedVoter!]
+    duplicateteamMembers(skip: Int, zipCode: Int): [DuplicateteamMembers!]
+    delistedVotes(skip: Int, zipCode: Int): [DelistedVoter!]
   }
 
   type Validation {
@@ -1086,7 +1086,10 @@ input NewRecordToDelete {
 
 input NewVoterRecord {
   id: String
-  voter_record_id: String
+  voter_id: String
+  desc: String
+  questionable: Int
+  account_id: String
 }
 
   input UpdateOption{

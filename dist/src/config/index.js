@@ -474,10 +474,13 @@ const resolvers = {
         getAllPurokCoor: () => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.purokCoor.findMany();
         }),
-        getAllTeamLeader: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip }) {
+        getAllTeamLeader: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip, zipCode }) {
             return yield prisma_1.prisma.teamLeader.findMany({
                 skip: skip !== null && skip !== void 0 ? skip : 0,
                 take: 20,
+                where: {
+                    municipalsId: zipCode,
+                },
             });
         }),
         getVotersList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { level, take, skip, query, zipCode, barangayId, purokId, pwd, illi, inc, oor, dead, youth, senior, gender, }) {
@@ -699,11 +702,15 @@ const resolvers = {
                 },
             });
         }),
-        voterRecords: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip }) {
-            console.log({ skip });
+        voterRecords: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip, zipCode }) {
             return yield prisma_1.prisma.voterRecords.findMany({
                 skip: skip !== null && skip !== void 0 ? skip : 0,
                 take: 50,
+                where: {
+                    voter: {
+                        municipalsId: zipCode
+                    }
+                }
             });
         }),
         printOptionResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { surveyId, queryId, zipCode }) {
@@ -715,18 +722,24 @@ const resolvers = {
                 where: { id },
             });
         }),
-        duplicateteamMembers: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip }) {
+        duplicateteamMembers: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip, zipCode }) {
             console.log({ skip });
             return yield prisma_1.prisma.duplicateteamMembers.findMany({
                 skip: skip !== null && skip !== void 0 ? skip : 0,
                 take: 50,
+                where: {
+                    municipalsId: zipCode
+                }
             });
         }),
-        delistedVotes: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip }) {
+        delistedVotes: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip, zipCode }) {
             console.log({ skip });
             return yield prisma_1.prisma.delistedVoter.findMany({
                 skip: skip !== null && skip !== void 0 ? skip : 0,
                 take: 50,
+                where: {
+                    municipalsId: zipCode
+                }
             });
         }),
     },
