@@ -703,6 +703,7 @@ const resolvers = {
             });
         }),
         voterRecords: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip, zipCode }) {
+            console.log("Voter's record skipped: ", { skip });
             return yield prisma_1.prisma.voterRecords.findMany({
                 skip: skip !== null && skip !== void 0 ? skip : 0,
                 take: 50,
@@ -723,7 +724,7 @@ const resolvers = {
             });
         }),
         duplicateteamMembers: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip, zipCode }) {
-            console.log({ skip });
+            console.log("Duplicated: ", { skip });
             return yield prisma_1.prisma.duplicateteamMembers.findMany({
                 skip: skip !== null && skip !== void 0 ? skip : 0,
                 take: 50,
@@ -733,7 +734,7 @@ const resolvers = {
             });
         }),
         delistedVotes: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip, zipCode }) {
-            console.log({ skip });
+            console.log("Delisted ", { skip });
             return yield prisma_1.prisma.delistedVoter.findMany({
                 skip: skip !== null && skip !== void 0 ? skip : 0,
                 take: 50,
