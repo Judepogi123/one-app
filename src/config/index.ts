@@ -809,16 +809,16 @@ const resolvers: Resolvers = {
         },
       });
     },
-    voterRecords: async (_, { skip,zipCode }) => {
-      console.log("Voter's record skipped: ",{ skip });
+    voterRecords: async (_, { skip, zipCode }) => {
+      console.log("Voter's record skipped: ", { skip });
       return await prisma.voterRecords.findMany({
         skip: skip ?? 0,
         take: 50,
-        where:{
-          voter:{
-            municipalsId:zipCode
-          }
-        }
+        where: {
+          voter: {
+            municipalsId: zipCode,
+          },
+        },
       });
     },
     printOptionResponse: async (_, { surveyId, queryId, zipCode }) => {
@@ -830,26 +830,25 @@ const resolvers: Resolvers = {
         where: { id },
       });
     },
-    duplicateteamMembers: async (_, { skip,zipCode }) => {
-
-      console.log("Duplicated: ",{ skip });
+    duplicateteamMembers: async (_, { skip, zipCode }) => {
+      console.log("Duplicated: ", { skip }, zipCode);
       return await prisma.duplicateteamMembers.findMany({
         skip: skip ?? 0,
         take: 50,
-        where:{
-          municipalsId: zipCode
-        }
+        where: {
+          municipalsId: zipCode,
+        },
       });
     },
-    delistedVotes: async (_, { skip,zipCode }) => {
-      console.log("Delisted ",{ skip });
+    delistedVotes: async (_, { skip, zipCode }) => {
+      console.log("Delisted ", { skip }, zipCode);
 
       return await prisma.delistedVoter.findMany({
         skip: skip ?? 0,
         take: 50,
-        where:{
-          municipalsId: zipCode
-        }
+        where: {
+          municipalsId: zipCode,
+        },
       });
     },
   },
