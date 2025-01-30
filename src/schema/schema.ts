@@ -23,16 +23,21 @@ type Users {
   uid: String!
   username: String!
   password: String!
-  purpose: Int!
-  privilege: [Int!]
-  status: Int!
   role: Int!
+  purpose: Int!
+  status: Int!
   timstamp: String!
+  privilege: [Int!]!
+  forMunicipal: Int
   surveyResponses: [SurveyResponse!]!
+  respondentResponses: [RespondentResponse!]!
   deviceLogs: [DeviceLogs!]!
-  userQRCodeId: String
   qrCode: UserQRCode
+  userQRCodeId: String
+  validatedTeam: [ValidatedTeams!]!
+  accountHandleTeam: [AccountHandleTeam!]!
 }
+
 
 type AccountHandleTeam {
   id: String!  
@@ -306,7 +311,6 @@ type ValdiatedTeams {
 
   type Query {
     users: [Users!]!
-    user(uid: ID!): Users
     voters(skip: Int, zipCode: Int): [Voter!]!
     voter(id: String!): Voter
     searchDraftVoter(query: SearchDraftQueryInput!): [Voter]!
@@ -377,10 +381,12 @@ type ValdiatedTeams {
     teamRecord(query: String!, barangay: String!, municipal: String!, skip: Int!): [ValidatedTeams!]
     getTeamRecord(id: String!): ValidatedTeams
     userList: [Users!]
+    user(id: String): Users!
     userQRCodeList: [UserQRCode!]
     duplicateteamMembers(skip: Int, zipCode: Int): [DuplicateteamMembers!]
     delistedVotes(skip: Int, zipCode: Int): [DelistedVoter!]
     accountTeamHandle(id: String,skip: Int): [AccountHandleTeam!]
+    getAssignedTeams(userId: String, zipCode: Int, barangaysId: Int, from: Int, take: Int, min: Int, max: Int):[AccountHandleTeam!]
   }
 
   type Validation {
@@ -548,7 +554,21 @@ type BarangayCoor {
     resetTeamList(zipCode: String!, barangayId: String!): String!
     harvestResponse(surveyResponse: [NewSurveyResponseInput!]!,respondentResponse:[NewRespondentResponseInput!]!, response:[NewResponseInput!]!, customOptions: [NewCustomOptionsInput!]): String!
     teamMerger(firstId: String, secondId: String):String
-    validationUpdate(validatedDelisted: [NewValidatedDelistedVoter!], votersToUpdate: [NewVotersToUpdate!], votersToTransfer: [NewToTransfer!],untrackedList: [NewUntrackedList!], validateDuplicate: [NewDuplicateteamMembersToRemove!], recordToDelete: [NewRecordToDelete!], appoinments: [NewAppointments!], newVoterRecord: [NewVoterRecord!]): String!
+    validationUpdate(validatedDelisted: [NewValidatedDelistedVoter!], 
+    votersToUpdate: [NewVotersToUpdate!], 
+    votersToTransfer: [NewToTransfer!],
+    untrackedList: [NewUntrackedList!], 
+    validateDuplicate: [NewDuplicateteamMembersToRemove!], 
+    recordToDelete: [NewRecordToDelete!], 
+    appoinments: [NewAppointments!], 
+    newVoterRecord: [NewVoterRecord!], 
+    toSplit: [NewForSplitInput!], 
+    validatedPerson: [NewValidatedPersonInput!], 
+    validatedTeams: [NewValidatedTeamsRecordInput!],
+    accountTeamHoldings: [NewAccountTeamHoldInput!], 
+    teamToMerge: [NewTeamToMergeInput],
+    teamExcluded: [NewToTeamExcludeInput!]): String!
+    
   }
 
   type VoterRecords {
@@ -1123,6 +1143,60 @@ input NewVoterRecord {
   questionable: Int
   account_id: String
 }
+
+input NewTeamToMergeInput {
+  id: String!
+  teamIdToJoin: String
+  teamIdToMerge: String
+  accountId: String
+  municipalsId: String
+  barangaysId: String
+}
+
+input NewValidatedPersonInput {
+  id: String!
+  votersId: String
+  timestamp: String
+}
+
+input NewValidatedTeamsRecordInput {
+  id: String!
+  teamId: String
+  municipalsId: String
+  barangaysId: String
+  accountId: String
+  timestamp: String
+}
+
+input NewAccountTeamHoldInput {
+  id: String!
+  accountId: String
+  teamId: String
+  municipalsId: String
+  barangaysId: String
+}
+
+input NewForSplitInput {
+  id: String!
+  teamId: String
+  pos: Int
+  votersId: String
+  level: Int
+  timestamp: String
+}
+
+input NewToTeamExcludeInput {
+  id: String!
+  teamId: String
+  votersId: String
+  municipalsId: String
+  barangaysId: String
+  purokId: String
+  accountId: String
+  timestamp: String
+}
+
+
 
   input UpdateOption{
     id: String!

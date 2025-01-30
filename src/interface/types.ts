@@ -291,7 +291,27 @@ export type Resolvers = {
       {},
       DelistedVoter[]
     >;
-    accountTeamHandle: ResolverFn<{}, { id: string,skip: number }, {}, AccountHandleTeam[]>;
+    accountTeamHandle: ResolverFn<
+      {},
+      { id: string; skip: number },
+      {},
+      AccountHandleTeam[]
+    >;
+    user: ResolverFn<{}, { id: string; skip: number }, {}, Users | null>;
+    getAssignedTeams: ResolverFn<
+      {},
+      {
+        userId: string;
+        zipCode: number;
+        barangaysId: number;
+        from: number;
+        take: number;
+        min: number;
+        max: number;
+      },
+      {},
+      AccountHandleTeam[]
+    >;
   };
   Mutation: {
     createVoter: ResolverFn<{}, Voters, {}, Voters>;
@@ -835,6 +855,52 @@ export type Resolvers = {
           purokId: string;
           date: string;
         }[];
+        toSplit: {
+          id: string;
+          teamId?: string;
+          pos?: number;
+          votersId?: string;
+          level?: number;
+          timestamp?: string;
+        }[];
+        validatedPerson: {
+          id: string;
+          votersId?: string;
+          timestamp?: string;
+        }[];
+        validatedTeams: {
+          id: string;
+          teamId?: string;
+          municipalsId?: string;
+          barangaysId?: string;
+          accountId?: string;
+          timestamp?: string;
+        }[];
+        accountTeamHoldings: {
+          id: string;
+          accountId?: string;
+          teamId?: string;
+          municipalsId?: string;
+          barangaysId?: string;
+        }[];
+        teamToMerge: {
+          id: string;
+          teamIdToJoin?: string;
+          teamIdToMerge?: string;
+          accountId?: string;
+          municipalsId?: string;
+          barangaysId?: string;
+        }[];
+        teamExcluded: {
+          id: string;
+          teamId?: string;
+          votersId?: string;
+          municipalsId?: string;
+          barangaysId?: string;
+          purokId?: string;
+          accountId?: string;
+          timestamp?: string;
+        }[];
       },
       {},
       string
@@ -1112,5 +1178,6 @@ export type Resolvers = {
   };
   Users: {
     qrCode: ResolverFn<Users, {}, {}, UserQRCode | null>;
+    accountHandleTeam: ResolverFn<Users, {}, {}, AccountHandleTeam[]>;
   };
 };

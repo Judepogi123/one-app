@@ -859,14 +859,74 @@ const resolvers: Resolvers = {
       });
       return response;
     },
-    accountTeamHandle: async (_, { id,skip }) => {
+    accountTeamHandle: async (_, { id, skip }) => {
       return await prisma.accountHandleTeam.findMany({
         where: {
           usersUid: id,
         },
         skip: skip ?? 0,
-        take: 50
+        take: 50,
       });
+    },
+    user: async (_, { id }) => {
+      if (!id) return null;
+      return prisma.users.findUnique({
+        where: {
+          uid: id,
+        },
+      });
+    },
+    getAssignedTeams: async (
+      _,
+      { userId, zipCode, barangaysId, from, take, max, min }
+    ) => {
+      console.log("Params ,", { userId, zipCode, barangaysId, from, take, max, min });
+      
+      const barangay = await prisma.barangays.findFirst({
+        where: {
+          municipalId: zipCode,
+          number: barangaysId,
+        },
+      });
+      const teams = await prisma.team.findMany({
+        where: {
+          barangaysId: barangay?.id,
+          municipalsId: zipCode,
+        },
+        include: {
+          _count: {
+            select: {
+              voters: true, // Count voters per team
+            },
+          },
+        },
+        skip: from - 1,
+        take,
+      });
+
+      // Filter teams based on min/max voter count
+      const filteredTeams = teams.filter(
+        (team) => team._count.voters >= min && team._count.voters <= max
+      );
+      console.log("Checked: ", filteredTeams.length);
+      
+      await prisma.accountHandleTeam.createMany({
+        data: filteredTeams.map((item) => {
+          return {
+            usersUid: userId,
+            teamId: item.id,
+            municipalsId: item.municipalsId,
+            barangaysId: item.barangaysId,
+          };
+        }),
+        skipDuplicates: true
+      });
+      const handleTeams = await prisma.accountHandleTeam.findMany({
+        where: {
+          usersUid: userId,
+        }
+      });
+      return handleTeams;
     },
   },
   Mutation: {
@@ -2936,8 +2996,7 @@ const resolvers: Resolvers = {
       return JSON.stringify(teamMembers);
     },
     composeTeam: async (_, { team }) => {
-      // console.log({ team });
-      // let successCount = 0;
+      let successCount = 0;
       const resultList: RejectListedProps[] = [];
       const members = [
         team.barangayCoorId,
@@ -3265,6 +3324,7 @@ const resolvers: Resolvers = {
               level: 0,
             },
           });
+          successCount++
         } catch (error) {
           console.error(error);
           continue;
@@ -3327,7 +3387,8 @@ const resolvers: Resolvers = {
           })),
         }),
       ]);
-      await prisma.$disconnect();
+      console.log({successCount});
+      
       return JSON.stringify(teamMembers);
     },
     clearTeamRecords: async () => {
@@ -3536,6 +3597,12 @@ const resolvers: Resolvers = {
         appoinments,
         untrackedList,
         recordToDelete,
+        validatedPerson,
+        validatedTeams,
+        teamExcluded,
+        teamToMerge,
+        toSplit,
+        accountTeamHoldings,
       }
     ) => {
       console.log({
@@ -3547,6 +3614,12 @@ const resolvers: Resolvers = {
         appoinments,
         untrackedList,
         recordToDelete,
+        validatedPerson,
+        validatedTeams,
+        teamExcluded,
+        teamToMerge,
+        toSplit,
+        accountTeamHoldings,
       });
 
       return "OK";
@@ -4440,6 +4513,13 @@ const resolvers: Resolvers = {
       if (!parent.userQRCodeId) return null;
       return await prisma.userQRCode.findUnique({
         where: { id: parent.userQRCodeId },
+      });
+    },
+    accountHandleTeam: async (parent) => {
+      return await prisma.accountHandleTeam.findMany({
+        where: {
+          usersUid: parent.uid,
+        },
       });
     },
   },
