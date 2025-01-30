@@ -32,6 +32,7 @@ import {
   VoterRecords,
   DelistedVoter,
   DuplicateteamMembers,
+  AccountHandleTeam,
 } from "../../prisma/prisma";
 import {
   BarangayOptionResponse,
@@ -290,6 +291,7 @@ export type Resolvers = {
       {},
       DelistedVoter[]
     >;
+    accountTeamHandle: ResolverFn<{}, { id: string,skip: number }, {}, AccountHandleTeam[]>;
   };
   Mutation: {
     createVoter: ResolverFn<{}, Voters, {}, Voters>;
@@ -922,6 +924,7 @@ export type Resolvers = {
       {},
       TeamLeader[]
     >;
+    barangayDelistedVoter: ResolverFn<Barangays, {}, {}, number>;
   };
   Purok: {
     purokDraftedVotersCount: ResolverFn<Purok, {}, {}, number>;

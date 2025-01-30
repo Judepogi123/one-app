@@ -49,6 +49,8 @@ model Users {
   Appointments         Appointments[]
   ValidationTimeInput  ValidationTimeInput[]
   ValidationNotes      ValidationNotes[]
+  AccountHandleTeam    AccountHandleTeam[]
+  AccountValidateTean  AccountValidateTeam[]
 }
 
 model UserQRCode {
@@ -180,6 +182,7 @@ model Voters {
   UntrackedVoter         UntrackedVoter[]
   Appointments           Appointments[]
   DuplicateteamMebers    DuplicateteamMembers[]
+  VotersToUpdate         ValidationResult[]
 }
 
 model Purok {
@@ -227,6 +230,8 @@ model Municipals {
   ValidationTimeInput  ValidationTimeInput[]
   UntrackedVoter       UntrackedVoter[]
   DuplicateteamMembers DuplicateteamMembers[]
+  AccountHandleTeam    AccountHandleTeam[]
+  AccountValidateTean  AccountValidateTeam[]
 }
 
 model Barangays {
@@ -266,6 +271,8 @@ model Barangays {
   ValidationTimeInput  ValidationTimeInput[]
   UntrackedVoter       UntrackedVoter[]
   DuplicateteamMembers DuplicateteamMembers[]
+  AccountHandleTeam    AccountHandleTeam[]
+  AccountValidateTean  AccountValidateTeam[]
 }
 
 model HouseHold {
@@ -347,6 +354,10 @@ model Team {
   ValidationTimeInput  ValidationTimeInput[]
   DuplicateteamMebers  DuplicateteamMembers[] @relation("TeamFoundIn")
   DuplicateteamMembers DuplicateteamMembers[]
+  AccountHandleTeam    AccountHandleTeam[]
+  timestamp            DateTime?              @default(now())
+  AccountValidateTean  AccountValidateTeam[]
+  VotersToUpdate       ValidationResult[]
 }
 
 model TeamLeader {
@@ -785,6 +796,7 @@ model Witness {
 model VoterRecords {
   id           String   @id @default(uuid())
   desc         String
+  type         Int?     @default(0)
   questionable Boolean  @default(true)
   timestamp    DateTime @default(now())
   voter        Voters?  @relation(fields: [votersId], references: [id], onDelete: Cascade)
@@ -890,4 +902,45 @@ model ValidationNotes {
   contact   String?
   user      Users?   @relation(fields: [usersUid], references: [uid], onDelete: Cascade)
   usersUid  String?
+}
+
+model AccountHandleTeam {
+  id                    String               @id @default(uuid())
+  account               Users?               @relation(fields: [usersUid], references: [uid])
+  usersUid              String?
+  team                  Team?                @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId                String?
+  municipal             Municipals?          @relation(fields: [municipalsId], references: [id])
+  municipalsId          Int?
+  barangay              Barangays?           @relation(fields: [barangaysId], references: [id])
+  barangaysId           String?
+  validated             AccountValidateTeam? @relation(fields: [accountValidateTeamId], references: [id])
+  accountValidateTeamId String?              @unique
+}
+
+model AccountValidateTeam {
+  id                String             @id @default(uuid())
+  account           Users?             @relation(fields: [usersUid], references: [uid])
+  usersUid          String?
+  team              Team?              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId            String?
+  municipal         Municipals?        @relation(fields: [municipalsId], references: [id])
+  municipalsId      Int?
+  barangay          Barangays?         @relation(fields: [barangaysId], references: [id])
+  barangaysId       String?
+  timstamp          DateTime?          @default(now())
+  AccountHandleTeam AccountHandleTeam?
+}
+
+model ValidationResult {
+  id       String  @id @default(uuid())
+  props    String?
+  type     String?
+  value    String?
+  voter    Voters? @relation(fields: [votersId], references: [id])
+  votersId String?
+  action   Int?
+  team     Team?   @relation(fields: [teamId], references: [id])
+  count    Int?    @default(0)
+  teamId   String?
 }

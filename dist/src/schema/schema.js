@@ -37,6 +37,35 @@ type Users {
   qrCode: UserQRCode
 }
 
+type AccountHandleTeam {
+  id: String!  
+  account: Users  # Optional relation to the Users model
+  usersUid: String  # Optional reference to the user's UID
+  team: Team  # Optional relation to the Team model
+  teamId: String  # Optional reference to the Team's ID
+  municipal: Municipal  # Optional relation to the Municipals model
+  municipalsId: Int  # Optional reference to the Municipal's ID
+  barangay: Barangay  # Optional relation to the Barangays model
+  barangaysId: String  # Optional reference to the Barangay's ID
+  validated: AccountValidateTeam  # Optional relation to AccountValidateTeam
+  accountValidateTeamId: String  # Unique reference to AccountValidateTeam ID
+}
+
+type AccountValidateTeam {
+  id: String! 
+  account: Users
+  usersUid: String  # Optional reference to the user's UID
+  team: Team  # Optional relation to the Team model
+  teamId: String  # Optional reference to the Team's ID
+  municipal: Municipal  # Optional relation to the Municipals model
+  municipalsId: Int 
+  barangay: Barangay 
+  barangaysId: String  
+  timestamp: String 
+  AccountHandleTeam: AccountHandleTeam 
+}
+
+
   type UserQRCode {
     id: ID!
     qrCode: String
@@ -144,6 +173,7 @@ type Users {
     supporters(id: String): AllSupporters!
     teamStat: AllTeamStatus!
     leaders(skip:Int, candidateId: String): [TeamLeader!]
+    barangayDelistedVoter: Int
   }
 
   type Precent {
@@ -353,6 +383,7 @@ type ValdiatedTeams {
     userQRCodeList: [UserQRCode!]
     duplicateteamMembers(skip: Int, zipCode: Int): [DuplicateteamMembers!]
     delistedVotes(skip: Int, zipCode: Int): [DelistedVoter!]
+    accountTeamHandle(id: String,skip: Int): [AccountHandleTeam!]
   }
 
   type Validation {
@@ -1055,10 +1086,11 @@ input NewUntrackedList {
   id: String
   votersId: String
   team_Id: String
-  municipalsId: String,
-  barangaysId: String,
-  purokId: String,
+  municipalsId: String
+  barangaysId: String
+  purokId: String
   timestamp: String
+  account_id: String
 }
 
 input NewAppointments{
@@ -1067,9 +1099,9 @@ input NewAppointments{
   appointment: String
   team_Id: String
   votersId: String
-  municipalsId: String,
-  barangaysId: String,
-  purokId: String,
+  municipalsId: String
+  barangaysId: String
+  purokId: String
   date: String
 }
 

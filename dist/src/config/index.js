@@ -617,6 +617,7 @@ const resolvers = {
                     level: true,
                     teamLeaderId: true,
                     candidatesId: true,
+                    timestamp: true,
                     _count: {
                         select: {
                             voters: {
@@ -735,12 +736,28 @@ const resolvers = {
         }),
         delistedVotes: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip, zipCode }) {
             console.log("Delisted ", { skip }, zipCode);
-            return yield prisma_1.prisma.delistedVoter.findMany({
+            const count = yield prisma_1.prisma.delistedVoter.count({
+                where: {
+                    municipalsId: zipCode,
+                },
+            });
+            console.log(count);
+            const response = yield prisma_1.prisma.delistedVoter.findMany({
                 skip: skip !== null && skip !== void 0 ? skip : 0,
                 take: 50,
                 where: {
                     municipalsId: zipCode,
                 },
+            });
+            return response;
+        }),
+        accountTeamHandle: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id, skip }) {
+            return yield prisma_1.prisma.accountHandleTeam.findMany({
+                where: {
+                    usersUid: id,
+                },
+                skip: skip !== null && skip !== void 0 ? skip : 0,
+                take: 50
             });
         }),
     },
@@ -2653,8 +2670,8 @@ const resolvers = {
             return JSON.stringify(teamMembers);
         }),
         composeTeam: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { team }) {
-            console.log({ team });
-            let successCount = 0;
+            // console.log({ team });
+            // let successCount = 0;
             const resultList = [];
             const members = [
                 team.barangayCoorId,
@@ -2832,22 +2849,23 @@ const resolvers = {
                             processedVoters.add(voter.id);
                         }
                     }
-                    // if (voter.level > 0) {
-                    //   if (!processedVoters.has(voter.id)) {
-                    //     resultList.push({
-                    //       id: voter.id,
-                    //       firstname: voter.firstname,
-                    //       lastname: voter.lastname,
-                    //       municipalsId: voter.municipalsId,
-                    //       barangaysId: voter.barangaysId,
-                    //       reason: `May katayuan na (${handleLevel(voter.level)})`,
-                    //       level: voter.level,
-                    //       idNumber: voter.idNumber,
-                    //       code: 1,
-                    //     });
-                    //     processedVoters.add(voter.id);
-                    //   }
-                    // }
+                    if (voter.level > 0) {
+                        if (!processedVoters.has(voter.id)) {
+                            resultList.push({
+                                id: voter.id,
+                                firstname: voter.firstname,
+                                lastname: voter.lastname,
+                                municipalsId: voter.municipalsId,
+                                barangaysId: voter.barangaysId,
+                                reason: `May katayuan na (${(0, data_1.handleLevel)(voter.level)})`,
+                                level: voter.level,
+                                idNumber: voter.idNumber,
+                                code: 1,
+                            });
+                            processedVoters.add(voter.id);
+                        }
+                        continue;
+                    }
                     if (voter.teamId) {
                         if (!processedVoters.has(voter.id)) {
                             // resultList.push({
@@ -3374,6 +3392,13 @@ const resolvers = {
                     barangaysId: parent.id,
                     level: 2,
                     candidatesId: candidateId,
+                },
+            });
+        }),
+        barangayDelistedVoter: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma_1.prisma.delistedVoter.count({
+                where: {
+                    barangaysId: parent.id,
                 },
             });
         }),

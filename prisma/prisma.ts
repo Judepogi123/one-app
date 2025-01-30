@@ -34,7 +34,8 @@ import {
   CustomOption,
   VoterRecords,
   DelistedVoter,
-  DuplicateteamMembers
+  DuplicateteamMembers,
+  AccountHandleTeam
 } from "@prisma/client";
 
 const prisma = new PrismaClient({
@@ -76,5 +77,6 @@ export {
   CustomOption,
   VoterRecords,
   DelistedVoter,
-  DuplicateteamMembers
+  DuplicateteamMembers,
+  AccountHandleTeam
 };

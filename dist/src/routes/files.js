@@ -416,6 +416,7 @@ exports.default = (io) => {
             const candidates = yield prisma_1.prisma.candidates.findMany();
             const barangayData = yield prisma_1.prisma.barangays.findFirst({
                 where: {
+                    municipalId: parseInt(zipCode, 10),
                     number: parseInt(barangay, 10),
                 },
             });
@@ -470,9 +471,11 @@ exports.default = (io) => {
                             }),
                         ]);
                         if (delisted) {
+                            console.log("Already In delisted: ", newRow.firstname, newRow.lastname);
                             return Object.assign({}, row);
                         }
                         if (voter) {
+                            console.log("New In delisted: ", newRow.firstname, newRow.lastname);
                             delistedCount++;
                             destlistedVoters.push({
                                 votersId: voter.id,
@@ -531,6 +534,9 @@ exports.default = (io) => {
                                 barangaysId: barangayData.id,
                             },
                         });
+                        if (voter) {
+                            console.log("ALready registered: ", newRow.firstname, newRow.lastname);
+                        }
                         if (!voter) {
                             votersToAdd.push({
                                 lastname: newRow.lastname,
@@ -566,25 +572,28 @@ exports.default = (io) => {
                     })));
                 }
             }
-            if (votersToAdd.length) {
-                console.log({ votersToAdd });
+            if (votersToAdd.length > 0) {
+                console.log("Processed New: ONe", votersToAdd.length);
                 yield prisma_1.prisma.voters.createMany({
                     data: votersToAdd,
-                    skipDuplicates: true
+                    skipDuplicates: true,
                 });
             }
-            if (destlistedVoters.length) {
-                console.log({ destlistedVoters });
+            if (destlistedVoters.length > 0) {
+                console.log("Processed Delisted ONE: ", destlistedVoters.length);
                 yield prisma_1.prisma.delistedVoter.createMany({
                     data: destlistedVoters,
-                    skipDuplicates: true
+                    skipDuplicates: true,
                 });
             }
+            console.log("Processed Delisted: ", destlistedVoters.length);
+            console.log("Processed New: ", votersToAdd.length);
             res.status(200).json({
                 message: "File processed successfully",
                 addedCount: addedCount,
                 delistedCount: delistedCount,
             });
+            console.log("NOt");
         }
         catch (error) {
             console.error("Error processing file:", error);

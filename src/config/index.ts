@@ -722,6 +722,7 @@ const resolvers: Resolvers = {
           level: true,
           teamLeaderId: true,
           candidatesId: true,
+          timestamp: true,
           _count: {
             select: {
               voters: {
@@ -842,13 +843,29 @@ const resolvers: Resolvers = {
     },
     delistedVotes: async (_, { skip, zipCode }) => {
       console.log("Delisted ", { skip }, zipCode);
+      const count = await prisma.delistedVoter.count({
+        where: {
+          municipalsId: zipCode,
+        },
+      });
+      console.log(count);
 
-      return await prisma.delistedVoter.findMany({
+      const response = await prisma.delistedVoter.findMany({
         skip: skip ?? 0,
         take: 50,
         where: {
           municipalsId: zipCode,
         },
+      });
+      return response;
+    },
+    accountTeamHandle: async (_, { id,skip }) => {
+      return await prisma.accountHandleTeam.findMany({
+        where: {
+          usersUid: id,
+        },
+        skip: skip ?? 0,
+        take: 50
       });
     },
   },
@@ -2919,8 +2936,8 @@ const resolvers: Resolvers = {
       return JSON.stringify(teamMembers);
     },
     composeTeam: async (_, { team }) => {
-      console.log({ team });
-      let successCount = 0;
+      // console.log({ team });
+      // let successCount = 0;
       const resultList: RejectListedProps[] = [];
       const members = [
         team.barangayCoorId,
@@ -3150,22 +3167,23 @@ const resolvers: Resolvers = {
             }
           }
 
-          // if (voter.level > 0) {
-          //   if (!processedVoters.has(voter.id)) {
-          //     resultList.push({
-          //       id: voter.id,
-          //       firstname: voter.firstname,
-          //       lastname: voter.lastname,
-          //       municipalsId: voter.municipalsId,
-          //       barangaysId: voter.barangaysId,
-          //       reason: `May katayuan na (${handleLevel(voter.level)})`,
-          //       level: voter.level,
-          //       idNumber: voter.idNumber,
-          //       code: 1,
-          //     });
-          //     processedVoters.add(voter.id);
-          //   }
-          // }
+          if (voter.level > 0) {
+            if (!processedVoters.has(voter.id)) {
+              resultList.push({
+                id: voter.id,
+                firstname: voter.firstname,
+                lastname: voter.lastname,
+                municipalsId: voter.municipalsId,
+                barangaysId: voter.barangaysId,
+                reason: `May katayuan na (${handleLevel(voter.level)})`,
+                level: voter.level,
+                idNumber: voter.idNumber,
+                code: 1,
+              });
+              processedVoters.add(voter.id);
+            }
+            continue;
+          }
 
           if (voter.teamId) {
             if (!processedVoters.has(voter.id)) {
@@ -3736,6 +3754,13 @@ const resolvers: Resolvers = {
           barangaysId: parent.id,
           level: 2,
           candidatesId: candidateId,
+        },
+      });
+    },
+    barangayDelistedVoter: async (parent) => {
+      return await prisma.delistedVoter.count({
+        where: {
+          barangaysId: parent.id,
         },
       });
     },
