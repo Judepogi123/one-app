@@ -1156,6 +1156,7 @@ input NewTeamToMergeInput {
 input NewValidatedPersonInput {
   id: String!
   votersId: String
+  personImage: String
   timestamp: String
 }
 
@@ -1166,6 +1167,7 @@ input NewValidatedTeamsRecordInput {
   barangaysId: String
   accountId: String
   timestamp: String
+  teamImage: String
 }
 
 input NewAccountTeamHoldInput {
