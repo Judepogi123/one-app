@@ -736,12 +736,6 @@ const resolvers = {
         }),
         delistedVotes: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip, zipCode }) {
             console.log("Delisted ", { skip }, zipCode);
-            const count = yield prisma_1.prisma.delistedVoter.count({
-                where: {
-                    municipalsId: zipCode,
-                },
-            });
-            console.log(count);
             const response = yield prisma_1.prisma.delistedVoter.findMany({
                 skip: skip !== null && skip !== void 0 ? skip : 0,
                 take: 50,
@@ -785,14 +779,13 @@ const resolvers = {
                 include: {
                     _count: {
                         select: {
-                            voters: true, // Count voters per team
+                            voters: true,
                         },
                     },
                 },
                 skip: from - 1,
                 take,
             });
-            // Filter teams based on min/max voter count
             const filteredTeams = teams.filter((team) => team._count.voters >= min && team._count.voters <= max);
             console.log("Checked: ", filteredTeams.length);
             yield prisma_1.prisma.accountHandleTeam.createMany({

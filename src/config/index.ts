@@ -843,13 +843,6 @@ const resolvers: Resolvers = {
     },
     delistedVotes: async (_, { skip, zipCode }) => {
       console.log("Delisted ", { skip }, zipCode);
-      const count = await prisma.delistedVoter.count({
-        where: {
-          municipalsId: zipCode,
-        },
-      });
-      console.log(count);
-
       const response = await prisma.delistedVoter.findMany({
         skip: skip ?? 0,
         take: 50,
@@ -896,7 +889,7 @@ const resolvers: Resolvers = {
         include: {
           _count: {
             select: {
-              voters: true, // Count voters per team
+              voters: true,
             },
           },
         },
@@ -904,7 +897,6 @@ const resolvers: Resolvers = {
         take,
       });
 
-      // Filter teams based on min/max voter count
       const filteredTeams = teams.filter(
         (team) => team._count.voters >= min && team._count.voters <= max
       );
