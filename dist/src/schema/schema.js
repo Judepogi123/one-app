@@ -179,6 +179,7 @@ type AccountValidateTeam {
     teamStat: AllTeamStatus!
     leaders(skip:Int, candidateId: String): [TeamLeader!]
     barangayDelistedVoter: Int
+
   }
 
   type Precent {
@@ -390,6 +391,7 @@ type ValdiatedTeams {
     delistedVotes(skip: Int, zipCode: Int): [DelistedVoter!]
     accountTeamHandle(id: String,skip: Int): [AccountHandleTeam!]
     getAssignedTeams(userId: String, zipCode: Int, barangaysId: Int, from: Int, take: Int, min: Int, max: Int):[AccountHandleTeam!]
+    accountHandleTeamList: [AccountHandleTeam!]
   }
 
   type Validation {
@@ -571,7 +573,8 @@ type BarangayCoor {
     accountTeamHoldings: [NewAccountTeamHoldInput!], 
     teamToMerge: [NewTeamToMergeInput],
     teamExcluded: [NewToTeamExcludeInput!]): String!
-    
+    resetAccountTeamhandle: String!
+    assignedTeamsOnAccount(userId: String, zipCode: Int, barangaysId: Int, from: Int, take: Int, min: Int, max: Int):String!
   }
 
   type VoterRecords {

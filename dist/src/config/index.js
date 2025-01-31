@@ -746,6 +746,7 @@ const resolvers = {
             return response;
         }),
         accountTeamHandle: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id, skip }) {
+            console.log({ id, skip });
             return yield prisma_1.prisma.accountHandleTeam.findMany({
                 where: {
                     usersUid: id,
@@ -809,6 +810,9 @@ const resolvers = {
             });
             return handleTeams;
         }),
+        accountHandleTeamList: () => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma_1.prisma.accountHandleTeam.findMany({});
+        })
     },
     Mutation: {
         signUp: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { user }) {
@@ -3248,6 +3252,60 @@ const resolvers = {
             });
             return "OK";
         }),
+        resetAccountTeamhandle: () => __awaiter(void 0, void 0, void 0, function* () {
+            yield prisma_1.prisma.accountHandleTeam.deleteMany();
+            yield prisma_1.prisma.accountValidateTeam.deleteMany();
+            return "OK";
+        }),
+        assignedTeamsOnAccount: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { userId, zipCode, barangaysId, from, take, max, min }) {
+            console.log("Params ,", { userId, zipCode, barangaysId, from, take, max, min });
+            const barangay = yield prisma_1.prisma.barangays.findFirst({
+                where: {
+                    municipalId: zipCode,
+                    number: barangaysId,
+                },
+            });
+            if (!barangay) {
+                throw new graphql_1.GraphQLError("Barangay not found.");
+            }
+            const teams = yield prisma_1.prisma.team.findMany({
+                where: {
+                    barangaysId: barangay.id,
+                    municipalsId: zipCode,
+                    AccountHandleTeam: {
+                        none: {}
+                    }
+                },
+                include: {
+                    _count: {
+                        select: {
+                            voters: true,
+                        },
+                    },
+                },
+                skip: from - 1,
+                take,
+                orderBy: { TeamLeader: {
+                        voter: {
+                            lastname: "asc"
+                        }
+                    } }
+            });
+            const filteredTeams = teams.filter((team) => team._count.voters >= min && team._count.voters <= max);
+            console.log("Checked: ", filteredTeams.length);
+            yield prisma_1.prisma.accountHandleTeam.createMany({
+                data: filteredTeams.map((item) => {
+                    return {
+                        usersUid: userId,
+                        teamId: item.id,
+                        municipalsId: item.municipalsId,
+                        barangaysId: item.barangaysId,
+                    };
+                }),
+                skipDuplicates: true
+            });
+            return "OK";
+        }),
     },
     Voter: {
         votersCount: () => __awaiter(void 0, void 0, void 0, function* () {
@@ -4101,6 +4159,18 @@ const resolvers = {
             });
         }),
     },
+    AccountHandleTeam: {
+        team: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            if (!parent.id) {
+                return null;
+            }
+            return yield prisma_1.prisma.team.findFirst({
+                where: {
+                    id: parent.teamId
+                }
+            });
+        })
+    }
 };
 const server = new server_1.ApolloServer({ typeDefs: schema_1.typeDefs, resolvers });
 const main = () => __awaiter(void 0, void 0, void 0, function* () {

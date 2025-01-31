@@ -853,6 +853,8 @@ const resolvers: Resolvers = {
       return response;
     },
     accountTeamHandle: async (_, { id, skip }) => {
+      console.log({id,skip});
+      
       return await prisma.accountHandleTeam.findMany({
         where: {
           usersUid: id,
@@ -923,6 +925,10 @@ const resolvers: Resolvers = {
       });
       return handleTeams;
     },
+
+    accountHandleTeamList: async()=>{
+      return await prisma.accountHandleTeam.findMany({})
+    }
   },
   Mutation: {
     signUp: async (_, { user }) => {
@@ -3619,6 +3625,68 @@ const resolvers: Resolvers = {
 
       return "OK";
     },
+    resetAccountTeamhandle: async()=>{
+      await prisma.accountHandleTeam.deleteMany()
+      await prisma.accountValidateTeam.deleteMany()
+      return "OK"
+    },
+    assignedTeamsOnAccount: async (
+      _,
+      { userId, zipCode, barangaysId, from, take, max, min }
+    ) => {
+      console.log("Params ,", { userId, zipCode, barangaysId, from, take, max, min });
+      
+      const barangay = await prisma.barangays.findFirst({
+        where: {
+          municipalId: zipCode,
+          number: barangaysId,
+        },
+      });
+      if (!barangay) {
+        throw new GraphQLError("Barangay not found.");
+      }
+      const teams = await prisma.team.findMany({
+        where: {
+          barangaysId: barangay.id,
+          municipalsId: zipCode,
+          AccountHandleTeam:{
+            none:{}
+          }
+        },
+        include: {
+          _count: {
+            select: {
+              voters: true,
+            },
+          },
+        },
+        skip: from - 1,
+        take,
+        orderBy:{TeamLeader:{
+          voter:{
+            lastname: "asc"
+          }
+        }}
+      });
+
+      const filteredTeams = teams.filter(
+        (team) => team._count.voters >= min && team._count.voters <= max
+      );
+      console.log("Checked: ", filteredTeams.length);
+      
+      await prisma.accountHandleTeam.createMany({
+        data: filteredTeams.map((item) => {
+          return {
+            usersUid: userId,
+            teamId: item.id,
+            municipalsId: item.municipalsId,
+            barangaysId: item.barangaysId,
+          };
+        }),
+        skipDuplicates: true
+      });
+      return "OK";
+    },
   },
   Voter: {
     votersCount: async () => {
@@ -4518,6 +4586,18 @@ const resolvers: Resolvers = {
       });
     },
   },
+  AccountHandleTeam: {
+    team:async(parent)=>{
+      if(!parent.id){
+        return null
+      }
+      return await prisma.team.findFirst({
+        where:{
+          id:parent.teamId as string
+        }
+      })
+    }
+  }
 };
 
 const server = new ApolloServer({ typeDefs, resolvers });

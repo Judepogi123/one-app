@@ -312,6 +312,8 @@ export type Resolvers = {
       {},
       AccountHandleTeam[]
     >;
+    
+    accountHandleTeamList: ResolverFn<{},{},{}, AccountHandleTeam[]>
   };
   Mutation: {
     createVoter: ResolverFn<{}, Voters, {}, Voters>;
@@ -905,6 +907,21 @@ export type Resolvers = {
       {},
       string
     >;
+    resetAccountTeamhandle: ResolverFn<{},{},{}, string>
+    assignedTeamsOnAccount: ResolverFn<
+      {},
+      {
+        userId: string;
+        zipCode: number;
+        barangaysId: number;
+        from: number;
+        take: number;
+        min: number;
+        max: number;
+      },
+      {},
+      string
+    >;
   };
   Voter: {
     votersCount: ResolverFn<{}, {}, {}, number>;
@@ -1180,4 +1197,7 @@ export type Resolvers = {
     qrCode: ResolverFn<Users, {}, {}, UserQRCode | null>;
     accountHandleTeam: ResolverFn<Users, {}, {}, AccountHandleTeam[]>;
   };
+  AccountHandleTeam: {
+    team: ResolverFn<AccountHandleTeam, {}, {}, Team | null>;
+  }
 };
