@@ -885,6 +885,9 @@ const resolvers: Resolvers = {
         where: {
           barangaysId: barangay?.id,
           municipalsId: zipCode,
+          AccountHandleTeam:{
+            none:{}
+          }
         },
         include: {
           _count: {

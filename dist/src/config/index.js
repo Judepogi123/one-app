@@ -775,6 +775,9 @@ const resolvers = {
                 where: {
                     barangaysId: barangay === null || barangay === void 0 ? void 0 : barangay.id,
                     municipalsId: zipCode,
+                    AccountHandleTeam: {
+                        none: {}
+                    }
                 },
                 include: {
                     _count: {
