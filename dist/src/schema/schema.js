@@ -129,7 +129,7 @@ type ValdilatedMember {
     teamId: String
     leader: TeamLeader
     validated: ValidatedTeamMembers
-    record: [VoterRecord!]
+    record: [VoterRecords!]
     ValdilatedMember: ValdilatedMember
     untracked: UntrackedVoter
   }
@@ -613,6 +613,7 @@ type BarangayCoor {
   type VoterRecords {
   id: ID!
   desc: String!
+  type: Int
   questionable: Boolean!
   timestamp: String! 
   voter: Voter     
