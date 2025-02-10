@@ -51,6 +51,7 @@ model Users {
   ValidationNotes      ValidationNotes[]
   AccountHandleTeam    AccountHandleTeam[]
   AccountValidateTean  AccountValidateTeam[]
+  UserResport          UserReport[]
 }
 
 model UserQRCode {
@@ -75,6 +76,7 @@ model Notification {
 model UserActivityLogs {
   id        String   @id @default(uuid())
   activity  String?  @default("None")
+  method    Int
   timestamp DateTime @default(now())
   Users     Users?   @relation(fields: [usersUid], references: [uid], onDelete: Cascade)
   usersUid  String?
@@ -98,29 +100,34 @@ model Validation {
 }
 
 model Candidates {
-  id               String         @id @default(uuid())
+  id               String          @id @default(uuid())
   lastname         String
   firstname        String
-  position         Position?      @relation(fields: [positionId], references: [id])
+  position         Position?       @relation(fields: [positionId], references: [id])
   code             String?
-  colorCode        String?        @default("#ffffff")
+  colorCode        String?         @default("#ffffff")
   desc             String?
-  image            MediaUrl?      @relation(fields: [mediaUrlId], references: [id])
+  image            MediaUrl?       @relation(fields: [mediaUrlId], references: [id])
   supporters       Voters[]
-  candidateBatchId String
   BarangayCoor     BarangayCoor[]
   PurokCoor        PurokCoor[]
   TeamLeader       TeamLeader[]
   mediaUrlId       String?
   positionId       String?
   Team             Team[]
+  CandidateBatch   CandidateBatch? @relation(fields: [candidateBatchId], references: [id], onDelete: Cascade)
+  candidateBatchId String?
+  municipal        Municipals?     @relation(fields: [municipalsId], references: [id])
+  municipalsId     Int?
 }
 
 model CandidateBatch {
-  id        String   @id @default(uuid())
-  timestamp DateTime @default(now())
-  waveID    Wave     @relation(fields: [waveId], references: [id], onDelete: Cascade)
-  waveId    Int
+  id         String       @id @default(uuid())
+  timestamp  DateTime     @default(now())
+  year       Int?
+  waveID     Wave?        @relation(fields: [waveId], references: [id], onDelete: Cascade)
+  waveId     Int?
+  candidates Candidates[]
 }
 
 model Wave {
@@ -183,6 +190,10 @@ model Voters {
   Appointments           Appointments[]
   DuplicateteamMebers    DuplicateteamMembers[]
   VotersToUpdate         ValidationResult[]
+  timestamp              DateTime                 @default(now())
+  ValdilatedMembers      ValdilatedMembers[]
+  TeamJoinDate           TeamJoinDate[]
+  TeamMembersTransac     TeamMembersTransac[]
 }
 
 model Purok {
@@ -232,6 +243,8 @@ model Municipals {
   DuplicateteamMembers DuplicateteamMembers[]
   AccountHandleTeam    AccountHandleTeam[]
   AccountValidateTean  AccountValidateTeam[]
+  ValidationResult     ValidationResult[]
+  Candidates           Candidates[]
 }
 
 model Barangays {
@@ -273,6 +286,7 @@ model Barangays {
   DuplicateteamMembers DuplicateteamMembers[]
   AccountHandleTeam    AccountHandleTeam[]
   AccountValidateTean  AccountValidateTeam[]
+  ValidationResult     ValidationResult[]
 }
 
 model HouseHold {
@@ -358,6 +372,19 @@ model Team {
   timestamp            DateTime?              @default(now())
   AccountValidateTean  AccountValidateTeam[]
   VotersToUpdate       ValidationResult[]
+  ValdilatedMembers    ValdilatedMembers[]
+  TeamJoinDate         TeamJoinDate[]
+  TeamUpdateAchive     TeamUpdateArchive[]
+}
+
+model TeamJoinDate {
+  id        String   @id @default(cuid())
+  voter     Voters?  @relation(fields: [votersId], references: [id])
+  team      Team?    @relation(fields: [teamId], references: [id])
+  votersId  String?
+  teamId    String?
+  timestamp DateTime @default(now())
+  method    Int?     @default(1)
 }
 
 model TeamLeader {
@@ -848,7 +875,7 @@ model UntrackedVoter {
   voter        Voters?     @relation(fields: [votersId], references: [id])
   votersId     String?
   team         Team?       @relation(fields: [teamId], references: [id])
-  timstamp     DateTime    @default(now())
+  timestamp    DateTime    @default(now())
   teamId       String?
   user         Users?      @relation(fields: [usersUid], references: [uid])
   usersUid     String?
@@ -932,15 +959,69 @@ model AccountValidateTeam {
   AccountHandleTeam AccountHandleTeam?
 }
 
+model ValdilatedMembers {
+  id        String   @id @default(uuid())
+  voterId   Voters?  @relation(fields: [votersId], references: [id])
+  votersId  String?
+  team      Team?    @relation(fields: [teamId], references: [id])
+  teamId    String?
+  timestamp DateTime @default(now())
+}
+
 model ValidationResult {
-  id       String  @id @default(uuid())
-  props    String?
-  type     String?
-  value    String?
-  voter    Voters? @relation(fields: [votersId], references: [id])
-  votersId String?
-  action   Int?
-  team     Team?   @relation(fields: [teamId], references: [id])
-  count    Int?    @default(0)
-  teamId   String?
+  id           String     @id @default(uuid())
+  props        String?
+  type         String?
+  value        String?
+  voter        Voters?    @relation(fields: [votersId], references: [id])
+  votersId     String?
+  action       Int?
+  team         Team?      @relation(fields: [teamId], references: [id])
+  count        Int?       @default(0)
+  teamId       String?
+  barangay     Barangays  @relation(fields: [barangaysId], references: [id])
+  barangaysId  String
+  municipal    Municipals @relation(fields: [municipalsId], references: [id])
+  municipalsId Int
+  timestamp    DateTime   @default(now())
+}
+
+model UserReport {
+  id             String           @id @default(uuid())
+  section        String?
+  subject        String?
+  message        String?
+  user           Users?           @relation(fields: [usersUid], references: [uid], onDelete: Cascade)
+  usersUid       String?
+  timestamp      DateTime?        @default(now())
+  ReportFeedback ReportFeedback[]
+}
+
+model ReportFeedback {
+  id           String      @id @default(uuid())
+  report       UserReport? @relation(fields: [userReportId], references: [id], onDelete: Cascade)
+  userReportId String?
+  feedback     String?
+  timestamp    DateTime?   @default(now())
+}
+
+model TeamUpdateArchive {
+  id            String               @id @default(uuid())
+  desc          String?
+  team          Team?                @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  level         Int
+  result        Int
+  method        Int
+  timestamp     DateTime?            @default(now())
+  teamId        String?
+  transacMember TeamMembersTransac[]
+}
+
+model TeamMembersTransac {
+  id                  String             @id @default(uuid())
+  voter               Voters             @relation(fields: [votersId], references: [id], onDelete: Cascade)
+  votersId            String
+  timestamp           DateTime?          @default(now())
+  TeamUpdateArchive   TeamUpdateArchive? @relation(fields: [teamUpdateArchiveId], references: [id])
+  teamUpdateArchiveId String?
 }

@@ -35,3 +35,16 @@ export const handleLevel = (value: number) => {
         return "Voter";
     }
   };
+
+  export const handleDataType = (type: string, value: string)=>{
+    
+    if(type === "number"){
+      return parseInt(value, 10)
+    }
+    if(type === "string"){
+      return value
+    }
+    if(type === "boolean"){
+      return value === "1"
+    }
+  }

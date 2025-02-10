@@ -344,3 +344,24 @@ export interface SurveyResults {
     }[];
   }[];
 }
+
+export interface GroupedVotersToUpdate {
+  votersId: string;
+  props: {
+    id: string;
+    props: string;
+    type: string;
+    value: string;
+    votersId: string;
+    action: number;
+    teamId: string;
+  }[];
+}
+
+export interface TeamValidationStat {
+  teamLeadersCount: number;
+  members: number;
+  validatedTL: number;
+  validatedMembers: number;
+  untrackedMembers: number;
+}

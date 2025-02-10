@@ -41,7 +41,7 @@ type Users {
 
 type AccountHandleTeam {
   id: String!  
-  account: Users  # Optional relation to the Users model
+  account: Users
   usersUid: String  # Optional reference to the user's UID
   team: Team  # Optional relation to the Team model
   teamId: String  # Optional reference to the Team's ID
@@ -63,10 +63,17 @@ type AccountValidateTeam {
   municipalsId: Int 
   barangay: Barangay 
   barangaysId: String  
-  timestamp: String 
+  timstamp: String 
   AccountHandleTeam: AccountHandleTeam 
 }
-
+type ValdilatedMember {
+  id: String!
+  voter: Voter
+  votersId: String
+  team: Team
+  teamId: String
+  timestamp: String
+}
 
   type UserQRCode {
     id: ID!
@@ -120,6 +127,8 @@ type AccountValidateTeam {
     leader: TeamLeader
     validated: ValidatedTeamMembers
     record: [VoterRecord!]
+    ValdilatedMember: ValdilatedMember
+    untracked: UntrackedVoter
   }
 
   type VoterRecord {
@@ -176,7 +185,16 @@ type AccountValidateTeam {
     teamStat: AllTeamStatus!
     leaders(skip:Int, candidateId: String): [TeamLeader!]
     barangayDelistedVoter: Int
+    teams(level: Int): [Team!]
+    teamValidationStat: TeamValidationStat
+  }
 
+  type TeamValidationStat {
+    teamLeadersCount: Int
+    members: Int
+    validatedTL: Int
+    validatedMembers: Int
+    untrackedMembers: Int
   }
 
   type Precent {
@@ -298,6 +316,9 @@ type Team {
   candidatesId: String
   level: Int!
   _count: VoterRecordsCount
+  AccountHandleTeam: AccountHandleTeam
+  AccountValidateTeam(id: String): AccountValidateTeam
+  untrackedCount: Int
 }
 
 type VoterRecordsCount {
@@ -315,7 +336,7 @@ type ValdiatedTeams {
     voters(skip: Int, zipCode: Int): [Voter!]!
     voter(id: String!): Voter
     searchDraftVoter(query: SearchDraftQueryInput!): [Voter]!
-    searchVoter(query: String!,skip: Int!,take: Int): [Voter!]
+    searchVoter(query: String!,skip: Int!,take: Int, zipCode: Int): [Voter!]
     votersCount: Int!
     municipals: [Municipal!]!
     municipal(id: Int!): Municipal
@@ -372,7 +393,7 @@ type ValdiatedTeams {
     getVotersList(level: String!, take: Int, skip: Int, zipCode: String, barangayId: String,purokId: String, query: String, pwd: String, illi: String,inc: String,oor: String,dead: String,youth: String,senior: String,gender: String): VotersList
     getPurokList(id: String!): [Purok!]
     teamList(zipCode: String!, barangayId: String!, purokId: String!, level: String!,query: String!, skip: Int!, candidate: String, withIssues: Boolean): [Team!]
-    candidates: [Candidates!]
+    candidates(zipCode: String): [Candidates!]
     candidate(id: String!):Candidates
     team(id: String!): Team
     getAllTL: [TeamLeader!]
@@ -389,6 +410,7 @@ type ValdiatedTeams {
     accountTeamHandle(id: String,skip: Int): [AccountHandleTeam!]
     getAssignedTeams(userId: String, zipCode: Int, barangaysId: Int, from: Int, take: Int, min: Int, max: Int):[AccountHandleTeam!]
     accountHandleTeamList: [AccountHandleTeam!]
+    teamLeaderTeamHandle(level: Int, zipCode: String, barangay: String, skip: Int): [TeamLeader!]
   }
 
   type Validation {
@@ -530,6 +552,7 @@ type BarangayCoor {
     saveDraftedVoter(batchId: String!): NewBatchDraft!
     removeVoter(id: String!): String!
     adminLogin(user:AdminLoginInput!): AuthUser!
+    userLogin(user:UserLoginInput!): Users!
     removeMultiVoter(list: [String!]): String!
     addTeam(headId: String!,teamIdList: [VoterInput!], level: Int!): String!
     addMember(headId: String!,teamIdList: [VoterInput!], level: Int!, teamId: String!): String!
@@ -545,7 +568,8 @@ type BarangayCoor {
     changeLeader(id: String!, teamId: String!, level: Int!): String!
     assignBarangayIDnumber(zipCode: Int!): String!
     assignTeam(team: NewTeamInput!): String!
-    composeTeam(team: NewTeamInput!): String!
+    composeTeam(team: NewTeamInput!, code: String): String!
+    multiComposeTeam(team: NewTeamInput!, code: String): String!
     clearTeamRecords: String!
     removeValidateTeamleader: String!
     multiSelectVoter(teamId: String!, members: [String!],method: Int!):String!
@@ -571,7 +595,16 @@ type BarangayCoor {
     teamToMerge: [NewTeamToMergeInput],
     teamExcluded: [NewToTeamExcludeInput!]): String!
     resetAccountTeamhandle: String!
-    assignedTeamsOnAccount(userId: String, zipCode: Int, barangaysId: Int, from: Int, take: Int, min: Int, max: Int):String!
+    assignedTeamsOnAccount(userId: String, zipCode: Int, barangaysId: Int, from: Int, take: Int, min: Int, max: Int):String
+    deleteAssignTeam(id: String): String!
+    selectedTeamAssign(ids: [String!], userId: String!): String!
+    creatCandidateBatch(zipCode: Int): String!
+    markTeamVerified(teamId: String, accountID: String): String!
+    markMemberVerified(memberId: [String!], accountID: String): String!
+    updateTeamMemberProps(memberId: [String!],props: String): String!
+    memberExclude(membersId: [String!]): String!
+    swapVoters(levelToSwap: Int, levelToBeSwapped: Int, voterOneId: String, voterTwoId: String): String!
+    markUntracked(memberId: [String!]): String!
   }
 
   type VoterRecords {
@@ -594,7 +627,7 @@ type BarangayCoor {
   image: MediaUrl
   colorCode: String
   supporters: Int!
-  candidateBatchId: String!
+  candidateBatchId: String
   BarangayCoor: [BarangayCoor!]!
   PurokCoor: [PurokCoor!]
   TeamLeader: [TeamLeader!]
@@ -922,6 +955,8 @@ input QuotaUpdate {
     role: Int!
     status: Int!
     privilege: [Int!]
+    encryptPassword: Boolean
+    forMunicipal: String
   }
   
   input NewAdminInput{
@@ -1091,6 +1126,7 @@ input NewVotersToUpdate {
   votersId: String
   action: Int
   teamId: String
+  timestamp: String
 }
 
 input NewToTransfer {
@@ -1145,6 +1181,7 @@ input NewVoterRecord {
   desc: String
   questionable: Int
   account_id: String
+  type: Int
 }
 
 input NewTeamToMergeInput {
@@ -1264,6 +1301,11 @@ input NewToTeamExcludeInput {
     password: String!
   }
 
+  input UserLoginInput {
+    username: String!
+    password: String!
+  }
+
   scalar Upload
 
   type DuplicateteamMembers {
@@ -1309,7 +1351,7 @@ type UntrackedVoter {
   voter: Voter
   votersId: String
   team: Team
-  timstamp: String
+  timestamp: String
   teamId: String
   user: Users
   usersUid: String

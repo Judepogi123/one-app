@@ -17,6 +17,7 @@ import {
   RejectListProps,
   UpdateDataProps,
   BarangayProps,
+  VotersProps,
 } from "../interface/data";
 import { GraphQLError } from "graphql";
 
@@ -53,12 +54,13 @@ export default (io: any) => {
 
           processedData[sheetName] = data.map((row: DataProps) => {
             const newRow: Partial<DataProps> = {};
-
+            
+            
             const supporting = candidates.map((candidate) =>
               row[candidate.code as string] ? candidate.id : undefined
             );
             const candidateId = supporting.filter(Boolean);
-
+            console.log({...row, idol: candidateId[0]});
             if (row["Voter's Name"]) {
               const [lastname, firstname] = row["Voter's Name"]
                 .split(",")
@@ -157,7 +159,7 @@ export default (io: any) => {
       const voterRecordsToInsert = [];
 
       for (const row of votersData) {
-        console.log("Logged 4");
+        console.log("Logged 4 candidate", row.candidateId);
         try {
           const key = `${row.firstname}_${row.lastname}`;
           const existingVoter = existingVoterMap.get(key);
@@ -886,7 +888,7 @@ export default (io: any) => {
       try {
         const workbook = new ExcelJS.Workbook();
         workbook.created = new Date();
-        const worksheetNames = new Set<string>(); // To track existing worksheet names
+        const worksheetNames = new Set<string>(); 
         console.log("All PC: ", temp.leaders.length);
         console.log(
           "All PC handle: ",
@@ -1040,7 +1042,142 @@ export default (io: any) => {
       //     },
       //   });
       // } catch (error) {}
-    }
+    },
+
+    router.post("/custom-list", async (req: Request, res: Response) => {
+      const barangayId = req.body.barangayId;
+    
+      if (!barangayId) {
+        res.status(400).json({ message: "Bad Request" });
+        return;
+      }
+    
+      try {
+        const workbook = new ExcelJS.Workbook();
+        workbook.created = new Date();
+    
+        let skip = 0;
+        let haveMore = true;
+        const readyToInsert: {purok: string, list: any[]}[] = [];
+    
+        // Fetch barangay details
+        const barangay = await prisma.barangays.findUnique({
+          where: { id: barangayId },
+        });
+    
+        if (!barangay) {
+          res.status(404).json({ message: "Barangay not found" });
+          return;
+        }
+    
+        const worksheet = workbook.addWorksheet(barangay.name, {
+          pageSetup: {
+            paperSize: 9,
+            orientation: "portrait",
+            fitToPage: false,
+            showGridLines: true,
+          },
+          headerFooter: {
+            firstHeader: ``,
+            firstFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+            oddHeader: `&L&B${barangay.name} Voter's List`,
+            oddFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+          },
+        });
+    
+        worksheet.columns = [
+          { header: "ID", key: "id", width: 6 },
+          { header: "Fullname", key: "fullname", width: 40 },
+          { header: "Purok", key: "purok", width: 12 },
+          { header: "OR", key: "or"},
+          { header: "DEAD", key: "dead" },
+          { header: "INC", key: "inc"},
+        ];
+    
+        worksheet.getRow(1).eachCell((cell) => {
+          cell.font = { bold: true };
+          cell.alignment = { horizontal: "center", vertical: "middle" };
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" },
+          };
+        });
+    
+        while (haveMore) {
+          const voters = await prisma.voters.findMany({
+            where: {
+              OR: [
+                { oor: "NO" },
+                { inc: "NO" },
+                { status: 1 }
+              ],
+              barangaysId: barangay.id, // Still keeping this as an additional filter
+              candidatesId: null,
+              teamId: null,
+            },
+            include: {
+              purok: {
+                select: {
+                  purokNumber: true,
+                },
+              },
+            },
+            skip,
+            take: 50,
+            orderBy: { lastname: "asc" },
+          })          
+    
+          if (voters.length === 0) {
+            haveMore = false;
+            break;
+          }
+    
+          voters.forEach((voter) => {
+            const matchIndex = readyToInsert.findIndex((item)=> item.purok === voter.purok?.purokNumber)
+            if(matchIndex !== -1){
+              readyToInsert[matchIndex].list.push({
+                id: voter.idNumber as string,
+                fullname: `${voter.lastname}, ${voter.firstname}`,
+                purok: voter.purok?.purokNumber
+              })
+            }
+            else{
+              readyToInsert.push({
+                purok: voter.purok?.purokNumber as string,
+                list: [{
+                  id: voter.idNumber as string,
+                  fullname: `${voter.lastname}, ${voter.firstname}`,
+                  purok: voter.purok?.purokNumber
+                }]
+              })
+            }
+          });
+    
+          skip += 50;
+        }
+        const flattenedList = readyToInsert.flatMap(entry => entry.list);
+        worksheet.addRows(flattenedList);
+    
+        res.setHeader(
+          "Content-Type",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        res.setHeader(
+          "Content-Disposition",
+          "attachment; filename=SupporterReport.xlsx"
+        );
+    
+        await workbook.xlsx.write(res);
+        res.end(); // Ensure the response is closed
+    
+      } catch (error) {
+        console.error("Error generating Excel file:", error);
+        res.status(500).send("Internal Server Error");
+      }
+    })
+    
   );
 
   return router;
