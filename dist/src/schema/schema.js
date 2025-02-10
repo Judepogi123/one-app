@@ -132,6 +132,7 @@ type ValdilatedMember {
     record: [VoterRecords!]
     ValdilatedMember: ValdilatedMember
     untracked: UntrackedVoter
+    duplicated: [DuplicateteamMembers!]
   }
 
   type VoterRecord {

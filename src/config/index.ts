@@ -3776,6 +3776,7 @@ const resolvers: Resolvers = {
                       teamUpdateArchiveId: teamRec.id
                     }
                   })
+                  console.log("----------->Team update successfully");
                 } catch (error) {
                   continue
                 }
@@ -3842,6 +3843,8 @@ const resolvers: Resolvers = {
               where: { id: item.votersId },
               data: updateData
             });
+            console.log("----------->Voter update successfully");
+            
           } else {
             console.log(`No changes for voter ${item.votersId}`);
           }
@@ -3921,6 +3924,7 @@ const resolvers: Resolvers = {
                 teamId: item.teamId,
               }))
             });
+            console.log("----------->Validated members successfully");
             console.log("Validated Members added.");
           } else {
             console.log("No new validated members to add.");

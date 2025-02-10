@@ -884,6 +884,7 @@ exports.default = (io) => {
                 },
             });
             worksheet.columns = [
+                { header: "No.", key: "no", width: 4 },
                 { header: "ID", key: "id", width: 6 },
                 { header: "Fullname", key: "fullname", width: 40 },
                 { header: "Purok", key: "purok", width: 12 },
@@ -907,7 +908,12 @@ exports.default = (io) => {
                         OR: [
                             { oor: "NO" },
                             { inc: "NO" },
-                            { status: 1 }
+                            { status: 1 },
+                            {
+                                DelistedVoter: {
+                                    none: {}
+                                }
+                            }
                         ],
                         barangaysId: barangay.id, // Still keeping this as an additional filter
                         candidatesId: null,
@@ -951,7 +957,17 @@ exports.default = (io) => {
                 });
                 skip += 50;
             }
-            const flattenedList = readyToInsert.flatMap(entry => entry.list);
+            const flattenedList = readyToInsert.flatMap(entry => entry.list).map((item, i) => {
+                return {
+                    no: i + 1,
+                    id: item.id,
+                    fullname: item.fullname,
+                    purok: item.purok,
+                    or: "",
+                    dead: "",
+                    inc: ""
+                };
+            });
             worksheet.addRows(flattenedList);
             res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             res.setHeader("Content-Disposition", "attachment; filename=SupporterReport.xlsx");
