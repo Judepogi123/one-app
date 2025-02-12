@@ -235,6 +235,8 @@ export type Resolvers = {
         youth: string;
         senior: string;
         gender: string;
+        withoutTeam: string, 
+        mode: string
       },
       {},
       { voters: Voters[]; results: number }
@@ -267,7 +269,7 @@ export type Resolvers = {
       ValidatedTeams[]
     >;
     getTeamRecord: ResolverFn<{}, { id: string }, {}, ValidatedTeams | null>;
-    userList: ResolverFn<{}, {}, {}, Users[]>;
+    userList: ResolverFn<{}, {zipCode: number}, {}, Users[]>;
     userQRCodeList: ResolverFn<{}, {}, {}, UserQRCode[]>;
     purokList: ResolverFn<{}, { zipCode: number }, {}, Purok[]>;
     voterRecords: ResolverFn<

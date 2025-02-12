@@ -488,9 +488,13 @@ const resolvers = {
                 },
             });
         }),
-        getVotersList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { level, take, skip, query, zipCode, barangayId, purokId, pwd, illi, inc, oor, dead, youth, senior, gender, }) {
+        getVotersList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { level, take, skip, query, zipCode, barangayId, purokId, pwd, illi, inc, oor, dead, youth, senior, gender, mode, withoutTeam }) {
             console.log({ skip });
             const filter = { saveStatus: "listed" };
+            // if(withoutTeam === "YES"){
+            //   filter.teamId= null
+            //   filter.candidatesId= null
+            // }
             if (zipCode !== "all") {
                 filter.municipalsId = parseInt(zipCode, 10);
             }
@@ -727,13 +731,21 @@ const resolvers = {
                 where: { id },
             });
         }),
-        userList: () => __awaiter(void 0, void 0, void 0, function* () {
-            return yield prisma_1.prisma.users.findMany();
+        userList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode }) {
+            console.log(zipCode);
+            const filter = {};
+            if (zipCode) {
+                filter.forMunicipal = zipCode;
+            }
+            return yield prisma_1.prisma.users.findMany({
+                where: filter
+            });
         }),
         userQRCodeList: () => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.userQRCode.findMany();
         }),
         purokList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode }) {
+            console.log({ zipCode });
             return yield prisma_1.prisma.purok.findMany({
                 where: {
                     municipalsId: zipCode,
@@ -2008,35 +2020,13 @@ const resolvers = {
                     extensions: { code: "REQUEST_ERROR" },
                 });
             }
-            const votersData = yield prisma_1.prisma.voters.findMany({
-                where: {
-                    id: { in: teamIdList.map((member) => member.id) },
-                },
-            });
-            const teamVoterCount = yield prisma_1.prisma.team.findFirst({
-                where: { teamLeaderId: headId },
-                select: {
-                    _count: { select: { voters: true } },
-                    id: true,
-                },
-            });
-            if (level === 0 && (teamVoterCount === null || teamVoterCount === void 0 ? void 0 : teamVoterCount._count.voters) >= 10) {
-                throw new graphql_1.GraphQLError("Limit reached", {
-                    extensions: { code: "REQUEST_ERROR" },
-                });
-            }
-            const purokCoorTeam = yield prisma_1.prisma.purokCoor.findFirst({
-                where: { votersId: headId },
-                select: {
-                    _count: { select: { TeamLeader: true } },
-                    id: true,
-                },
-            });
-            if (level === 1 && (purokCoorTeam === null || purokCoorTeam === void 0 ? void 0 : purokCoorTeam._count.TeamLeader) >= 10) {
-                throw new graphql_1.GraphQLError("Limit reached", {
-                    extensions: { code: "REQUEST_ERROR" },
-                });
-            }
+            const [votersData] = yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.voters.findMany({
+                    where: {
+                        id: { in: teamIdList.map((member) => member.id) },
+                    },
+                })
+            ]);
             yield Promise.all(teamIdList.map((member) => __awaiter(void 0, void 0, void 0, function* () {
                 const voter = votersData.find((v) => v.id === member.id);
                 if (!voter) {
@@ -2099,7 +2089,7 @@ const resolvers = {
                         lastname: member.lastname,
                         municipal: member.municipalsId,
                         barangay: member.barangaysId,
-                        reason: "Nakalista na, bilang isang Barangay Coor.",
+                        reason: "Already a Barangay Coor.",
                         teamId: member.teamId,
                         code: 3,
                     });
@@ -2112,7 +2102,7 @@ const resolvers = {
                         lastname: member.lastname,
                         municipal: member.municipalsId,
                         barangay: member.barangaysId,
-                        reason: "Nakalista na, bilang isang Purok Coor.",
+                        reason: "Already a Purok Coor.",
                         teamId: member.teamId,
                         code: 2,
                     });
@@ -2125,7 +2115,7 @@ const resolvers = {
                         lastname: member.lastname,
                         municipal: member.municipalsId,
                         barangay: member.barangaysId,
-                        reason: "Nakalista na, bilang isang Team Leader.",
+                        reason: "Already a Team Leader.",
                         teamId: member.teamId,
                         code: 1,
                     });
@@ -3331,162 +3321,171 @@ const resolvers = {
             return "OK";
         }),
         validationUpdate: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { validateDuplicate, votersToTransfer, validatedDelisted, votersToUpdate, newVoterRecord, appoinments, untrackedList, recordToDelete, validatedPerson, validatedTeams, teamExcluded, teamToMerge, toSplit, accountTeamHoldings, }) {
+            console.log({ validateDuplicate,
+                votersToTransfer,
+                validatedDelisted,
+                votersToUpdate,
+                newVoterRecord,
+                appoinments,
+                untrackedList,
+                recordToDelete,
+                validatedPerson,
+                validatedTeams,
+                teamExcluded,
+                teamToMerge,
+                toSplit,
+                accountTeamHoldings, });
             //voter's to exclude
-            if (teamExcluded.length > 0) {
-                const voters = yield prisma_1.prisma.voters.findMany({
-                    where: {
-                        id: { in: teamExcluded.map((item) => item.votersId) }
-                    }
-                });
-                console.log({ teamExcluded });
-                const votersId = new Set(voters.map((voter) => voter.id));
-                const voterToExlude = teamExcluded.filter((voter) => votersId.has(voter.id));
-                let groupTeam = [];
-                if (voterToExlude.length > 0) {
-                    voterToExlude.forEach((voter) => {
-                        const matchedIndex = groupTeam.findIndex((item) => item.teamId === voter.teamId);
-                        if (matchedIndex !== -1) {
-                            groupTeam[matchedIndex].voters.push(Object.assign({}, voter));
-                        }
-                        else {
-                            groupTeam.push({
-                                teamId: voter.teamId,
-                                voters: [Object.assign({}, voter)]
-                            });
-                        }
-                    });
-                    yield prisma_1.prisma.$transaction([
-                        prisma_1.prisma.blackList.createMany({
-                            data: voterToExlude.map((item) => {
-                                return {
-                                    votersId: item.votersId,
-                                    municipalsId: parseInt(item.municipalsId, 10),
-                                    barangaysId: item.barangaysId,
-                                };
-                            })
-                        }),
-                    ]);
-                    for (let item of groupTeam) {
-                        try {
-                            const teamRec = yield prisma_1.prisma.teamUpdateArchive.create({
-                                data: {
-                                    teamId: item.teamId,
-                                    result: item.voters.length,
-                                    level: 0,
-                                    method: 0
-                                }
-                            });
-                            for (let voter of item.voters) {
-                                try {
-                                    yield prisma_1.prisma.teamMembersTransac.create({
-                                        data: {
-                                            votersId: voter.votersId,
-                                            teamUpdateArchiveId: teamRec.id
-                                        }
-                                    });
-                                    console.log("----------->Team update successfully");
-                                }
-                                catch (error) {
-                                    continue;
-                                }
-                            }
-                        }
-                        catch (error) {
-                            continue;
-                        }
-                    }
-                }
-            }
-            if (votersToUpdate.length > 0) {
-                // Fetch voters using votersId instead of item.id
-                const voters = yield prisma_1.prisma.voters.findMany({
-                    where: {
-                        id: { in: votersToUpdate.map((item) => item.votersId) }
-                    }
-                });
-                console.log({ votersToUpdate });
-                const votersMap = new Map(voters.map(voter => [voter.id, voter]));
-                // Group updates by votersId
-                const groupedVotersToUpdate = {};
-                votersToUpdate.forEach((item) => {
-                    if (!groupedVotersToUpdate[item.votersId]) {
-                        groupedVotersToUpdate[item.votersId] = {
-                            votersId: item.votersId,
-                            props: []
-                        };
-                    }
-                    groupedVotersToUpdate[item.votersId].props.push({
-                        id: item.id,
-                        props: item.props,
-                        type: item.type,
-                        value: item.value,
-                        action: item.action,
-                        teamId: item.teamId
-                    });
-                });
-                for (const item of Object.values(groupedVotersToUpdate)) {
-                    const voter = votersMap.get(item.votersId);
-                    if (!voter)
-                        continue; // Ensure voter exists
-                    // Only keep properties that need updating
-                    const propsToUpdate = item.props.filter((prop) => {
-                        const valueForUpdate = (0, data_1.handleDataType)(prop.type, prop.value);
-                        const voterPropsTyped = voter;
-                        // Ensure both are strings for comparison safety
-                        return String(voterPropsTyped[prop.props]) !== String(valueForUpdate);
-                    });
-                    if (propsToUpdate.length > 0) {
-                        const updateData = {};
-                        propsToUpdate.forEach((prop) => {
-                            updateData[prop.props] = (0, data_1.handleDataType)(prop.type, prop.value);
-                        });
-                        yield prisma_1.prisma.voters.update({
-                            where: { id: item.votersId },
-                            data: updateData
-                        });
-                        console.log("----------->Voter update successfully");
-                    }
-                    else {
-                        console.log(`No changes for voter ${item.votersId}`);
-                    }
-                }
-            }
-            else {
-                console.log("No voters to update.");
-            }
-            //save validated Teams
-            if (validatedTeams.length > 0) {
-                console.log({ validatedTeams });
-                // Fetch only existing teams
-                const existingTeams = yield prisma_1.prisma.team.findMany({
-                    where: {
-                        id: { in: validatedTeams.map((item) => item.teamId) },
-                    },
-                    select: { id: true },
-                });
-                const existingTeamIds = new Set(existingTeams.map((team) => team.id));
-                const validTeamsToInsert = validatedTeams.filter((item) => existingTeamIds.has(item.teamId));
-                console.log({ validTeamsToInsert });
-                if (validTeamsToInsert.length > 0) {
-                    yield prisma_1.prisma.accountValidateTeam.createMany({
-                        data: validTeamsToInsert.map((item) => ({
-                            id: item.id,
-                            usersUid: item.accountId,
-                            teamId: item.teamId,
-                            municipalsId: item.municipalsId
-                                ? parseInt(item.municipalsId, 10)
-                                : null,
-                            barangaysId: item.barangaysId,
-                            timstamp: item.timestamp,
-                        })),
-                        skipDuplicates: true
-                    });
-                    console.log("Added New Valdiated Teams");
-                }
-                else {
-                    console.log("No valid teams found for insertion.");
-                }
-            }
+            // if(teamExcluded.length > 0) {
+            //   const voters = await prisma.voters.findMany({
+            //     where:{
+            //       id: {in: teamExcluded.map((item)=> item.votersId as string)}
+            //     }
+            //   })
+            //   console.log({teamExcluded});
+            //   const votersId = new Set(voters.map((voter) => voter.id));
+            //   const voterToExlude = teamExcluded.filter((voter) => votersId.has(voter.id));
+            //   let groupTeam: any[] = []
+            //   if(voterToExlude.length > 0){
+            //     voterToExlude.forEach((voter) => {
+            //       const matchedIndex = groupTeam.findIndex((item)=> item.teamId === voter.teamId)
+            //       if(matchedIndex !== -1){
+            //         groupTeam[matchedIndex].voters.push({...voter})
+            //       }else{
+            //         groupTeam.push({
+            //           teamId: voter.teamId,
+            //           voters: [{...voter}]
+            //         })
+            //       }
+            //     })
+            //     await prisma.$transaction([
+            //       prisma.blackList.createMany({
+            //         data: voterToExlude.map((item)=>{
+            //           return{
+            //             votersId: item.votersId as string,
+            //             municipalsId: parseInt(item.municipalsId as string, 10),
+            //             barangaysId: item.barangaysId as string,
+            //           }
+            //         })
+            //       }),
+            //     ])
+            //     for(let item of groupTeam){
+            //       try {
+            //         const teamRec = await prisma.teamUpdateArchive.create({
+            //           data:{
+            //             teamId: item.teamId,
+            //             result: item.voters.length,
+            //             level: 0,
+            //             method: 0
+            //           }
+            //         })
+            //         for(let voter of item.voters) {
+            //           try {
+            //             await prisma.teamMembersTransac.create({
+            //               data:{
+            //                 votersId: voter.votersId,
+            //                 teamUpdateArchiveId: teamRec.id
+            //               }
+            //             })
+            //             console.log("----------->Team update successfully");
+            //           } catch (error) {
+            //             continue
+            //           }
+            //         }
+            //       } catch (error) {
+            //         continue
+            //       }
+            //     }
+            //   }
+            // }
+            // if (votersToUpdate.length > 0) {
+            //   // Fetch voters using votersId instead of item.id
+            //   const voters = await prisma.voters.findMany({
+            //     where: {
+            //       id: { in: votersToUpdate.map((item) => item.votersId) }
+            //     }
+            //   });
+            //   console.log({ votersToUpdate });
+            //   const votersMap = new Map(voters.map(voter => [voter.id, voter]));
+            //   // Group updates by votersId
+            //   const groupedVotersToUpdate: Record<string, any> = {};
+            //   votersToUpdate.forEach((item) => {
+            //     if (!groupedVotersToUpdate[item.votersId]) {
+            //       groupedVotersToUpdate[item.votersId] = {
+            //         votersId: item.votersId,
+            //         props: []
+            //       };
+            //     }
+            //     groupedVotersToUpdate[item.votersId].props.push({
+            //       id: item.id,
+            //       props: item.props,
+            //       type: item.type,
+            //       value: item.value,
+            //       action: item.action,
+            //       teamId: item.teamId
+            //     });
+            //   });
+            //   for (const item of Object.values(groupedVotersToUpdate)) {
+            //     const voter = votersMap.get(item.votersId);
+            //     if (!voter) continue; // Ensure voter exists
+            //     // Only keep properties that need updating
+            //     const propsToUpdate = item.props.filter((prop: { type: string; value: string; props: string | number; }) => {
+            //       const valueForUpdate = handleDataType(prop.type, prop.value);
+            //       const voterPropsTyped = voter as Record<string, any>;
+            //       // Ensure both are strings for comparison safety
+            //       return String(voterPropsTyped[prop.props]) !== String(valueForUpdate);
+            //     });
+            //     if (propsToUpdate.length > 0) {
+            //       const updateData: Record<string, any> = {};
+            //       propsToUpdate.forEach((prop: { props: string | number; type: string; value: string; }) => {
+            //         updateData[prop.props] = handleDataType(prop.type, prop.value);
+            //       });
+            //       await prisma.voters.update({
+            //         where: { id: item.votersId },
+            //         data: updateData
+            //       });
+            //       console.log("----------->Voter update successfully");
+            //     } else {
+            //       console.log(`No changes for voter ${item.votersId}`);
+            //     }
+            //   }
+            // } else {
+            //   console.log("No voters to update.");
+            // }
+            // //save validated Teams
+            // if (validatedTeams.length > 0) {
+            //   console.log({validatedTeams});
+            //   // Fetch only existing teams
+            //   const existingTeams = await prisma.team.findMany({
+            //     where: {
+            //       id: { in: validatedTeams.map((item) => item.teamId as string) },
+            //     },
+            //     select: { id: true },
+            //   });
+            //   const existingTeamIds = new Set(existingTeams.map((team) => team.id));
+            //   const validTeamsToInsert = validatedTeams.filter((item) =>
+            //     existingTeamIds.has(item.teamId as string)
+            //   );
+            //   console.log({validTeamsToInsert});
+            //   if (validTeamsToInsert.length > 0) {
+            //     await prisma.accountValidateTeam.createMany({
+            //       data: validTeamsToInsert.map((item) => ({
+            //         id: item.id,
+            //         usersUid: item.accountId,
+            //         teamId: item.teamId,
+            //         municipalsId: item.municipalsId
+            //           ? parseInt(item.municipalsId, 10)
+            //           : null,
+            //         barangaysId: item.barangaysId,
+            //         timstamp: new Date(item.timestamp as string).toISOString(),
+            //       })), 
+            //       skipDuplicates: true
+            //     });
+            //     console.log("Added New Valdiated Teams");
+            //   } else {
+            //     console.log("No valid teams found for insertion.");
+            //   }
+            // }
             if (validatedPerson.length > 0) {
                 const voterIds = validatedPerson.map((item) => item.votersId);
                 const voters = yield prisma_1.prisma.voters.findMany({
@@ -3510,6 +3509,7 @@ const resolvers = {
                             data: newVoters.map((item) => ({
                                 votersId: item.id,
                                 teamId: item.teamId,
+                                timeStamp: new Date(item.timestamp).toISOString()
                             }))
                         });
                         console.log("----------->Validated members successfully");
@@ -3523,44 +3523,43 @@ const resolvers = {
                     console.log("No Validated Voters to record");
                 }
             }
-            if (untrackedList.length > 0) {
-                console.log("Original untracked list:", untrackedList);
-                const voterIds = untrackedList.map((item) => item.votersId);
-                // Fetch existing voters
-                const voters = yield prisma_1.prisma.voters.findMany({
-                    where: {
-                        id: { in: voterIds }
-                    },
-                    select: { id: true }
-                });
-                const untrackedVoterList = yield prisma_1.prisma.untrackedVoter.findMany({
-                    where: {
-                        votersId: { in: voters.map(item => item.id) }
-                    }
-                });
-                const untrackedListIds = new Set(untrackedVoterList.map((item) => item.votersId));
-                const newUntrackedList = untrackedList.filter((item) => !untrackedListIds.has(item.votersId));
-                console.log("New untracked voters:", newUntrackedList);
-                if (newUntrackedList.length > 0) {
-                    const list = yield prisma_1.prisma.untrackedVoter.createMany({
-                        data: newUntrackedList.map((item) => ({
-                            id: item.id,
-                            votersId: item.votersId,
-                            timestamp: new Date(item.timestamp).toISOString(),
-                            teamId: item.team_Id,
-                            municipalsId: item.municipalsId ? parseInt(item.municipalsId, 10) : null,
-                            barangaysId: item.barangaysId,
-                            usersUid: item.account_id
-                        })),
-                        skipDuplicates: true
-                    });
-                    console.log({ list });
-                    console.log("Added new untracked voters.");
-                }
-                else {
-                    console.log("No new untracked voters to add.");
-                }
-            }
+            // if (untrackedList.length > 0) {
+            //   console.log("Original untracked list:", untrackedList);
+            //   const voterIds = untrackedList.map((item) => item.votersId as string);
+            //   // Fetch existing voters
+            //   const voters = await prisma.voters.findMany({
+            //     where: {
+            //       id: { in: voterIds }
+            //     },
+            //     select: { id: true }
+            //   });
+            //   const untrackedVoterList = await prisma.untrackedVoter.findMany({
+            //     where:{
+            //       votersId: { in: voters.map(item=> item.id) }
+            //     }
+            //   })
+            //  const untrackedListIds = new Set(untrackedVoterList.map((item)=> item.votersId))
+            //   const newUntrackedList = untrackedList.filter((item) => !untrackedListIds.has(item.votersId));
+            //   console.log("New untracked voters:", newUntrackedList);
+            //   if (newUntrackedList.length > 0) {
+            //     const list = await prisma.untrackedVoter.createMany({
+            //       data: newUntrackedList.map((item) => ({
+            //         id: item.id,
+            //         votersId: item.votersId,
+            //         timestamp: new Date(item.timestamp).toISOString(),
+            //         teamId: item.team_Id,
+            //         municipalsId: item.municipalsId ? parseInt(item.municipalsId, 10) : null,
+            //         barangaysId: item.barangaysId,
+            //         usersUid: item.account_id
+            //       })),
+            //       skipDuplicates: true
+            //     });
+            //     console.log({list});
+            //     console.log("Added new untracked voters.");
+            //   } else {
+            //     console.log("No new untracked voters to add.");
+            //   }
+            // }
             // if(newVoterRecord.length){
             //   console.log({newVoterRecord});
             //   const records = await prisma.voterRecords.findMany({

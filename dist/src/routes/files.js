@@ -872,9 +872,17 @@ exports.default = (io) => {
             const worksheet = workbook.addWorksheet(barangay.name, {
                 pageSetup: {
                     paperSize: 9,
-                    orientation: "portrait",
+                    orientation: "landscape",
                     fitToPage: false,
                     showGridLines: true,
+                    margins: {
+                        left: 0.6,
+                        right: 0.6,
+                        top: 0.5,
+                        bottom: 0.5,
+                        header: 0.3,
+                        footer: 0.3,
+                    }
                 },
                 headerFooter: {
                     firstHeader: ``,
@@ -891,6 +899,9 @@ exports.default = (io) => {
                 { header: "OR", key: "or" },
                 { header: "DEAD", key: "dead" },
                 { header: "INC", key: "inc" },
+                { header: "JML", key: "jml" },
+                { header: "RT", key: "rt" },
+                { header: "FH", key: "fh" },
             ];
             worksheet.getRow(1).eachCell((cell) => {
                 cell.font = { bold: true };
@@ -909,15 +920,16 @@ exports.default = (io) => {
                             { oor: "NO" },
                             { inc: "NO" },
                             { status: 1 },
-                            {
-                                DelistedVoter: {
-                                    none: {}
-                                }
-                            }
                         ],
-                        barangaysId: barangay.id, // Still keeping this as an additional filter
+                        barangaysId: barangay.id,
                         candidatesId: null,
                         teamId: null,
+                        DelistedVoter: {
+                            none: {}
+                        },
+                        WhiteList: {
+                            none: {}
+                        },
                     },
                     include: {
                         purok: {
@@ -965,7 +977,171 @@ exports.default = (io) => {
                     purok: item.purok,
                     or: "",
                     dead: "",
-                    inc: ""
+                    inc: "",
+                    jml: "",
+                    rt: "",
+                    fh: "",
+                };
+            });
+            worksheet.addRows(flattenedList);
+            res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            res.setHeader("Content-Disposition", "attachment; filename=SupporterReport.xlsx");
+            yield workbook.xlsx.write(res);
+            res.end(); // Ensure the response is closed
+        }
+        catch (error) {
+            console.error("Error generating Excel file:", error);
+            res.status(500).send("Internal Server Error");
+        }
+    })), router.post("/validation-untracked", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+        const barangayId = req.body.barangayId;
+        if (!barangayId) {
+            res.status(400).json({ message: "Bad Request" });
+            return;
+        }
+        try {
+            const workbook = new exceljs_1.default.Workbook();
+            workbook.created = new Date();
+            let skip = 0;
+            let haveMore = true;
+            const readyToInsert = [];
+            // Fetch barangay details
+            const barangay = yield prisma_1.prisma.barangays.findUnique({
+                where: { id: barangayId },
+            });
+            if (!barangay) {
+                res.status(404).json({ message: "Barangay not found" });
+                return;
+            }
+            const worksheet = workbook.addWorksheet(barangay.name, {
+                pageSetup: {
+                    paperSize: 9,
+                    orientation: "landscape",
+                    fitToPage: false,
+                    showGridLines: true,
+                    margins: {
+                        left: 0.6,
+                        right: 0.6,
+                        top: 0.5, // Top margin in inches
+                        bottom: 0.5, // Bottom margin in inches
+                        header: 0.3, // Header margin in inches
+                        footer: 0.3, // Footer margin in inches
+                    }
+                },
+                headerFooter: {
+                    firstHeader: ``,
+                    firstFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+                    oddHeader: `&L&B${barangay.name} Voter's List`,
+                    oddFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+                },
+            });
+            worksheet.columns = [
+                { header: "No.", key: "no", width: 4 },
+                { header: "ID", key: "id", width: 6 },
+                { header: "Team Leader", key: "tl", width: 40 },
+                { header: "Purok", key: "purok", width: 12 },
+                { header: "OR", key: "or" },
+                { header: "DEAD", key: "dead" },
+                { header: "INC", key: "inc" },
+                { header: "JML", key: "jml" },
+                { header: "RT", key: "rt" },
+                { header: "FH", key: "fh" },
+            ];
+            worksheet.getRow(1).eachCell((cell) => {
+                cell.font = { bold: true };
+                cell.alignment = { horizontal: "center", vertical: "middle" };
+                cell.border = {
+                    top: { style: "thin" },
+                    left: { style: "thin" },
+                    bottom: { style: "thin" },
+                    right: { style: "thin" },
+                };
+            });
+            while (haveMore) {
+                const teams = yield prisma_1.prisma.team.findMany({
+                    include: {
+                        TeamLeader: {
+                            include: {
+                                voter: true
+                            }
+                        }, voters: {
+                            where: {
+                                UntrackedVoter: {
+                                    some: {}
+                                }
+                            }
+                        }
+                    },
+                    take: 10,
+                    skip: skip !== null && skip !== void 0 ? skip : 0
+                });
+                const voters = yield prisma_1.prisma.voters.findMany({
+                    where: {
+                        OR: [
+                            { oor: "NO" },
+                            { inc: "NO" },
+                            { status: 1 },
+                        ],
+                        barangaysId: barangay.id,
+                        candidatesId: null,
+                        teamId: null,
+                        DelistedVoter: {
+                            none: {}
+                        },
+                        WhiteList: {
+                            none: {}
+                        },
+                    },
+                    include: {
+                        purok: {
+                            select: {
+                                purokNumber: true,
+                            },
+                        },
+                    },
+                    skip,
+                    take: 50,
+                    orderBy: { lastname: "asc" },
+                });
+                if (voters.length === 0) {
+                    haveMore = false;
+                    break;
+                }
+                voters.forEach((voter) => {
+                    var _a, _b, _c;
+                    const matchIndex = readyToInsert.findIndex((item) => { var _a; return item.purok === ((_a = voter.purok) === null || _a === void 0 ? void 0 : _a.purokNumber); });
+                    if (matchIndex !== -1) {
+                        readyToInsert[matchIndex].list.push({
+                            id: voter.idNumber,
+                            fullname: `${voter.lastname}, ${voter.firstname}`,
+                            purok: (_a = voter.purok) === null || _a === void 0 ? void 0 : _a.purokNumber
+                        });
+                    }
+                    else {
+                        readyToInsert.push({
+                            purok: (_b = voter.purok) === null || _b === void 0 ? void 0 : _b.purokNumber,
+                            list: [{
+                                    id: voter.idNumber,
+                                    fullname: `${voter.lastname}, ${voter.firstname}`,
+                                    purok: (_c = voter.purok) === null || _c === void 0 ? void 0 : _c.purokNumber
+                                }]
+                        });
+                    }
+                });
+                skip += 50;
+            }
+            const flattenedList = readyToInsert.flatMap(entry => entry.list).map((item, i) => {
+                return {
+                    no: i + 1,
+                    id: item.id,
+                    fullname: item.fullname,
+                    purok: item.purok,
+                    or: "",
+                    dead: "",
+                    inc: "",
+                    jml: "",
+                    rt: "",
+                    fh: "",
                 };
             });
             worksheet.addRows(flattenedList);

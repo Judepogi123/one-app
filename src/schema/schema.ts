@@ -391,7 +391,7 @@ type ValdiatedTeams {
     getRankOption(optionId: String!): String!
     getAllPurokCoor: [PurokCoor!]
     getAllTeamLeader(skip: Int, zipCode: Int): [TeamLeader!]
-    getVotersList(level: String!, take: Int, skip: Int, zipCode: String, barangayId: String,purokId: String, query: String, pwd: String, illi: String,inc: String,oor: String,dead: String,youth: String,senior: String,gender: String): VotersList
+    getVotersList(level: String!, take: Int, skip: Int, zipCode: String, barangayId: String,purokId: String, query: String, pwd: String, illi: String,inc: String,oor: String,dead: String,youth: String,senior: String,gender: String, withoutTeam: String, mode: String): VotersList
     getPurokList(id: String!): [Purok!]
     teamList(zipCode: String!, barangayId: String!, purokId: String!, level: String!,query: String!, skip: Int!, candidate: String, withIssues: Boolean): [Team!]
     candidates(zipCode: String): [Candidates!]
@@ -403,7 +403,7 @@ type ValdiatedTeams {
     option(id: String!):Option!
     teamRecord(query: String!, barangay: String!, municipal: String!, skip: Int!): [ValidatedTeams!]
     getTeamRecord(id: String!): ValidatedTeams
-    userList: [Users!]
+    userList(zipCode: Int): [Users!]
     user(id: String): Users!
     userQRCodeList: [UserQRCode!]
     duplicateteamMembers(skip: Int, zipCode: Int): [DuplicateteamMembers!]
