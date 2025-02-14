@@ -261,7 +261,7 @@ export type Resolvers = {
     team: ResolverFn<{}, { id: string }, {}, Team | null>;
     validationList: ResolverFn<{}, { id: string }, {}, Validation[]>;
     getAllTL: ResolverFn<{}, {}, {}, TeamLeader[]>;
-    teams: ResolverFn<{}, { skip: number }, {}, Team[]>;
+    teams: ResolverFn<{}, { skip: number, zipCode: number}, {}, Team[]>;
     teamRecord: ResolverFn<
       {},
       { query: string; barangay: string; municipal: string; skip: number },
@@ -948,6 +948,10 @@ export type Resolvers = {
     memberExclude: ResolverFn<{},{membersId: string[]},{}, string>;
     swapVoters: ResolverFn<{},{levelToSwap: number, levelToBeSwapped: number, voterOneId: string, voterTwoId: string},{}, string>
     markUntracked: ResolverFn<{},{ memberId: string[]},{}, string>
+    transferVotersArea: ResolverFn<{},{memberId: string[], zipCode: number, barangay: string},{}, string>
+    resetPassword: ResolverFn<{},{id: string, newPassword: string},{}, string>
+    updateCandidate: ResolverFn<{},{id: string},{},string>
+    tranCandidate: ResolverFn<{},{},{}, string>
   };
   Voter: {
     votersCount: ResolverFn<{}, {}, {}, number>;
@@ -1017,7 +1021,7 @@ export type Resolvers = {
     >;
     teamStat: ResolverFn<
       Barangays,
-      {},
+      {candidateId: string},
       {},
       {
         aboveMax: number;

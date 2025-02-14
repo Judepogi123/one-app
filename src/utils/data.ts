@@ -48,3 +48,5 @@ export const handleLevel = (value: number) => {
       return value === "1"
     }
   }
+
+  export const removeAllSpaces = (str: string) => str.replace(/\s+/g, '');

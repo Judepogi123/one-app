@@ -186,7 +186,7 @@ type ValdilatedMember {
     options(queryId: String!): [Option!]
     validationList:[Validation!]
     supporters(id: String): AllSupporters!
-    teamStat: AllTeamStatus!
+    teamStat(candidateId: String): AllTeamStatus!
     leaders(skip:Int, candidateId: String): [TeamLeader!]
     barangayDelistedVoter: Int
     teams(level: Int): [Team!]
@@ -401,7 +401,7 @@ type ValdiatedTeams {
     candidate(id: String!):Candidates
     team(id: String!): Team
     getAllTL: [TeamLeader!]
-    teams(skip: Int):[Team!]
+    teams(skip: Int, zipCode: Int):[Team!]
     validationList(id: ID!):[Validation!]
     option(id: String!):Option!
     teamRecord(query: String!, barangay: String!, municipal: String!, skip: Int!): [ValidatedTeams!]
@@ -609,6 +609,10 @@ type BarangayCoor {
     memberExclude(membersId: [String!]): String!
     swapVoters(levelToSwap: Int, levelToBeSwapped: Int, voterOneId: String, voterTwoId: String): String!
     markUntracked(memberId: [String!]): String!
+    transferVotersArea(memberId: [String!], zipCode: Int, barangay: String): String!
+    resetPassword(id: String, newPassword: String): String!
+    updateCandidate(id: String ): String!
+    tranCandidate: String!
   }
 
   type VoterRecords {

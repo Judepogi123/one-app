@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.handleDataType = exports.handleLevel = exports.handleGender = exports.handleSpecialChar = exports.handleGenTagID = void 0;
+exports.removeAllSpaces = exports.handleDataType = exports.handleLevel = exports.handleGender = exports.handleSpecialChar = exports.handleGenTagID = void 0;
 const handleGenTagID = (min = 100000, max = 999999) => {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 };
@@ -51,3 +51,5 @@ const handleDataType = (type, value) => {
     }
 };
 exports.handleDataType = handleDataType;
+const removeAllSpaces = (str) => str.replace(/\s+/g, '');
+exports.removeAllSpaces = removeAllSpaces;
