@@ -128,7 +128,7 @@ type ValdilatedMember {
     validated: ValidatedTeamMembers
     record: [VoterRecords!]
     ValdilatedMember: ValdilatedMember
-    untracked: UntrackedVoter
+    UntrackedVoter: UntrackedVoter
     duplicated: [DuplicateteamMembers!]
   }
 

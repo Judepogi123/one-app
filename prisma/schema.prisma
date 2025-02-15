@@ -14,44 +14,44 @@ model AdminUser {
   phoneNumber String
   password    String
   address     String
-  platform    String?      @default("portal")
   accessLevel String?      @default("regular")
-  expire      String?      @default("none")
   areaAccess  Int[]
+  expire      String?      @default("none")
+  platform    String?      @default("portal")
   DeviceLogs  DeviceLogs[]
   Survey      Survey[]
 }
 
 model Users {
   uid                  String                 @id @default(uuid())
-  username             String
   password             String
-  role                 Int                    @default(2)
-  purpose              Int                    @default(1234)
-  status               Int                    @default(1)
-  timstamp             DateTime               @default(now())
   privilege            Int[]                  @default([1, 2, 3, 4, 5, 6, 7, 8, 9])
-  forMunicipal         Int?
-  activityLogs         UserActivityLogs[]
-  validatedTeam        ValidatedTeams[]
-  SurveyResponse       SurveyResponse[]
-  respondentResponse   RespondentResponse[]
-  DeviceLogs           DeviceLogs[]
-  qrCode               UserQRCode?            @relation(fields: [userQRCodeId], references: [id], onDelete: Cascade)
+  purpose              Int                    @default(1234)
+  role                 Int                    @default(2)
+  timstamp             DateTime               @default(now())
   userQRCodeId         String?                @unique
-  notificationsSent    Notification[]         @relation("SenderRelation")
-  notificationsTarget  Notification[]         @relation("TargetRelation")
-  TeamDistributions    TeamDistributions[]
-  TeamLeaderAttendance TeamLeaderAttendance[]
-  VoterRecords         VoterRecords[]
-  TeamRecords          TeamRecords[]
-  UntrackedVoter       UntrackedVoter[]
-  Appointments         Appointments[]
-  ValidationTimeInput  ValidationTimeInput[]
-  ValidationNotes      ValidationNotes[]
+  username             String
+  status               Int                    @default(1)
+  forMunicipal         Int?
   AccountHandleTeam    AccountHandleTeam[]
   AccountValidateTean  AccountValidateTeam[]
+  Appointments         Appointments[]
+  DeviceLogs           DeviceLogs[]
+  notificationsSent    Notification[]         @relation("SenderRelation")
+  notificationsTarget  Notification[]         @relation("TargetRelation")
+  respondentResponse   RespondentResponse[]
+  SurveyResponse       SurveyResponse[]
+  TeamDistributions    TeamDistributions[]
+  TeamLeaderAttendance TeamLeaderAttendance[]
+  TeamRecords          TeamRecords[]
+  UntrackedVoter       UntrackedVoter[]
+  activityLogs         UserActivityLogs[]
   UserResport          UserReport[]
+  qrCode               UserQRCode?            @relation(fields: [userQRCodeId], references: [id], onDelete: Cascade)
+  validatedTeam        ValidatedTeams[]
+  ValidationNotes      ValidationNotes[]
+  ValidationTimeInput  ValidationTimeInput[]
+  VoterRecords         VoterRecords[]
 }
 
 model UserQRCode {
@@ -63,23 +63,23 @@ model UserQRCode {
 model Notification {
   uid       String   @id @default(uuid())
   fromUid   String
-  from      Users    @relation("SenderRelation", fields: [fromUid], references: [uid], onDelete: Cascade)
   targetUid String
-  target    Users    @relation("TargetRelation", fields: [targetUid], references: [uid])
   viewed    Boolean  @default(false)
   path      String?
   title     String
   message   String
   timestamp DateTime @default(now())
+  from      Users    @relation("SenderRelation", fields: [fromUid], references: [uid], onDelete: Cascade)
+  target    Users    @relation("TargetRelation", fields: [targetUid], references: [uid])
 }
 
 model UserActivityLogs {
   id        String   @id @default(uuid())
   activity  String?  @default("None")
-  method    Int
   timestamp DateTime @default(now())
-  Users     Users?   @relation(fields: [usersUid], references: [uid], onDelete: Cascade)
   usersUid  String?
+  method    Int
+  Users     Users?   @relation(fields: [usersUid], references: [uid], onDelete: Cascade)
 }
 
 model Position {
@@ -91,42 +91,42 @@ model Position {
 model Validation {
   id           String     @id @default(uuid())
   timestamp    DateTime   @default(now())
-  municiapal   Municipals @relation(fields: [municipalsId], references: [id])
   percent      Float
   totalVoters  Int
   municipalsId Int
-  barangay     Barangays  @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
   barangaysId  String
+  barangay     Barangays  @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
+  municiapal   Municipals @relation(fields: [municipalsId], references: [id])
 }
 
 model Candidates {
   id               String          @id @default(uuid())
   lastname         String
   firstname        String
-  position         Position?       @relation(fields: [positionId], references: [id])
+  candidateBatchId String?
   code             String?
-  colorCode        String?         @default("#ffffff")
   desc             String?
-  image            MediaUrl?       @relation(fields: [mediaUrlId], references: [id])
-  supporters       Voters[]
-  BarangayCoor     BarangayCoor[]
-  PurokCoor        PurokCoor[]
-  TeamLeader       TeamLeader[]
   mediaUrlId       String?
   positionId       String?
-  Team             Team[]
-  CandidateBatch   CandidateBatch? @relation(fields: [candidateBatchId], references: [id], onDelete: Cascade)
-  candidateBatchId String?
-  municipal        Municipals?     @relation(fields: [municipalsId], references: [id])
+  colorCode        String?         @default("#ffffff")
   municipalsId     Int?
+  BarangayCoor     BarangayCoor[]
+  CandidateBatch   CandidateBatch? @relation(fields: [candidateBatchId], references: [id], onDelete: Cascade)
+  image            MediaUrl?       @relation(fields: [mediaUrlId], references: [id])
+  municipal        Municipals?     @relation(fields: [municipalsId], references: [id])
+  position         Position?       @relation(fields: [positionId], references: [id])
+  PurokCoor        PurokCoor[]
+  Team             Team[]
+  TeamLeader       TeamLeader[]
+  supporters       Voters[]
 }
 
 model CandidateBatch {
   id         String       @id @default(uuid())
   timestamp  DateTime     @default(now())
+  waveId     Int?
   year       Int?
   waveID     Wave?        @relation(fields: [waveId], references: [id], onDelete: Cascade)
-  waveId     Int?
   candidates Candidates[]
 }
 
@@ -137,201 +137,201 @@ model Wave {
 }
 
 model Voters {
-  id                     String                   @id @default(uuid())
-  idNumber               String?                  @default("none")
   lastname               String
   firstname              String
-  gender                 String?                  @default("Unknown")
-  barangay               Barangays                @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
-  municipal              Municipals               @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
-  precent                Precents?                @relation(fields: [precintsId], references: [id], onDelete: Cascade)
   status                 Int                      @default(1)
-  calcAge                Int
-  birthYear              String
   level                  Int                      @default(0)
   barangaysId            String
   municipalsId           Int
-  precintsId             String?
-  batchDraft             NewBatchDraft?           @relation(fields: [newBatchDraftId], references: [id], onDelete: Cascade)
-  saveStatus             String                   @default("drafted")
-  mobileNumber           String?                  @default("Unknown")
-  houseHold              HouseHold?               @relation(fields: [houseHoldId], references: [id])
   houseHoldId            String?
+  mobileNumber           String?                  @default("Unknown")
   newBatchDraftId        String?
-  purok                  Purok?                   @relation(fields: [purokId], references: [id], onDelete: Cascade)
+  precintsId             String?
   purokId                String?
-  hubID                  Hub?                     @relation(fields: [hubId], references: [id])
-  BarangayCoor           BarangayCoor[]
-  PurokCoor              PurokCoor[]
-  pwd                    String?
-  oor                    String?
-  inc                    String?
+  saveStatus             String                   @default("drafted")
+  calcAge                Int
+  id                     String                   @id @default(uuid())
+  birthYear              String
   illi                   String?
+  inc                    String?
+  oor                    String?
+  pwd                    String?
   inPurok                Boolean?
-  senior                 Boolean?
-  youth                  Boolean?
   hubId                  String?
   qrCode                 String?                  @default("None")
-  Candidates             Candidates?              @relation(fields: [candidatesId], references: [id])
   candidatesId           String?
-  WhiteList              BlackList[]
-  QRcode                 QRcode[]
-  qrCodeNumber           Int?                     @default(0)
-  Team                   Team?                    @relation(fields: [teamId], references: [id])
+  senior                 Boolean?
+  youth                  Boolean?
+  gender                 String?                  @default("Unknown")
   teamId                 String?
-  TeamLeader             TeamLeader[]
-  ValidatedTeamMembers   ValidatedTeamMembers[]
-  VoterRecords           VoterRecords[]
+  qrCodeNumber           Int?                     @default(0)
+  idNumber               String?                  @default("none")
   witnessId              String?
-  Witness                Witness?
+  timestamp              DateTime                 @default(now())
+  Appointments           Appointments[]
+  BarangayCoor           BarangayCoor[]
+  WhiteList              BlackList[]
   DelistedVoter          DelistedVoter[]
   DelistedVoterValidated DelistedVoterValidated[]
-  UntrackedVoter         UntrackedVoter[]
-  Appointments           Appointments[]
   DuplicateteamMebers    DuplicateteamMembers[]
-  VotersToUpdate         ValidationResult[]
-  timestamp              DateTime                 @default(now())
-  ValdilatedMembers      ValdilatedMembers[]
+  PurokCoor              PurokCoor[]
+  QRcode                 QRcode[]
   TeamJoinDate           TeamJoinDate[]
+  TeamLeader             TeamLeader[]
   TeamMembersTransac     TeamMembersTransac[]
+  UntrackedVoter         UntrackedVoter[]
+  ValdilatedMembers      ValdilatedMembers[]
+  ValidatedTeamMembers   ValidatedTeamMembers[]
+  VotersToUpdate         ValidationResult[]
+  VoterRecords           VoterRecords[]
+  barangay               Barangays                @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
+  Candidates             Candidates?              @relation(fields: [candidatesId], references: [id])
+  houseHold              HouseHold?               @relation(fields: [houseHoldId], references: [id])
+  hubID                  Hub?                     @relation(fields: [hubId], references: [id])
+  municipal              Municipals               @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
+  batchDraft             NewBatchDraft?           @relation(fields: [newBatchDraftId], references: [id], onDelete: Cascade)
+  precent                Precents?                @relation(fields: [precintsId], references: [id], onDelete: Cascade)
+  purok                  Purok?                   @relation(fields: [purokId], references: [id], onDelete: Cascade)
+  Team                   Team?                    @relation(fields: [teamId], references: [id])
+  Witness                Witness?
 }
 
 model Purok {
   id                   String                 @id @default(cuid())
   purokNumber          String
   barangaysId          String
-  barangay             Barangays              @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
   municipalsId         Int
-  municipal            Municipals             @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
-  houseHolds           HouseHold[]
-  voters               Voters[]
   draftID              String
-  TeamLeaderBridge     Team[]
+  Appointments         Appointments[]
+  houseHolds           HouseHold[]
+  barangay             Barangays              @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
+  municipal            Municipals             @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
   PurokCoor            PurokCoor[]
+  TeamLeaderBridge     Team[]
   TeamLeader           TeamLeader[]
   ValidatedTeamMembers ValidatedTeamMembers[]
   ValidatedTeams       ValidatedTeams[]
-  Appointments         Appointments[]
+  voters               Voters[]
 }
 
 model Municipals {
   id                   Int                    @id
   name                 String
-  barangays            Barangays[]
-  voters               Voters[]
-  Precents             Precents[]
-  NewBatchDraft        NewBatchDraft[]
-  Purok                Purok[]
-  HouseHold            HouseHold[]
-  Hub                  Hub[]
-  PurokCoor            PurokCoor[]
-  BarangayCoor         BarangayCoor[]
-  SurveyResponse       SurveyResponse[]
-  Response             Response[]
-  RespondentResponse   RespondentResponse[]
-  TeamLeader           TeamLeader[]
-  WhiteList            BlackList[]
-  TeamLeaderBridge     Team[]
-  Validated            Validation[]
-  ValidatedTeams       ValidatedTeams[]
-  ValidatedTeamMembers ValidatedTeamMembers[]
-  TeamRecordsLogs      TeamRecordsLogs[]
-  DelistedVoter        DelistedVoter[]
-  Appointments         Appointments[]
-  ValidationTimeInput  ValidationTimeInput[]
-  UntrackedVoter       UntrackedVoter[]
-  DuplicateteamMembers DuplicateteamMembers[]
   AccountHandleTeam    AccountHandleTeam[]
   AccountValidateTean  AccountValidateTeam[]
-  ValidationResult     ValidationResult[]
+  Appointments         Appointments[]
+  BarangayCoor         BarangayCoor[]
+  barangays            Barangays[]
+  WhiteList            BlackList[]
   Candidates           Candidates[]
+  DelistedVoter        DelistedVoter[]
+  DuplicateteamMembers DuplicateteamMembers[]
+  HouseHold            HouseHold[]
+  Hub                  Hub[]
+  NewBatchDraft        NewBatchDraft[]
+  Precents             Precents[]
+  Purok                Purok[]
+  PurokCoor            PurokCoor[]
+  RespondentResponse   RespondentResponse[]
+  Response             Response[]
+  SurveyResponse       SurveyResponse[]
+  TeamLeaderBridge     Team[]
+  TeamLeader           TeamLeader[]
+  TeamRecordsLogs      TeamRecordsLogs[]
+  UntrackedVoter       UntrackedVoter[]
+  ValidatedTeamMembers ValidatedTeamMembers[]
+  ValidatedTeams       ValidatedTeams[]
+  Validated            Validation[]
+  ValidationResult     ValidationResult[]
+  ValidationTimeInput  ValidationTimeInput[]
+  voters               Voters[]
 }
 
 model Barangays {
   id                   String                 @id @default(uuid())
-  number               Int                    @default(autoincrement())
   name                 String
-  municipal            Municipals             @relation(fields: [municipalId], references: [id], onDelete: Cascade)
   municipalId          Int
-  voters               Voters[]
-  precents             Precents[]
-  NewBatchDraft        NewBatchDraft[]
-  Purok                Purok[]
-  HouseHold            HouseHold[]
-  Hub                  Hub[]
-  PurokCoor            PurokCoor[]
-  BarangayCoor         BarangayCoor[]
-  Response             Response[]
-  SurveyResponse       SurveyResponse[]
   population           Int?                   @default(0)
-  sampleSize           Int?                   @default(0)
   sampleRate           Int?                   @default(10)
+  sampleSize           Int?                   @default(0)
   surveyor             Int?                   @default(0)
+  activeSurveyor       Int?                   @default(0)
   femaleSize           Int?                   @default(0)
   maleSize             Int?                   @default(0)
-  activeSurveyor       Int?                   @default(0)
-  RespondentResponse   RespondentResponse[]
-  Quota                Quota[]
-  TeamLeader           TeamLeader[]
-  WhiteList            BlackList[]
-  TeamLeaderBridge     Team[]
-  Validated            Validation[]
-  ValidatedTeams       ValidatedTeams[]
-  ValidatedTeamMembers ValidatedTeamMembers[]
-  TeamRecordsLogs      TeamRecordsLogs[]
-  DelistedVoter        DelistedVoter[]
-  Appointments         Appointments[]
-  ValidationTimeInput  ValidationTimeInput[]
-  UntrackedVoter       UntrackedVoter[]
-  DuplicateteamMembers DuplicateteamMembers[]
+  number               Int                    @default(autoincrement())
   AccountHandleTeam    AccountHandleTeam[]
   AccountValidateTean  AccountValidateTeam[]
+  Appointments         Appointments[]
+  BarangayCoor         BarangayCoor[]
+  municipal            Municipals             @relation(fields: [municipalId], references: [id], onDelete: Cascade)
+  WhiteList            BlackList[]
+  DelistedVoter        DelistedVoter[]
+  DuplicateteamMembers DuplicateteamMembers[]
+  HouseHold            HouseHold[]
+  Hub                  Hub[]
+  NewBatchDraft        NewBatchDraft[]
+  precents             Precents[]
+  Purok                Purok[]
+  PurokCoor            PurokCoor[]
+  Quota                Quota[]
+  RespondentResponse   RespondentResponse[]
+  Response             Response[]
+  SurveyResponse       SurveyResponse[]
+  TeamLeaderBridge     Team[]
+  TeamLeader           TeamLeader[]
+  TeamRecordsLogs      TeamRecordsLogs[]
+  UntrackedVoter       UntrackedVoter[]
+  ValidatedTeamMembers ValidatedTeamMembers[]
+  ValidatedTeams       ValidatedTeams[]
+  Validated            Validation[]
   ValidationResult     ValidationResult[]
+  ValidationTimeInput  ValidationTimeInput[]
+  voters               Voters[]
 }
 
 model HouseHold {
   id              String     @id
   houseHoldNumber String
-  barangayId      Barangays  @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
   barangaysId     String
-  municipalId     Municipals @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
   municipalsId    Int
-  Voters          Voters[]
-  purokID         Purok?     @relation(fields: [purokId], references: [id], onDelete: Cascade)
   purokId         String?
+  barangayId      Barangays  @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
+  municipalId     Municipals @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
+  purokID         Purok?     @relation(fields: [purokId], references: [id], onDelete: Cascade)
+  Voters          Voters[]
 }
 
 model Hub {
   id           String     @id @default(cuid())
+  barangaysId  String
+  municipalsId Int
+  teamLeaderId String
   info         String
   barangayID   Barangays  @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
-  barangaysId  String
   municipalId  Municipals @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
-  municipalsId Int
   teamLeader   TeamLeader @relation(fields: [teamLeaderId], references: [id])
-  teamLeaderId String
-  Voters       Voters[]
   Team         Team[]
+  Voters       Voters[]
 }
 
 model Precents {
   id            String     @id
+  barangayId    String
+  municipalsId  Int
   precintNumber String
   barangay      Barangays  @relation(fields: [barangayId], references: [id], onDelete: Cascade)
-  barangayId    String
   municipal     Municipals @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
   Voters        Voters[]
-  municipalsId  Int
 }
 
 model NewBatchDraft {
   id          String      @id @default(uuid())
-  Municipals  Municipals? @relation(fields: [municipalId], references: [id], onDelete: Cascade)
   municipalId Int?
-  barangay    Barangays   @relation(fields: [barangayId], references: [id], onDelete: Cascade)
   barangayId  String
   timestamp   DateTime    @default(now())
   drafted     Boolean?    @default(true)
+  barangay    Barangays   @relation(fields: [barangayId], references: [id], onDelete: Cascade)
+  Municipals  Municipals? @relation(fields: [municipalId], references: [id], onDelete: Cascade)
   Voters      Voters[]
 }
 
@@ -346,84 +346,82 @@ model CutstomList {
 
 model Team {
   id                   String                 @id @default(uuid())
-  voters               Voters[]
-  purok                Purok?                 @relation(fields: [purokId], references: [id], onDelete: Cascade)
-  purokId              String?
-  barangay             Barangays              @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
-  barangaysId          String
-  municipal            Municipals             @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
-  municipalsId         Int
-  hub                  Hub?                   @relation(fields: [hubId], references: [id])
-  hubId                String?
-  level                Int                    @default(1)
-  TeamLeader           TeamLeader?            @relation(fields: [teamLeaderId], references: [id], onDelete: SetNull)
   teamLeaderId         String?
-  candidate            Candidates?            @relation(fields: [candidatesId], references: [id])
+  purokId              String?
+  barangaysId          String
+  municipalsId         Int
+  hubId                String?
   candidatesId         String?
-  TeamRecordsLogs      TeamRecordsLogs[]
-  TeamRecords          TeamRecords[]
-  TeamDistributions    TeamDistributions[]
+  level                Int                    @default(1)
+  timestamp            DateTime?              @default(now())
+  AccountHandleTeam    AccountHandleTeam[]
+  AccountValidateTean  AccountValidateTeam[]
   appointments         Appointments[]
-  UntrackedVoter       UntrackedVoter[]
-  ValidationTimeInput  ValidationTimeInput[]
   DuplicateteamMebers  DuplicateteamMembers[] @relation("TeamFoundIn")
   DuplicateteamMembers DuplicateteamMembers[]
-  AccountHandleTeam    AccountHandleTeam[]
-  timestamp            DateTime?              @default(now())
-  AccountValidateTean  AccountValidateTeam[]
-  VotersToUpdate       ValidationResult[]
-  ValdilatedMembers    ValdilatedMembers[]
+  barangay             Barangays              @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
+  candidate            Candidates?            @relation(fields: [candidatesId], references: [id])
+  hub                  Hub?                   @relation(fields: [hubId], references: [id])
+  municipal            Municipals             @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
+  purok                Purok?                 @relation(fields: [purokId], references: [id], onDelete: Cascade)
+  TeamLeader           TeamLeader?            @relation(fields: [teamLeaderId], references: [id])
+  TeamDistributions    TeamDistributions[]
   TeamJoinDate         TeamJoinDate[]
+  TeamRecords          TeamRecords[]
+  TeamRecordsLogs      TeamRecordsLogs[]
   TeamUpdateAchive     TeamUpdateArchive[]
+  UntrackedVoter       UntrackedVoter[]
+  ValdilatedMembers    ValdilatedMembers[]
+  VotersToUpdate       ValidationResult[]
+  ValidationTimeInput  ValidationTimeInput[]
+  voters               Voters[]
 }
 
 model TeamJoinDate {
   id        String   @id @default(cuid())
-  voter     Voters?  @relation(fields: [votersId], references: [id])
-  team      Team?    @relation(fields: [teamId], references: [id])
   votersId  String?
   teamId    String?
   timestamp DateTime @default(now())
   method    Int?     @default(1)
+  team      Team?    @relation(fields: [teamId], references: [id])
+  voter     Voters?  @relation(fields: [votersId], references: [id])
 }
 
 model TeamLeader {
   id                   String                 @id @default(cuid())
-  voter                Voters?                @relation(fields: [votersId], references: [id])
   hubId                String
-  municipal            Municipals             @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
-  barangay             Barangays              @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
-  purokCoor            PurokCoor?             @relation(fields: [purokCoorId], references: [id])
   purokCoorId          String?
-  purok                Purok                  @relation(fields: [purokId], references: [id])
   voterId              String?
-  Hub                  Hub[]
-  municipalsId         Int
   barangaysId          String
-  team                 Team[]
-  teamId               String?                @default("None")
+  municipalsId         Int
   votersId             String?
-  purokId              String
   handle               Int?                   @default(0)
-  level                Int                    @default(1)
-  candidate            Candidates?            @relation(fields: [candidatesId], references: [id])
+  purokId              String
   candidatesId         String?
-  ValidatedTeams       ValidatedTeams[]
-  ValidatedTeamMembers ValidatedTeamMembers[]
-  qrCode               TeamlLeaderQRcodes?    @relation(fields: [teamlLeaderQRcodesId], references: [id], onDelete: Cascade)
-  teamlLeaderQRcodesId String?                @unique
+  level                Int                    @default(1)
+  teamId               String?                @default("None")
   barangayCoorId       String?
+  purokCoorsId         String?
+  teamLeaderId         String?
+  teamlLeaderQRcodesId String?                @unique
+  Hub                  Hub[]
+  team                 Team[]
   barangayCoor         TeamLeader?            @relation("BarangayCoor", fields: [barangayCoorId], references: [id])
   barangayCoorFor      TeamLeader[]           @relation("BarangayCoor")
-
-  purokCoorsId String?
-  purokCoors   TeamLeader?  @relation("PurokCoors", fields: [purokCoorsId], references: [id])
-  purokCoorFor TeamLeader[] @relation("PurokCoors")
-
-  teamLeaderId         String?
+  barangay             Barangays              @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
+  candidate            Candidates?            @relation(fields: [candidatesId], references: [id])
+  municipal            Municipals             @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
+  purokCoor            PurokCoor?             @relation(fields: [purokCoorId], references: [id])
+  purokCoors           TeamLeader?            @relation("PurokCoors", fields: [purokCoorsId], references: [id])
+  purokCoorFor         TeamLeader[]           @relation("PurokCoors")
+  purok                Purok                  @relation(fields: [purokId], references: [id])
   teamLeader           TeamLeader?            @relation("TeamLeader", fields: [teamLeaderId], references: [id])
   teamLeaderFor        TeamLeader[]           @relation("TeamLeader")
+  qrCode               TeamlLeaderQRcodes?    @relation(fields: [teamlLeaderQRcodesId], references: [id], onDelete: Cascade)
+  voter                Voters?                @relation(fields: [votersId], references: [id])
   TeamLeaderAttendance TeamLeaderAttendance[]
+  ValidatedTeamMembers ValidatedTeamMembers[]
+  ValidatedTeams       ValidatedTeams[]
 }
 
 model TeamlLeaderQRcodes {
@@ -435,126 +433,126 @@ model TeamlLeaderQRcodes {
 model TeamLeaderAttendance {
   id           String     @id @default(uuid())
   for          Int        @default(1)
-  teamLeader   TeamLeader @relation(fields: [teamLeaderId], references: [id])
   teamLeaderId String
   date         DateTime
   status       String
-  user         Users?     @relation(fields: [usersUid], references: [uid])
   usersUid     String?
+  teamLeader   TeamLeader @relation(fields: [teamLeaderId], references: [id])
+  user         Users?     @relation(fields: [usersUid], references: [uid])
 }
 
 model ValidatedTeams {
   id                   String                 @id @default(uuid())
-  teamLeader           TeamLeader?            @relation(fields: [teamLeaderId], references: [id], onDelete: SetNull)
   teamLeaderId         String?
-  barangay             Barangays              @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
   barangaysId          String
-  municipal            Municipals             @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
   municipalsId         Int
-  purok                Purok?                 @relation(fields: [purokId], references: [id], onDelete: Cascade)
-  validatedTeamMembers ValidatedTeamMembers[]
-  timestamp            DateTime               @default(now())
   purokId              String?
+  timestamp            DateTime               @default(now())
   issues               Int?                   @default(0)
-  Users                Users?                 @relation(fields: [usersUid], references: [uid])
   usersUid             String?
+  validatedTeamMembers ValidatedTeamMembers[]
+  barangay             Barangays              @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
+  municipal            Municipals             @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
+  purok                Purok?                 @relation(fields: [purokId], references: [id], onDelete: Cascade)
+  teamLeader           TeamLeader?            @relation(fields: [teamLeaderId], references: [id])
+  Users                Users?                 @relation(fields: [usersUid], references: [uid])
 }
 
 model ValidatedTeamMembers {
   id               String          @id @default(uuid())
   idNumber         String
-  voter            Voters?         @relation(fields: [votersId], references: [id], onDelete: SetNull)
   votersId         String?
-  barangay         Barangays?      @relation(fields: [barangayId], references: [id], onDelete: Cascade)
   barangayId       String
-  municipal        Municipals?     @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
   municipalsId     Int?
-  purok            Purok?          @relation(fields: [purokId], references: [id])
   purokId          String
-  teamLeader       TeamLeader?     @relation(fields: [teamLeaderId], references: [id], onDelete: SetNull)
   teamLeaderId     String?
-  ValidatedTeams   ValidatedTeams? @relation(fields: [validatedTeamsId], references: [id], onDelete: Cascade)
   validatedTeamsId String?
   remark           String?         @default("OK")
+  barangay         Barangays       @relation(fields: [barangayId], references: [id], onDelete: Cascade)
+  municipal        Municipals?     @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
+  purok            Purok           @relation(fields: [purokId], references: [id])
+  teamLeader       TeamLeader?     @relation(fields: [teamLeaderId], references: [id])
+  ValidatedTeams   ValidatedTeams? @relation(fields: [validatedTeamsId], references: [id], onDelete: Cascade)
+  voter            Voters?         @relation(fields: [votersId], references: [id])
 }
 
 model PurokCoor {
   id             String        @id @default(cuid())
-  voter          Voters        @relation(fields: [votersId], references: [id], onDelete: Cascade)
-  municipalId    Municipals    @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
   municipalsId   Int
-  barangayId     Barangays     @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
-  purok          Purok         @relation(fields: [purokId], references: [id])
   barangaysId    String
-  TeamLeader     TeamLeader[]
-  barangayCoor   BarangayCoor? @relation(fields: [barangayCoorId], references: [id])
   barangayCoorId String?
   votersId       String
   handle         Int           @default(0)
   purokId        String
-  candidate      Candidates?   @relation(fields: [candidatesId], references: [id])
   candidatesId   String?
+  barangayCoor   BarangayCoor? @relation(fields: [barangayCoorId], references: [id])
+  barangayId     Barangays     @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
+  candidate      Candidates?   @relation(fields: [candidatesId], references: [id])
+  municipalId    Municipals    @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
+  purok          Purok         @relation(fields: [purokId], references: [id])
+  voter          Voters        @relation(fields: [votersId], references: [id], onDelete: Cascade)
+  TeamLeader     TeamLeader[]
 }
 
 model BlackList {
   id           String     @id @default(uuid())
-  voter        Voters     @relation(fields: [votersId], references: [id])
   timestamp    DateTime   @default(now())
-  municipal    Municipals @relation(fields: [municipalsId], references: [id])
   municipalsId Int
-  barangay     Barangays  @relation(fields: [barangaysId], references: [id])
   barangaysId  String
   votersId     String
+  barangay     Barangays  @relation(fields: [barangaysId], references: [id])
+  municipal    Municipals @relation(fields: [municipalsId], references: [id])
+  voter        Voters     @relation(fields: [votersId], references: [id])
 }
 
 model BarangayCoor {
   id           String      @id @default(cuid())
-  voter        Voters      @relation(fields: [votersId], references: [id], onDelete: Cascade)
-  purokCoor    PurokCoor[]
-  municipalID  Municipals  @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
   municipalsId Int
-  barangayID   Barangays   @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
   barangaysId  String
   votersId     String
-  candidate    Candidates? @relation(fields: [candidatesId], references: [id])
   candidatesId String?
+  barangayID   Barangays   @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
+  candidate    Candidates? @relation(fields: [candidatesId], references: [id])
+  municipalID  Municipals  @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
+  voter        Voters      @relation(fields: [votersId], references: [id], onDelete: Cascade)
+  purokCoor    PurokCoor[]
 }
 
 model QRcode {
   id              String   @id @default(uuid())
-  number          Int      @default(autoincrement())
-  voterNumber     String?
-  qrCode          String
   timestamp       DateTime @default(now())
-  voter           Voters   @relation(fields: [votersId], references: [id], onDelete: Cascade)
   votersId        String
   stamp           Int
+  number          Int      @default(autoincrement())
   scannedDateTime String?  @default("N/A")
+  qrCode          String
+  voterNumber     String?
+  voter           Voters   @relation(fields: [votersId], references: [id], onDelete: Cascade)
 }
 
 model SurveyorNumber {
   id                String              @id @default(uuid())
-  username          String
   password          String
   role              Int
+  username          String
   ValidatedResponse ValidatedResponse[]
 }
 
 model Survey {
   id                 String               @id @default(cuid())
   tagID              String
-  name               String               @default("Title_")
   timestamp          DateTime             @default(now())
   type               String
-  queries            Queries[]
   drafted            Boolean?             @default(true)
   status             String?              @default("Ongoing")
-  createdBy          AdminUser            @relation(fields: [adminUserUid], references: [uid], onDelete: Cascade)
-  images             MediaUrl[]
   adminUserUid       String
+  name               String               @default("Title_")
   DeviceLogs         DeviceLogs[]
-  Response           Response[]
+  images             MediaUrl[]
+  queries            Queries[]
   RespondentResponse RespondentResponse[]
+  Response           Response[]
+  createdBy          AdminUser            @relation(fields: [adminUserUid], references: [uid], onDelete: Cascade)
   SurveyResponse     SurveyResponse[]
   ValidatedResponse  ValidatedResponse[]
 }
@@ -574,93 +572,93 @@ model AgeBracket {
   id                 String               @id @default(cuid())
   segment            String
   order              Int                  @default(autoincrement())
-  Response           Response[]
-  RespondentResponse RespondentResponse[]
   Quota              Quota[]
+  RespondentResponse RespondentResponse[]
+  Response           Response[]
 }
 
 model Gender {
   id                 String               @id @default(cuid())
   name               String
-  Response           Response[]
-  RespondentResponse RespondentResponse[]
   GenderSize         GenderSize[]
   GenderTotal        GenderTotal[]
+  RespondentResponse RespondentResponse[]
+  Response           Response[]
 }
 
 model GenderTotal {
   id       String @id @default(cuid())
   total    Int?   @default(0)
-  gender   Gender @relation(fields: [genderId], references: [id], onDelete: Cascade)
   genderId String
+  gender   Gender @relation(fields: [genderId], references: [id], onDelete: Cascade)
 }
 
 model GenderSize {
   id       String  @id @default(cuid())
-  gender   Gender  @relation(fields: [genderId], references: [id], onDelete: Cascade)
   genderId String
   size     Int
-  Quota    Quota?  @relation(fields: [quotaId], references: [id], onDelete: Cascade)
   quotaId  String?
+  gender   Gender  @relation(fields: [genderId], references: [id], onDelete: Cascade)
+  Quota    Quota?  @relation(fields: [quotaId], references: [id], onDelete: Cascade)
 }
 
 model Quota {
   id             String       @id @default(uuid())
-  barangay       Barangays    @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
   barangaysId    String
+  ageBracketId   String
+  activeSurveyor Int?         @default(0)
   gendersSize    GenderSize[]
   age            AgeBracket   @relation(fields: [ageBracketId], references: [id], onDelete: Cascade)
-  activeSurveyor Int?         @default(0)
-  ageBracketId   String
+  barangay       Barangays    @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
 }
 
 model Queries {
   id               String         @id @default(uuid())
-  order            Int            @default(autoincrement())
   queries          String
-  survey           Survey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
   surveyId         String
   type             String?        @default("single")
   componentType    String?        @default("regular")
-  responseType     String?        @default("multiple")
-  style            Int?           @default(1)
-  selectionType    String?        @default("select")
-  access           String?        @default("regular")
-  withCustomOption Boolean?       @default(false)
-  Response         Response[]
-  Option           Option[]
-  customOption     CustomOption[]
-  QueryAnswer      QueryAnswer[]
+  order            Int            @default(autoincrement())
   onTop            Boolean?       @default(false)
+  access           String?        @default("regular")
+  responseType     String?        @default("multiple")
+  selectionType    String?        @default("select")
+  style            Int?           @default(1)
+  withCustomOption Boolean?       @default(false)
+  customOption     CustomOption[]
+  Option           Option[]
+  survey           Survey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  QueryAnswer      QueryAnswer[]
+  Response         Response[]
 }
 
 model CustomOption {
   id                   String              @id @default(cuid())
   value                String
-  Queries              Queries?            @relation(fields: [queriesId], references: [id])
   queriesId            String?
-  QueryAnswer          QueryAnswer[]
-  RespondentResponse   RespondentResponse? @relation(fields: [respondentResponseId], references: [id])
   respondentResponseId String?
+  Queries              Queries?            @relation(fields: [queriesId], references: [id])
+  RespondentResponse   RespondentResponse? @relation(fields: [respondentResponseId], references: [id])
+  QueryAnswer          QueryAnswer[]
   Response             Response[]
 }
 
 model Option {
   id           String        @id @default(cuid())
-  order        Int           @default(autoincrement())
   title        String?
   desc         String?
   mediaUrlId   String?
-  queries      Queries       @relation(fields: [queryId], references: [id], onDelete: Cascade)
   queryId      String
+  order        Int           @default(autoincrement())
   onExit       Boolean       @default(false)
   onTop        Boolean?      @default(false)
   inlcuded     Boolean?      @default(false)
   forAll       Boolean?      @default(false)
   customizable Boolean?      @default(false)
-  Response     Response[]
   MediaUrl     MediaUrl[]
+  queries      Queries       @relation(fields: [queryId], references: [id], onDelete: Cascade)
   QueryAnswer  QueryAnswer[]
+  Response     Response[]
 }
 
 model MediaUrl {
@@ -668,135 +666,135 @@ model MediaUrl {
   url                String
   filename           String?
   size               String
-  option             Option?              @relation(fields: [optionId], references: [id], onDelete: Cascade)
-  Survey             Survey?              @relation(fields: [surveyId], references: [id], onDelete: Cascade)
   surveyId           String?
   optionId           String?
   Candidates         Candidates[]
+  option             Option?              @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  Survey             Survey?              @relation(fields: [surveyId], references: [id], onDelete: Cascade)
   RespondentResponse RespondentResponse[]
 }
 
 model SurveyResponse {
   id                 String               @id
   timestamp          DateTime             @default(now())
-  municipal          Municipals           @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
-  municipalsId       Int
-  barangay           Barangays            @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
-  barangaysId        String
-  survey             Survey               @relation(fields: [surveyId], references: [id], onDelete: Cascade)
-  Users              Users?               @relation(fields: [usersUid], references: [uid], onDelete: Cascade)
   usersUid           String?
+  municipalsId       Int
+  barangaysId        String
   surveyId           String
   RespondentResponse RespondentResponse[]
   Response           Response[]
+  barangay           Barangays            @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
+  municipal          Municipals           @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
+  survey             Survey               @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  Users              Users?               @relation(fields: [usersUid], references: [uid], onDelete: Cascade)
 }
 
 model RespondentResponse {
   id                  String             @id
-  age                 AgeBracket         @relation(fields: [ageBracketId], references: [id], onDelete: Cascade)
   ageBracketId        String
-  gender              Gender             @relation(fields: [genderId], references: [id], onDelete: Cascade)
   genderId            String
-  municipal           Municipals         @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
   municipalsId        Int
-  barangay            Barangays          @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
   barangaysId         String
-  survey              Survey             @relation(fields: [surveyId], references: [id], onDelete: Cascade)
   surveyId            String
-  Response            Response[]
-  surveyResponse      SurveyResponse     @relation(fields: [surveyResponseId], references: [id], onDelete: Cascade)
   surveyResponseId    String
-  ValidatedResponse   ValidatedResponse? @relation(fields: [validatedResponseId], references: [id])
-  validatedResponseId String?
-  media               MediaUrl?          @relation(fields: [mediaUrlId], references: [id])
   mediaUrlId          String?
   valid               Boolean            @default(true)
+  validatedResponseId String?
   usersUid            String?
-  Users               Users?             @relation(fields: [usersUid], references: [uid])
   customeOption       CustomOption[]
+  age                 AgeBracket         @relation(fields: [ageBracketId], references: [id], onDelete: Cascade)
+  barangay            Barangays          @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
+  gender              Gender             @relation(fields: [genderId], references: [id], onDelete: Cascade)
+  media               MediaUrl?          @relation(fields: [mediaUrlId], references: [id])
+  municipal           Municipals         @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
+  survey              Survey             @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  surveyResponse      SurveyResponse     @relation(fields: [surveyResponseId], references: [id], onDelete: Cascade)
+  Users               Users?             @relation(fields: [usersUid], references: [uid])
+  ValidatedResponse   ValidatedResponse? @relation(fields: [validatedResponseId], references: [id])
+  Response            Response[]
 }
 
 model ValidatedResponse {
   id                 String               @id
-  survey             Survey?              @relation(fields: [surveyId], references: [id])
   surveyId           String
-  respondentResponse RespondentResponse[]
-  surveyor           SurveyorNumber?      @relation(fields: [surveyorNumberId], references: [id])
   surveyorNumberId   String
   timestamp          DateTime             @default(now())
+  respondentResponse RespondentResponse[]
+  survey             Survey               @relation(fields: [surveyId], references: [id])
+  surveyor           SurveyorNumber       @relation(fields: [surveyorNumberId], references: [id])
 }
 
 model Response {
   id                   String             @id
-  survey               Survey             @relation(fields: [surveyId], references: [id], onDelete: Cascade)
-  queries              Queries            @relation(fields: [queryId], references: [id], onDelete: Cascade)
   queryId              String
-  barangay             Barangays          @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
   barangaysId          String
-  municipal            Municipals         @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
-  option               Option?            @relation(fields: [optionId], references: [id], onDelete: Cascade)
   optionId             String?
-  ageBracket           AgeBracket         @relation(fields: [ageBracketId], references: [id], onDelete: Cascade)
   ageBracketId         String
-  gender               Gender             @relation(fields: [genderId], references: [id], onDelete: Cascade)
   genderId             String
   municipalsId         Int
   surveyId             String
-  surveyResponse       SurveyResponse     @relation(fields: [surveyResponseId], references: [id], onDelete: Cascade)
-  respondentResponse   RespondentResponse @relation(fields: [respondentResponseId], references: [id], onDelete: Cascade)
   respondentResponseId String
   surveyResponseId     String
-  QueryAnswer          QueryAnswer[]
-  customOption         CustomOption?      @relation(fields: [customOptionId], references: [id])
   customOptionId       String?
+  QueryAnswer          QueryAnswer[]
+  ageBracket           AgeBracket         @relation(fields: [ageBracketId], references: [id], onDelete: Cascade)
+  barangay             Barangays          @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
+  customOption         CustomOption?      @relation(fields: [customOptionId], references: [id])
+  gender               Gender             @relation(fields: [genderId], references: [id], onDelete: Cascade)
+  municipal            Municipals         @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
+  option               Option?            @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  queries              Queries            @relation(fields: [queryId], references: [id], onDelete: Cascade)
+  respondentResponse   RespondentResponse @relation(fields: [respondentResponseId], references: [id], onDelete: Cascade)
+  survey               Survey             @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  surveyResponse       SurveyResponse     @relation(fields: [surveyResponseId], references: [id], onDelete: Cascade)
 }
 
 model QueryAnswer {
   id             String        @id
-  query          Queries       @relation(fields: [queriesId], references: [id], onDelete: Cascade)
   queriesId      String
-  customOption   CustomOption? @relation(fields: [customOptionId], references: [id])
-  option         Option        @relation(fields: [optionId], references: [id], onDelete: Cascade)
   optionId       String
-  response       Response      @relation(fields: [responseId], references: [id], onDelete: Cascade)
   responseId     String
   customOptionId String?
+  customOption   CustomOption? @relation(fields: [customOptionId], references: [id])
+  option         Option        @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  query          Queries       @relation(fields: [queriesId], references: [id], onDelete: Cascade)
+  response       Response      @relation(fields: [responseId], references: [id], onDelete: Cascade)
 }
 
 model DeviceLogs {
   id           String    @id @default(cuid())
   release      String    @default("-/-")
   return       String    @default("-/-")
-  user         Users     @relation(fields: [usersUid], references: [uid], onDelete: Cascade)
   usersUid     String
   condition    String    @default("New")
-  handTo       AdminUser @relation(fields: [adminUserUid], references: [uid], onDelete: Cascade)
   adminUserUid String
-  survey       Survey    @relation(fields: [surveyId], references: [id], onDelete: Cascade)
   surveyId     String
+  handTo       AdminUser @relation(fields: [adminUserUid], references: [uid], onDelete: Cascade)
+  survey       Survey    @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  user         Users     @relation(fields: [usersUid], references: [uid], onDelete: Cascade)
 }
 
 model TeamRecordsLogs {
   id           String     @id @default(uuid())
   timstamp     DateTime   @default(now())
   value        Int?
-  method       Int        @default(1)
-  municipal    Municipals @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
   municipalsId Int
-  barnagay     Barangays  @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
   barangaysId  String
-  team         Team       @relation(fields: [teamId], references: [id])
   teamId       String
+  method       Int        @default(1)
+  barnagay     Barangays  @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
+  municipal    Municipals @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
+  team         Team       @relation(fields: [teamId], references: [id])
 }
 
 model TeamRecords {
   id        String    @id @default(uuid())
   activity  String
-  team      Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
   timestamp DateTime?
   teamId    String
-  user      Users?    @relation(fields: [usersUid], references: [uid])
   usersUid  String?
+  team      Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      Users?    @relation(fields: [usersUid], references: [uid])
 }
 
 model TeamDistributions {
@@ -804,85 +802,85 @@ model TeamDistributions {
   activity  String
   timestamp DateTime?
   status    Int?      @default(0)
-  team      Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId    String
-  operator  Users?    @relation(fields: [usersUid], references: [uid])
   usersUid  String?
+  team      Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  operator  Users?    @relation(fields: [usersUid], references: [uid])
   witness   Witness[]
 }
 
 model Witness {
   id                  String             @id
-  voter               Voters             @relation(fields: [votersId], references: [id], onDelete: Cascade)
   votersId            String             @unique
   timstamp            DateTime
-  TeamDistributions   TeamDistributions? @relation(fields: [teamDistributionsId], references: [id])
   teamDistributionsId String?
+  TeamDistributions   TeamDistributions? @relation(fields: [teamDistributionsId], references: [id])
+  voter               Voters             @relation(fields: [votersId], references: [id], onDelete: Cascade)
 }
 
 model VoterRecords {
   id           String   @id @default(uuid())
   desc         String
-  type         Int?     @default(0)
   questionable Boolean  @default(true)
   timestamp    DateTime @default(now())
-  voter        Voters?  @relation(fields: [votersId], references: [id], onDelete: Cascade)
   votersId     String?
-  user         Users?   @relation(fields: [usersUid], references: [uid])
   usersUid     String?
+  type         Int?     @default(0)
+  user         Users?   @relation(fields: [usersUid], references: [uid])
+  voter        Voters?  @relation(fields: [votersId], references: [id], onDelete: Cascade)
 }
 
 model DuplicateteamMembers {
   id           String     @id @default(uuid())
-  voter        Voters?    @relation(fields: [votersId], references: [id], onDelete: Cascade)
   votersId     String?
-  team         Team?      @relation(fields: [teamId], references: [id])
-  teamFounIn   Team?      @relation("TeamFoundIn", fields: [foundTeamId], references: [id])
   timstamp     DateTime   @default(now())
   teamId       String?
   foundTeamId  String?
-  barangay     Barangays  @relation(fields: [barangaysId], references: [id])
   barangaysId  String
-  municpal     Municipals @relation(fields: [municipalsId], references: [id])
   municipalsId Int
+  barangay     Barangays  @relation(fields: [barangaysId], references: [id])
+  teamFounIn   Team?      @relation("TeamFoundIn", fields: [foundTeamId], references: [id])
+  municpal     Municipals @relation(fields: [municipalsId], references: [id])
+  team         Team?      @relation(fields: [teamId], references: [id])
+  voter        Voters?    @relation(fields: [votersId], references: [id], onDelete: Cascade)
 }
 
 model DelistedVoter {
   id                       String                  @id @default(uuid())
-  voter                    Voters?                 @relation(fields: [votersId], references: [id], onDelete: Cascade)
   votersId                 String?
   timstamp                 DateTime                @default(now())
-  municipal                Municipals              @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
   municipalsId             Int
-  barangay                 Barangays               @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
   barangaysId              String
-  validated                DelistedVoterValidated? @relation(fields: [delistedVoterValidatedId], references: [id])
   delistedVoterValidatedId String?
+  barangay                 Barangays               @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
+  validated                DelistedVoterValidated? @relation(fields: [delistedVoterValidatedId], references: [id])
+  municipal                Municipals              @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
+  voter                    Voters?                 @relation(fields: [votersId], references: [id], onDelete: Cascade)
 }
 
 model DelistedVoterValidated {
   id            String          @id @default(uuid())
-  voter         Voters          @relation(fields: [votersId], references: [id], onDelete: Cascade)
   votersId      String
   timstamp      DateTime        @default(now())
   validated     Boolean         @default(false)
   DelistedVoter DelistedVoter[]
+  voter         Voters          @relation(fields: [votersId], references: [id], onDelete: Cascade)
 }
 
 model UntrackedVoter {
   id           String      @id @default(uuid())
   note         String?
-  voter        Voters?     @relation(fields: [votersId], references: [id])
   votersId     String?
-  team         Team?       @relation(fields: [teamId], references: [id])
-  timestamp    DateTime    @default(now())
   teamId       String?
-  user         Users?      @relation(fields: [usersUid], references: [uid])
   usersUid     String?
-  barangay     Barangays?  @relation(fields: [barangaysId], references: [id])
   barangaysId  String?
-  municpal     Municipals? @relation(fields: [municipalsId], references: [id])
   municipalsId Int?
+  timestamp    DateTime    @default(now())
+  barangay     Barangays?  @relation(fields: [barangaysId], references: [id])
+  municpal     Municipals? @relation(fields: [municipalsId], references: [id])
+  team         Team?       @relation(fields: [teamId], references: [id])
+  user         Users?      @relation(fields: [usersUid], references: [uid])
+  voter        Voters?     @relation(fields: [votersId], references: [id])
 }
 
 model Appointments {
@@ -890,19 +888,19 @@ model Appointments {
   appointment  String?
   activity     Int?       @default(0)
   timestamp    DateTime   @default(now())
-  voter        Voters?    @relation(fields: [votersId], references: [id])
-  team         Team?      @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId       String?
-  barangay     Barangays  @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
   barangaysId  String
-  municipal    Municipals @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
   municipalsId Int
-  purok        Purok?     @relation(fields: [purokId], references: [id])
-  user         Users?     @relation(fields: [usersUid], references: [uid], onDelete: Cascade)
   usersUid     String?
   purokId      String?
   data         String?
   votersId     String?
+  barangay     Barangays  @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
+  municipal    Municipals @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
+  purok        Purok?     @relation(fields: [purokId], references: [id])
+  team         Team?      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user         Users?     @relation(fields: [usersUid], references: [uid], onDelete: Cascade)
+  voter        Voters?    @relation(fields: [votersId], references: [id])
 }
 
 model ValidationTimeInput {
@@ -910,14 +908,14 @@ model ValidationTimeInput {
   minutes      Int?
   name         String?
   action       Int?
-  barangay     Barangays?  @relation(fields: [barangaysId], references: [id])
-  municipal    Municipals? @relation(fields: [municipalsId], references: [id])
-  team         Team?       @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user         Users?      @relation(fields: [usersUid], references: [uid], onDelete: Cascade)
   usersUid     String?
   teamId       String?
   barangaysId  String?
   municipalsId Int?
+  barangay     Barangays?  @relation(fields: [barangaysId], references: [id])
+  municipal    Municipals? @relation(fields: [municipalsId], references: [id])
+  team         Team?       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user         Users?      @relation(fields: [usersUid], references: [uid], onDelete: Cascade)
 }
 
 model ValidationNotes {
@@ -927,45 +925,45 @@ model ValidationNotes {
   title     String?
   desc      String?
   contact   String?
-  user      Users?   @relation(fields: [usersUid], references: [uid], onDelete: Cascade)
   usersUid  String?
+  user      Users?   @relation(fields: [usersUid], references: [uid], onDelete: Cascade)
 }
 
 model AccountHandleTeam {
   id                    String               @id @default(uuid())
-  account               Users?               @relation(fields: [usersUid], references: [uid])
   usersUid              String?
-  team                  Team?                @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId                String?
-  municipal             Municipals?          @relation(fields: [municipalsId], references: [id])
   municipalsId          Int?
-  barangay              Barangays?           @relation(fields: [barangaysId], references: [id])
   barangaysId           String?
-  validated             AccountValidateTeam? @relation(fields: [accountValidateTeamId], references: [id])
   accountValidateTeamId String?              @unique
+  validated             AccountValidateTeam? @relation(fields: [accountValidateTeamId], references: [id])
+  barangay              Barangays?           @relation(fields: [barangaysId], references: [id])
+  municipal             Municipals?          @relation(fields: [municipalsId], references: [id])
+  team                  Team?                @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  account               Users?               @relation(fields: [usersUid], references: [uid])
 }
 
 model AccountValidateTeam {
   id                String             @id @default(uuid())
-  account           Users?             @relation(fields: [usersUid], references: [uid])
   usersUid          String?
-  team              Team?              @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId            String?
-  municipal         Municipals?        @relation(fields: [municipalsId], references: [id])
   municipalsId      Int?
-  barangay          Barangays?         @relation(fields: [barangaysId], references: [id])
   barangaysId       String?
   timstamp          DateTime?          @default(now())
   AccountHandleTeam AccountHandleTeam?
+  barangay          Barangays?         @relation(fields: [barangaysId], references: [id])
+  municipal         Municipals?        @relation(fields: [municipalsId], references: [id])
+  team              Team?              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  account           Users?             @relation(fields: [usersUid], references: [uid])
 }
 
 model ValdilatedMembers {
   id        String   @id @default(uuid())
-  voterId   Voters?  @relation(fields: [votersId], references: [id])
   votersId  String?
-  team      Team?    @relation(fields: [teamId], references: [id])
   teamId    String?
   timestamp DateTime @default(now())
+  team      Team?    @relation(fields: [teamId], references: [id])
+  voterId   Voters?  @relation(fields: [votersId], references: [id])
 }
 
 model ValidationResult {
@@ -973,17 +971,17 @@ model ValidationResult {
   props        String?
   type         String?
   value        String?
-  voter        Voters?    @relation(fields: [votersId], references: [id])
   votersId     String?
   action       Int?
-  team         Team?      @relation(fields: [teamId], references: [id])
   count        Int?       @default(0)
   teamId       String?
-  barangay     Barangays  @relation(fields: [barangaysId], references: [id])
   barangaysId  String
-  municipal    Municipals @relation(fields: [municipalsId], references: [id])
   municipalsId Int
   timestamp    DateTime   @default(now())
+  barangay     Barangays  @relation(fields: [barangaysId], references: [id])
+  municipal    Municipals @relation(fields: [municipalsId], references: [id])
+  team         Team?      @relation(fields: [teamId], references: [id])
+  voter        Voters?    @relation(fields: [votersId], references: [id])
 }
 
 model UserReport {
@@ -991,37 +989,37 @@ model UserReport {
   section        String?
   subject        String?
   message        String?
-  user           Users?           @relation(fields: [usersUid], references: [uid], onDelete: Cascade)
   usersUid       String?
   timestamp      DateTime?        @default(now())
   ReportFeedback ReportFeedback[]
+  user           Users?           @relation(fields: [usersUid], references: [uid], onDelete: Cascade)
 }
 
 model ReportFeedback {
   id           String      @id @default(uuid())
-  report       UserReport? @relation(fields: [userReportId], references: [id], onDelete: Cascade)
   userReportId String?
   feedback     String?
   timestamp    DateTime?   @default(now())
+  report       UserReport? @relation(fields: [userReportId], references: [id], onDelete: Cascade)
 }
 
 model TeamUpdateArchive {
   id            String               @id @default(uuid())
   desc          String?
-  team          Team?                @relation(fields: [teamId], references: [id], onDelete: Cascade)
   level         Int
   result        Int
   method        Int
   timestamp     DateTime?            @default(now())
   teamId        String?
   transacMember TeamMembersTransac[]
+  team          Team?                @relation(fields: [teamId], references: [id], onDelete: Cascade)
 }
 
 model TeamMembersTransac {
   id                  String             @id @default(uuid())
-  voter               Voters             @relation(fields: [votersId], references: [id], onDelete: Cascade)
   votersId            String
   timestamp           DateTime?          @default(now())
-  TeamUpdateArchive   TeamUpdateArchive? @relation(fields: [teamUpdateArchiveId], references: [id])
   teamUpdateArchiveId String?
+  TeamUpdateArchive   TeamUpdateArchive? @relation(fields: [teamUpdateArchiveId], references: [id])
+  voter               Voters             @relation(fields: [votersId], references: [id], onDelete: Cascade)
 }

@@ -3807,70 +3807,70 @@ const resolvers: Resolvers = {
       //   }
       // }
 
-      // if (votersToUpdate.length > 0) {
-      //   // Fetch voters using votersId instead of item.id
-      //   const voters = await prisma.voters.findMany({
-      //     where: {
-      //       id: { in: votersToUpdate.map((item) => item.votersId) }
-      //     }
-      //   });
+      if (votersToUpdate.length > 0) {
+        // Fetch voters using votersId instead of item.id
+        const voters = await prisma.voters.findMany({
+          where: {
+            id: { in: votersToUpdate.map((item) => item.votersId) }
+          }
+        });
       
-      //   console.log({ votersToUpdate });
+        console.log({ votersToUpdate });
       
-      //   const votersMap = new Map(voters.map(voter => [voter.id, voter]));
+        const votersMap = new Map(voters.map(voter => [voter.id, voter]));
       
-      //   // Group updates by votersId
-      //   const groupedVotersToUpdate: Record<string, any> = {};
+        // Group updates by votersId
+        const groupedVotersToUpdate: Record<string, any> = {};
       
-      //   votersToUpdate.forEach((item) => {
-      //     if (!groupedVotersToUpdate[item.votersId]) {
-      //       groupedVotersToUpdate[item.votersId] = {
-      //         votersId: item.votersId,
-      //         props: []
-      //       };
-      //     }
-      //     groupedVotersToUpdate[item.votersId].props.push({
-      //       id: item.id,
-      //       props: item.props,
-      //       type: item.type,
-      //       value: item.value,
-      //       action: item.action,
-      //       teamId: item.teamId
-      //     });
-      //   });
+        votersToUpdate.forEach((item) => {
+          if (!groupedVotersToUpdate[item.votersId]) {
+            groupedVotersToUpdate[item.votersId] = {
+              votersId: item.votersId,
+              props: []
+            };
+          }
+          groupedVotersToUpdate[item.votersId].props.push({
+            id: item.id,
+            props: item.props,
+            type: item.type,
+            value: item.value,
+            action: item.action,
+            teamId: item.teamId
+          });
+        });
       
-      //   for (const item of Object.values(groupedVotersToUpdate)) {
-      //     const voter = votersMap.get(item.votersId);
-      //     if (!voter) continue; // Ensure voter exists
+        for (const item of Object.values(groupedVotersToUpdate)) {
+          const voter = votersMap.get(item.votersId);
+          if (!voter) continue; // Ensure voter exists
       
-      //     // Only keep properties that need updating
-      //     const propsToUpdate = item.props.filter((prop: { type: string; value: string; props: string | number; }) => {
-      //       const valueForUpdate = handleDataType(prop.type, prop.value);
-      //       const voterPropsTyped = voter as Record<string, any>;
+          // Only keep properties that need updating
+          const propsToUpdate = item.props.filter((prop: { type: string; value: string; props: string | number; }) => {
+            const valueForUpdate = handleDataType(prop.type, prop.value);
+            const voterPropsTyped = voter as Record<string, any>;
       
-      //       // Ensure both are strings for comparison safety
-      //       return String(voterPropsTyped[prop.props]) !== String(valueForUpdate);
-      //     });
+            // Ensure both are strings for comparison safety
+            return String(voterPropsTyped[prop.props]) !== String(valueForUpdate);
+          });
       
-      //     if (propsToUpdate.length > 0) {
-      //       const updateData: Record<string, any> = {};
-      //       propsToUpdate.forEach((prop: { props: string | number; type: string; value: string; }) => {
-      //         updateData[prop.props] = handleDataType(prop.type, prop.value);
-      //       });
+          if (propsToUpdate.length > 0) {
+            const updateData: Record<string, any> = {};
+            propsToUpdate.forEach((prop: { props: string | number; type: string; value: string; }) => {
+              updateData[prop.props] = handleDataType(prop.type, prop.value);
+            });
       
-      //       await prisma.voters.update({
-      //         where: { id: item.votersId },
-      //         data: updateData
-      //       });
-      //       console.log("----------->Voter update successfully");
+            await prisma.voters.update({
+              where: { id: item.votersId },
+              data: updateData
+            });
+            console.log("----------->Voter update successfully");
             
-      //     } else {
-      //       console.log(`No changes for voter ${item.votersId}`);
-      //     }
-      //   }
-      // } else {
-      //   console.log("No voters to update.");
-      // }
+          } else {
+            console.log(`No changes for voter ${item.votersId}`);
+          }
+        }
+      } else {
+        console.log("No voters to update.");
+      }
       
       
       
@@ -4648,11 +4648,15 @@ const resolvers: Resolvers = {
           votersId: parent.id,
         }
       })
-    },untracked: async(parent)=>{
+    },
+    UntrackedVoter: async(parent)=>{
+      if(!parent){
+        return null
+      }
       return await prisma.untrackedVoter.findFirst({
         where:{
           votersId: parent.id,
-        }
+        },
       })
     }
   },
@@ -4864,7 +4868,8 @@ const resolvers: Resolvers = {
         where:{
           voter:{
             barangaysId: parent.id,
-          }
+            
+          },
         }
       })
       const tls = await prisma.teamLeader.count({

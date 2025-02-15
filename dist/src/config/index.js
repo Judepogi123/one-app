@@ -3407,60 +3407,63 @@ const resolvers = {
             //     }
             //   }
             // }
-            // if (votersToUpdate.length > 0) {
-            //   // Fetch voters using votersId instead of item.id
-            //   const voters = await prisma.voters.findMany({
-            //     where: {
-            //       id: { in: votersToUpdate.map((item) => item.votersId) }
-            //     }
-            //   });
-            //   console.log({ votersToUpdate });
-            //   const votersMap = new Map(voters.map(voter => [voter.id, voter]));
-            //   // Group updates by votersId
-            //   const groupedVotersToUpdate: Record<string, any> = {};
-            //   votersToUpdate.forEach((item) => {
-            //     if (!groupedVotersToUpdate[item.votersId]) {
-            //       groupedVotersToUpdate[item.votersId] = {
-            //         votersId: item.votersId,
-            //         props: []
-            //       };
-            //     }
-            //     groupedVotersToUpdate[item.votersId].props.push({
-            //       id: item.id,
-            //       props: item.props,
-            //       type: item.type,
-            //       value: item.value,
-            //       action: item.action,
-            //       teamId: item.teamId
-            //     });
-            //   });
-            //   for (const item of Object.values(groupedVotersToUpdate)) {
-            //     const voter = votersMap.get(item.votersId);
-            //     if (!voter) continue; // Ensure voter exists
-            //     // Only keep properties that need updating
-            //     const propsToUpdate = item.props.filter((prop: { type: string; value: string; props: string | number; }) => {
-            //       const valueForUpdate = handleDataType(prop.type, prop.value);
-            //       const voterPropsTyped = voter as Record<string, any>;
-            //       // Ensure both are strings for comparison safety
-            //       return String(voterPropsTyped[prop.props]) !== String(valueForUpdate);
-            //     });
-            //     if (propsToUpdate.length > 0) {
-            //       const updateData: Record<string, any> = {};
-            //       propsToUpdate.forEach((prop: { props: string | number; type: string; value: string; }) => {
-            //         updateData[prop.props] = handleDataType(prop.type, prop.value);
-            //       });
-            //       await prisma.voters.update({
-            //         where: { id: item.votersId },
-            //         data: updateData
-            //       });
-            //       console.log("----------->Voter update successfully");
-            //     } else {
-            //       console.log(`No changes for voter ${item.votersId}`);
-            //     }
-            //   }
-            // } else {
-            //   console.log("No voters to update.");
-            // }
+            if (votersToUpdate.length > 0) {
+                // Fetch voters using votersId instead of item.id
+                const voters = yield prisma_1.prisma.voters.findMany({
+                    where: {
+                        id: { in: votersToUpdate.map((item) => item.votersId) }
+                    }
+                });
+                console.log({ votersToUpdate });
+                const votersMap = new Map(voters.map(voter => [voter.id, voter]));
+                // Group updates by votersId
+                const groupedVotersToUpdate = {};
+                votersToUpdate.forEach((item) => {
+                    if (!groupedVotersToUpdate[item.votersId]) {
+                        groupedVotersToUpdate[item.votersId] = {
+                            votersId: item.votersId,
+                            props: []
+                        };
+                    }
+                    groupedVotersToUpdate[item.votersId].props.push({
+                        id: item.id,
+                        props: item.props,
+                        type: item.type,
+                        value: item.value,
+                        action: item.action,
+                        teamId: item.teamId
+                    });
+                });
+                for (const item of Object.values(groupedVotersToUpdate)) {
+                    const voter = votersMap.get(item.votersId);
+                    if (!voter)
+                        continue; // Ensure voter exists
+                    // Only keep properties that need updating
+                    const propsToUpdate = item.props.filter((prop) => {
+                        const valueForUpdate = (0, data_1.handleDataType)(prop.type, prop.value);
+                        const voterPropsTyped = voter;
+                        // Ensure both are strings for comparison safety
+                        return String(voterPropsTyped[prop.props]) !== String(valueForUpdate);
+                    });
+                    if (propsToUpdate.length > 0) {
+                        const updateData = {};
+                        propsToUpdate.forEach((prop) => {
+                            updateData[prop.props] = (0, data_1.handleDataType)(prop.type, prop.value);
+                        });
+                        yield prisma_1.prisma.voters.update({
+                            where: { id: item.votersId },
+                            data: updateData
+                        });
+                        console.log("----------->Voter update successfully");
+                    }
+                    else {
+                        console.log(`No changes for voter ${item.votersId}`);
+                    }
+                }
+            }
+            else {
+                console.log("No voters to update.");
+            }
             // //save validated Teams
             // if (validatedTeams.length > 0) {
             //   console.log({validatedTeams});
@@ -4170,11 +4173,15 @@ const resolvers = {
                     votersId: parent.id,
                 }
             });
-        }), untracked: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+        }),
+        UntrackedVoter: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            if (!parent) {
+                return null;
+            }
             return yield prisma_1.prisma.untrackedVoter.findFirst({
                 where: {
                     votersId: parent.id,
-                }
+                },
             });
         })
     },
@@ -4382,7 +4389,7 @@ const resolvers = {
                 where: {
                     voter: {
                         barangaysId: parent.id,
-                    }
+                    },
                 }
             });
             const tls = yield prisma_1.prisma.teamLeader.count({

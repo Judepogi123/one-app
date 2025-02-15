@@ -967,7 +967,7 @@ export type Resolvers = {
     leader: ResolverFn<Voters, {}, {}, TeamLeader | null>;
     record: ResolverFn<Voters, {}, {}, VoterRecords[]>;
     ValdilatedMember: ResolverFn<Voters, {},{}, ValdilatedMembers | null>;
-    untracked: ResolverFn<Voters, {}, {}, UntrackedVoter | null>
+    UntrackedVoter: ResolverFn<Voters, {}, {}, UntrackedVoter | null>
   };
   Municipal: {
     barangays: ResolverFn<Municipals, {}, {}, Barangays[]>;
