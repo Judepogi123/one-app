@@ -271,7 +271,7 @@ export type Resolvers = {
     getTeamRecord: ResolverFn<{}, { id: string }, {}, ValidatedTeams | null>;
     userList: ResolverFn<{}, {zipCode: number}, {}, Users[]>;
     userQRCodeList: ResolverFn<{}, {}, {}, UserQRCode[]>;
-    purokList: ResolverFn<{}, { zipCode: number }, {}, Purok[]>;
+    purokList: ResolverFn<{}, { zipCode: number, skip: number, take: number }, {}, Purok[]>;
     voterRecords: ResolverFn<
       {},
       { skip: number; zipCode: number },
@@ -952,6 +952,7 @@ export type Resolvers = {
     resetPassword: ResolverFn<{},{id: string, newPassword: string},{}, string>
     updateCandidate: ResolverFn<{},{id: string},{},string>
     tranCandidate: ResolverFn<{},{},{}, string>
+    transferGroup: ResolverFn<{},{id: string, toId: string},{}, string>
   };
   Voter: {
     votersCount: ResolverFn<{}, {}, {}, number>;

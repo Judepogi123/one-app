@@ -356,7 +356,7 @@ type ValdiatedTeams {
     barangayVotersCount: Int!
     purokCount: Int!
     purok(id: String!): Purok!
-    purokList(zipCode: Int): [Purok!]
+    purokList(zipCode: Int, skip: Int, take: Int): [Purok!]
     voterRecords(skip: Int, zipCode: Int): [VoterRecords!]
     barangayVotersList(barangayList: NewPurokInput!): [Voter]!
     draftedVoters(voter: DraftedVoters!): [Voter]!
@@ -610,6 +610,7 @@ type BarangayCoor {
     resetPassword(id: String, newPassword: String): String!
     updateCandidate(id: String ): String!
     tranCandidate: String!
+    transferGroup(id: String, toId: String): String!
   }
 
   type VoterRecords {

@@ -777,7 +777,7 @@ const resolvers: Resolvers = {
     },
     candidates: async (_,{zipCode}) => {
       const filter:any = {}
-      if(zipCode){
+      if(zipCode === "4903"){
         filter.municipalsId = parseInt(zipCode, 10)
       }
       // const newBatch = await prisma.ccaandidates.update({
@@ -2851,8 +2851,6 @@ const resolvers: Resolvers = {
         purokId?: string,
         voterId?: string
       ) => {
-        console.log("Params: ", { id, level, teamId, purokId });
-        console.log("Supporting: ", supporting?.code);
 
         const leader = await prisma.teamLeader.findFirst({
           where: {
@@ -3134,7 +3132,7 @@ const resolvers: Resolvers = {
 
       const supporting = await prisma.candidates.findFirst({
         where: {
-          code: { contains: code, mode: "insensitive" },
+          code: { contains: "jp", mode: "insensitive" },
         },
       });
 
@@ -3261,6 +3259,12 @@ const resolvers: Resolvers = {
         purokCoorData?.id
       );
 
+      const tlTeam = await prisma.team.findUnique({
+        where:{
+          id: teamLeaderData?.teamId as string
+        }
+      })
+
       const temp = await prisma.validatedTeams.create({
         data: {
           purokId: purokCoor?.purokId as string,
@@ -3271,7 +3275,7 @@ const resolvers: Resolvers = {
       });
 
       const processedVoters = new Set<string>();
-      const alreadyInTeam: Voters[] = [];
+      const alreadyInTeam: {votersId: string, teamId: string,foundTeamId: string | undefined | null, municipalsId: number, barangaysId: string}[] = [];
 
       for (const member of team.members) {
         try {
@@ -3284,31 +3288,7 @@ const resolvers: Resolvers = {
               },
             },
           });
-
-          let votersTeam = null;
-
-          if (voter?.teamId) {
-            votersTeam = await prisma.team.findFirst({
-              where: {
-                id: voter.teamId,
-              },
-              include: {
-                TeamLeader: {
-                  select: {
-                    id: true,
-                    teamId: true,
-                    voter: {
-                      select: {
-                        firstname: true,
-                        lastname: true,
-                        level: true,
-                      },
-                    },
-                  },
-                },
-              },
-            });
-          }
+          const inAlreadList = new Set(alreadyInTeam.map(item => item.votersId))
 
           if (!voter) {
             if (!processedVoters.has(member)) {
@@ -3380,10 +3360,18 @@ const resolvers: Resolvers = {
               //   idNumber: voter.idNumber,
               //   code: 1,
               // });
-              alreadyInTeam.push(voter);
               processedVoters.add(voter.id);
+              alreadyInTeam.push({
+                votersId: voter.id,
+                teamId: voter.teamId as string, // Voter's current team
+                municipalsId: voter.municipalsId,
+                barangaysId: voter.barangaysId,
+                foundTeamId: tlTeam?.id
+              });
+              
               continue;
             }
+
           }
 
           if (voter.oor === "YES") {
@@ -3498,9 +3486,9 @@ const resolvers: Resolvers = {
         }),
         prisma.duplicateteamMembers.createMany({
           data: alreadyInTeam.map((item) => ({
-            votersId: item.id,
+            votersId: item.votersId,
             teamId: item.teamId,
-            foundTeamId: teamLeaderData?.teamId,
+            foundTeamId: item.foundTeamId,
             municipalsId: item.municipalsId,
             barangaysId: item.barangaysId,
           })),
@@ -3631,6 +3619,9 @@ const resolvers: Resolvers = {
             voter: filter,
           },
         }),
+        prisma.duplicateteamMembers.deleteMany({
+          where: filter
+        })
       ]);
       return "OK";
     },
@@ -3738,6 +3729,91 @@ const resolvers: Resolvers = {
         teamToMerge,
         toSplit,
         accountTeamHoldings,});
+        
+        // if (votersToTransfer.length > 0) {
+        //   try {
+        //     const voterIds = votersToTransfer.map((item) => item.votersId);
+        //     const teamIds = votersToTransfer.map((item) => item.toTeamId);
+        
+        //     const [voters, teams, duplicateRecords] = await prisma.$transaction([
+        //       prisma.voters.findMany({
+        //         where: { id: { in: voterIds } },
+        //       }),
+        //       prisma.team.findMany({
+        //         where: { id: { in: teamIds } },
+        //         include:{
+        //           TeamLeader:{
+        //             include:{
+        //               voter:true
+        //             }
+        //           }
+        //         }
+        //       }),
+        //       prisma.duplicateteamMembers.findMany({
+        //         where: { votersId: { in: voterIds } }, // Fetch all duplicate records first
+        //       }),
+        //     ]);
+        //     console.log({teams});
+            
+        
+        //     if (voters.length > 0) {
+        //       console.log({voters});
+              
+        //       const updatePromises = voters.map((voter) => {
+        //         console.log("Team OK 0");
+        //         const votersTeam = votersToTransfer.find((item) => item.votersId === voter.id);
+        //         if (!votersTeam) return null;
+        //         console.log("Team OK 1");
+        //         const toTeam = teams.find((item) => item.id === votersTeam.toTeamId);
+        //         console.log("Team TO: ", toTeam);
+                
+        //         if (!toTeam || voter.teamId === toTeam.id) return null; // Skip if already in the correct team
+        //         console.log("Team OK 2");
+                
+        //         return prisma.voters.update({
+        //           data: { teamId: toTeam.id },
+        //           where: { id: voter.id },
+        //         });
+        //       }).filter(Boolean); // Remove null values
+        
+        //       // const deletePromises = duplicateRecords.map((record) => 
+        //       //   prisma.duplicateteamMembers.delete({
+        //       //     where: { id: record.id },
+        //       //   })
+        //       // );
+
+        
+        //       await Promise.all([...updatePromises,]); // Batch process updates and deletes
+        //       console.log("OK");
+              
+        //     }
+        //   } catch (error) {
+        //     console.error("Error transferring voters:", error);
+        //   }
+        // }
+
+        // if(validateDuplicate.length > 0){
+        //   const duplicatedIds = validateDuplicate.map(item=> item.duplicateteamMemberId)
+        //   const duplicates = await prisma.duplicateteamMembers.findMany({
+        //     where:{
+        //       id: {in: duplicatedIds}
+        //     }
+        //   })
+        //   console.log({duplicates});
+          
+        //   // if(duplicates.length > 0){
+        //   //   await prisma.duplicateteamMembers.deleteMany({
+        //   //     where:{
+        //   //       id: {in: duplicates.map(item=> item.id)}
+        //   //     }
+        //   //   })
+        //   // }else{
+        //   //   console.log("No Duplicates to remove");
+            
+        //   // }
+         
+        // }
+        
       
       //voter's to exclude
       // if(teamExcluded.length > 0) {
@@ -4372,8 +4448,7 @@ const resolvers: Resolvers = {
       if (!voterOneId || !voterTwoId) {
         throw new GraphQLError("Bad Request");
       }
-    
-      console.log({ voterOneId, voterTwoId });
+  
     
       // Fetch voters
       const [voterOne, voterTwo] = await prisma.$transaction([
@@ -4596,6 +4671,34 @@ const resolvers: Resolvers = {
         })
       ])
       return "OK"
+    },
+    transferGroup: async(_,{id, toId})=>{
+      const [team, toTeam] = await prisma.$transaction([
+        prisma.team.findUnique({
+          where:{
+            id
+          }
+        }),
+        prisma.team.findUnique({
+          where:{
+            id: toId
+          }
+        })
+      ])
+
+      if(!team || !toTeam){
+        throw new GraphQLError("Current Team or target team not found")
+      }
+      await prisma.$transaction([
+        prisma.teamLeader.update({
+          where: {
+            id: team.teamLeaderId as string
+          },data:{
+            teamId: toTeam.id
+          }
+        })
+      ])
+      return "Ok"
     }
   },
   Voter: {

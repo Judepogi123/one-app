@@ -634,11 +634,10 @@ exports.default = (io) => {
                 { header: "PC", key: "pc", width: 10 },
                 { header: "TL", key: "tl", width: 10 },
                 { header: "Voters W/team", key: "withTeam", width: 16 },
-                { header: "Voters W/o team", key: "withoutTeam", width: 16 },
+                // { header: "Voters W/o team", key: "withoutTeam", width: 16 },
                 { header: "10+", key: "aboveTen", width: 10 },
                 { header: "10", key: "equalTen", width: 10 },
                 { header: "6-10", key: "belowTen", width: 10 },
-                { header: "5", key: "aboveFive", width: 10 },
                 { header: "5", key: "equalFive", width: 10 },
                 { header: "4", key: "belowFive", width: 10 },
                 { header: "1-3", key: "belowEqualThree", width: 10 },
@@ -662,11 +661,10 @@ exports.default = (io) => {
                     pc: item.supporters.pc,
                     tl: item.supporters.tl,
                     withTeam: item.supporters.withTeams,
-                    withoutTeam: item.supporters.voterWithoutTeam,
+                    // withoutTeam: item.supporters.voterWithoutTeam,
                     aboveTen: item.teamStat.aboveMax,
                     equalTen: item.teamStat.equalToMax,
                     belowTen: item.teamStat.belowMax,
-                    aboveFive: item.teamStat.aboveMin,
                     equalFive: item.teamStat.equalToMin,
                     belowFive: item.teamStat.belowMin,
                     belowEqualThree: item.teamStat.threeAndBelow,
@@ -681,11 +679,13 @@ exports.default = (io) => {
                 pc: sheetData.reduce((sum, row) => sum + (row.pc || 0), 0),
                 tl: sheetData.reduce((sum, row) => sum + (row.tl || 0), 0),
                 withTeam: sheetData.reduce((sum, row) => sum + (row.withTeam || 0), 0),
-                withoutTeam: sheetData.reduce((sum, row) => sum + (row.withoutTeam || 0), 0),
+                // withoutTeam: sheetData.reduce(
+                //   (sum, row) => sum + (row.withoutTeam || 0),
+                //   0
+                // ),
                 aboveTen: sheetData.reduce((sum, row) => sum + (row.aboveTen || 0), 0),
                 equalTen: sheetData.reduce((sum, row) => sum + (row.equalTen || 0), 0),
                 belowTen: sheetData.reduce((sum, row) => sum + (row.belowTen || 0), 0),
-                aboveFive: sheetData.reduce((sum, row) => sum + (row.aboveFive || 0), 0),
                 equalFive: sheetData.reduce((sum, row) => sum + (row.equalFive || 0), 0),
                 belowFive: sheetData.reduce((sum, row) => sum + (row.belowFive || 0), 0),
                 belowEqualThree: sheetData.reduce((sum, row) => sum + (row.belowEqualThree || 0), 0),
@@ -1040,12 +1040,6 @@ exports.default = (io) => {
                 { header: "ID", key: "id", width: 6 },
                 { header: "Team Leader", key: "tl", width: 40 },
                 { header: "Purok", key: "purok", width: 12 },
-                { header: "OR", key: "or" },
-                { header: "DEAD", key: "dead" },
-                { header: "INC", key: "inc" },
-                { header: "JML", key: "jml" },
-                { header: "RT", key: "rt" },
-                { header: "FH", key: "fh" },
             ];
             worksheet.getRow(1).eachCell((cell) => {
                 cell.font = { bold: true };
@@ -1136,12 +1130,6 @@ exports.default = (io) => {
                     id: item.id,
                     fullname: item.fullname,
                     purok: item.purok,
-                    or: "",
-                    dead: "",
-                    inc: "",
-                    jml: "",
-                    rt: "",
-                    fh: "",
                 };
             });
             worksheet.addRows(flattenedList);
@@ -1152,6 +1140,210 @@ exports.default = (io) => {
         }
         catch (error) {
             console.error("Error generating Excel file:", error);
+            res.status(500).send("Internal Server Error");
+        }
+    })), router.post("/duplicated", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+        const zipCode = req.body.zipCode;
+        console.log({ zipCode });
+        if (!zipCode) {
+            res.status(400).json({ message: "Bad Request" });
+            return;
+        }
+        try {
+            const municipal = yield prisma_1.prisma.municipals.findUnique({
+                where: {
+                    id: parseInt(zipCode, 10),
+                },
+            });
+            if (!municipal) {
+                res.status(404).json({ message: "Municipal not found" });
+                return;
+            }
+            let skip = 0;
+            let hasMore = true;
+            let grouped = [];
+            while (hasMore) {
+                const duplicated = yield prisma_1.prisma.duplicateteamMembers.findMany({
+                    where: {
+                        municipalsId: municipal.id,
+                    },
+                    skip: skip,
+                    take: 50,
+                    include: {
+                        teamFounIn: {
+                            include: {
+                                TeamLeader: {
+                                    include: {
+                                        voter: {
+                                            select: {
+                                                id: true,
+                                                lastname: true,
+                                                firstname: true,
+                                                idNumber: true,
+                                            },
+                                        },
+                                        purokCoors: {
+                                            select: {
+                                                voter: {
+                                                    select: {
+                                                        id: true,
+                                                        lastname: true,
+                                                        firstname: true,
+                                                        idNumber: true,
+                                                    },
+                                                },
+                                            },
+                                        },
+                                        barangayCoor: {
+                                            select: {
+                                                voter: {
+                                                    select: {
+                                                        id: true,
+                                                        lastname: true,
+                                                        firstname: true,
+                                                        idNumber: true,
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        team: {
+                            include: {
+                                TeamLeader: {
+                                    include: {
+                                        voter: {
+                                            select: {
+                                                id: true,
+                                                lastname: true,
+                                                firstname: true,
+                                                idNumber: true,
+                                            },
+                                        },
+                                        purokCoors: {
+                                            select: {
+                                                voter: {
+                                                    select: {
+                                                        id: true,
+                                                        lastname: true,
+                                                        firstname: true,
+                                                        idNumber: true,
+                                                    },
+                                                },
+                                            },
+                                        },
+                                        barangayCoor: {
+                                            select: {
+                                                voter: {
+                                                    select: {
+                                                        id: true,
+                                                        lastname: true,
+                                                        firstname: true,
+                                                        idNumber: true,
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        barangay: {
+                            select: {
+                                id: true,
+                                name: true,
+                            },
+                        },
+                        voter: {
+                            select: {
+                                id: true,
+                                idNumber: true,
+                            }
+                        }
+                    },
+                    orderBy: {
+                        barangay: {
+                            name: "asc",
+                        },
+                    },
+                });
+                if (duplicated.length === 0) {
+                    hasMore = false;
+                    break;
+                }
+                else {
+                    const data = duplicated.map((item) => {
+                        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y;
+                        return ({
+                            barangay: item.barangay.name,
+                            "1bc": (_d = (_c = (_b = (_a = item.team) === null || _a === void 0 ? void 0 : _a.TeamLeader) === null || _b === void 0 ? void 0 : _b.barangayCoor) === null || _c === void 0 ? void 0 : _c.voter) === null || _d === void 0 ? void 0 : _d.idNumber,
+                            "1pc": (_h = (_g = (_f = (_e = item.team) === null || _e === void 0 ? void 0 : _e.TeamLeader) === null || _f === void 0 ? void 0 : _f.purokCoors) === null || _g === void 0 ? void 0 : _g.voter) === null || _h === void 0 ? void 0 : _h.idNumber,
+                            "1tl": (_l = (_k = (_j = item.team) === null || _j === void 0 ? void 0 : _j.TeamLeader) === null || _k === void 0 ? void 0 : _k.voter) === null || _l === void 0 ? void 0 : _l.idNumber,
+                            "2bc": (_q = (_p = (_o = (_m = item.teamFounIn) === null || _m === void 0 ? void 0 : _m.TeamLeader) === null || _o === void 0 ? void 0 : _o.barangayCoor) === null || _p === void 0 ? void 0 : _p.voter) === null || _q === void 0 ? void 0 : _q.idNumber,
+                            "2pc": (_u = (_t = (_s = (_r = item.teamFounIn) === null || _r === void 0 ? void 0 : _r.TeamLeader) === null || _s === void 0 ? void 0 : _s.purokCoors) === null || _t === void 0 ? void 0 : _t.voter) === null || _u === void 0 ? void 0 : _u.idNumber,
+                            "2tl": (_x = (_w = (_v = item.teamFounIn) === null || _v === void 0 ? void 0 : _v.TeamLeader) === null || _w === void 0 ? void 0 : _w.voter) === null || _x === void 0 ? void 0 : _x.idNumber,
+                            "voter": (_y = item.voter) === null || _y === void 0 ? void 0 : _y.idNumber
+                        });
+                    });
+                    grouped.push(...data); // Flattening the array
+                    skip += duplicated.length; // Correct pagination
+                }
+            }
+            // Generate Excel file regardless of whether grouped.length is 0
+            const workbook = new exceljs_1.default.Workbook();
+            workbook.created = new Date();
+            const worksheet = workbook.addWorksheet(municipal.name, {
+                pageSetup: {
+                    paperSize: 9,
+                    orientation: "landscape",
+                    fitToPage: false,
+                    showGridLines: true,
+                    margins: {
+                        left: 0.6,
+                        right: 0.6,
+                        top: 0.5,
+                        bottom: 0.5,
+                        header: 0.3,
+                        footer: 0.3,
+                    },
+                },
+                headerFooter: {
+                    firstHeader: ``,
+                    firstFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+                    oddHeader: `&L&B${municipal.name} Double Entry List`,
+                    oddFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+                },
+            });
+            worksheet.columns = [
+                { header: "Barangay", key: "barangay", width: 12 },
+                { header: "1st BC", key: "1bc", width: 10 },
+                { header: "1st PC", key: "1pc", width: 10 },
+                { header: "1st TL", key: "1tl", width: 10 },
+                { header: "2nd BC", key: "2bc", width: 10 },
+                { header: "2nd PC", key: "2pc", width: 10 },
+                { header: "2nd TL", key: "2tl", width: 10 },
+                { header: "Voter ID", key: "voter", width: 10 },
+            ];
+            worksheet.getRow(1).eachCell((cell) => {
+                cell.font = { bold: true };
+                cell.alignment = { horizontal: "center", vertical: "middle" };
+                cell.border = {
+                    top: { style: "thin" },
+                    left: { style: "thin" },
+                    bottom: { style: "thin" },
+                    right: { style: "thin" },
+                };
+            });
+            worksheet.addRows(grouped);
+            res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            res.setHeader("Content-Disposition", "attachment; filename=SupporterReport.xlsx");
+            yield workbook.xlsx.write(res);
+            res.end();
+        }
+        catch (error) {
+            console.log(error);
             res.status(500).send("Internal Server Error");
         }
     })));

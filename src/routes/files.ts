@@ -10,7 +10,7 @@ import { extractYear } from "../utils/date";
 import { handleSpecialChar, handleGender } from "../utils/data";
 
 //database
-import { prisma, Voters } from "../../prisma/prisma";
+import { DuplicateteamMembers, prisma, Voters } from "../../prisma/prisma";
 //props
 import {
   DataProps,
@@ -762,11 +762,10 @@ export default (io: any) => {
         { header: "PC", key: "pc", width: 10 },
         { header: "TL", key: "tl", width: 10 },
         { header: "Voters W/team", key: "withTeam", width: 16 },
-        { header: "Voters W/o team", key: "withoutTeam", width: 16 },
+        // { header: "Voters W/o team", key: "withoutTeam", width: 16 },
         { header: "10+", key: "aboveTen", width: 10 },
         { header: "10", key: "equalTen", width: 10 },
         { header: "6-10", key: "belowTen", width: 10 },
-        { header: "5", key: "aboveFive", width: 10 },
         { header: "5", key: "equalFive", width: 10 },
         { header: "4", key: "belowFive", width: 10 },
         { header: "1-3", key: "belowEqualThree", width: 10 },
@@ -792,11 +791,10 @@ export default (io: any) => {
           pc: item.supporters.pc,
           tl: item.supporters.tl,
           withTeam: item.supporters.withTeams,
-          withoutTeam: item.supporters.voterWithoutTeam,
+          // withoutTeam: item.supporters.voterWithoutTeam,
           aboveTen: item.teamStat.aboveMax,
           equalTen: item.teamStat.equalToMax,
           belowTen: item.teamStat.belowMax,
-          aboveFive: item.teamStat.aboveMin,
           equalFive: item.teamStat.equalToMin,
           belowFive: item.teamStat.belowMin,
           belowEqualThree: item.teamStat.threeAndBelow,
@@ -816,17 +814,13 @@ export default (io: any) => {
         pc: sheetData.reduce((sum, row) => sum + (row.pc || 0), 0),
         tl: sheetData.reduce((sum, row) => sum + (row.tl || 0), 0),
         withTeam: sheetData.reduce((sum, row) => sum + (row.withTeam || 0), 0),
-        withoutTeam: sheetData.reduce(
-          (sum, row) => sum + (row.withoutTeam || 0),
-          0
-        ),
+        // withoutTeam: sheetData.reduce(
+        //   (sum, row) => sum + (row.withoutTeam || 0),
+        //   0
+        // ),
         aboveTen: sheetData.reduce((sum, row) => sum + (row.aboveTen || 0), 0),
         equalTen: sheetData.reduce((sum, row) => sum + (row.equalTen || 0), 0),
         belowTen: sheetData.reduce((sum, row) => sum + (row.belowTen || 0), 0),
-        aboveFive: sheetData.reduce(
-          (sum, row) => sum + (row.aboveFive || 0),
-          0
-        ),
         equalFive: sheetData.reduce(
           (sum, row) => sum + (row.equalFive || 0),
           0
@@ -1264,12 +1258,6 @@ export default (io: any) => {
           { header: "ID", key: "id", width: 6 },
           { header: "Team Leader", key: "tl", width: 40 },
           { header: "Purok", key: "purok", width: 12 },
-          { header: "OR", key: "or"},
-          { header: "DEAD", key: "dead" },
-          { header: "INC", key: "inc"},
-          { header: "JML", key: "jml"},
-          { header: "RT", key: "rt"},
-          { header: "FH", key: "fh"},
         ];
     
         worksheet.getRow(1).eachCell((cell) => {
@@ -1364,12 +1352,6 @@ export default (io: any) => {
             id: item.id,
             fullname: item.fullname,
             purok: item.purok,
-            or: "",
-            dead: "",
-            inc: "",
-            jml: "",
-            rt: "",
-            fh: "",
           }
         });
         worksheet.addRows(flattenedList);
@@ -1390,7 +1372,229 @@ export default (io: any) => {
         console.error("Error generating Excel file:", error);
         res.status(500).send("Internal Server Error");
       }
+    }),
+
+    router.post("/duplicated", async (req: Request, res: Response) => {
+      const zipCode = req.body.zipCode;
+      console.log({ zipCode });
+    
+      if (!zipCode) {
+        res.status(400).json({ message: "Bad Request" });
+        return;
+      }
+    
+      try {
+        const municipal = await prisma.municipals.findUnique({
+          where: {
+            id: parseInt(zipCode, 10),
+          },
+        });
+    
+        if (!municipal) {
+          res.status(404).json({ message: "Municipal not found" });
+          return;
+        }
+    
+        let skip = 0;
+        let hasMore = true;
+        let grouped: any[] = [];
+    
+        while (hasMore) {
+          const duplicated = await prisma.duplicateteamMembers.findMany({
+            where: {
+              municipalsId: municipal.id,
+            },
+            skip: skip,
+            take: 50,
+            include: {
+              teamFounIn: {
+                include: {
+                  TeamLeader: {
+                    include: {
+                      voter: {
+                        select: {
+                          id: true,
+                          lastname: true,
+                          firstname: true,
+                          idNumber: true,
+                        },
+                      },
+                      purokCoors: {
+                        select: {
+                          voter: {
+                            select: {
+                              id: true,
+                              lastname: true,
+                              firstname: true,
+                              idNumber: true,
+                            },
+                          },
+                        },
+                      },
+                      barangayCoor: {
+                        select: {
+                          voter: {
+                            select: {
+                              id: true,
+                              lastname: true,
+                              firstname: true,
+                              idNumber: true,
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              team: {
+                include: {
+                  TeamLeader: {
+                    include: {
+                      voter: {
+                        select: {
+                          id: true,
+                          lastname: true,
+                          firstname: true,
+                          idNumber: true,
+                        },
+                      },
+                      purokCoors: {
+                        select: {
+                          voter: {
+                            select: {
+                              id: true,
+                              lastname: true,
+                              firstname: true,
+                              idNumber: true,
+                            },
+                          },
+                        },
+                      },
+                      barangayCoor: {
+                        select: {
+                          voter: {
+                            select: {
+                              id: true,
+                              lastname: true,
+                              firstname: true,
+                              idNumber: true,
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              barangay: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+              voter:{
+                select:{
+                  id: true,
+                  idNumber: true,
+                }
+              }
+            },
+            orderBy: {
+              barangay: {
+                name: "asc",
+              },
+            },
+            
+          });
+    
+          if (duplicated.length === 0) {
+            hasMore = false;
+            break;
+          } else {
+            const data = duplicated.map((item) => ({
+              barangay: item.barangay.name,
+              "1bc": item.team?.TeamLeader?.barangayCoor?.voter?.idNumber,
+              "1pc": item.team?.TeamLeader?.purokCoors?.voter?.idNumber,
+              "1tl": item.team?.TeamLeader?.voter?.idNumber,
+              "2bc": item.teamFounIn?.TeamLeader?.barangayCoor?.voter?.idNumber,
+              "2pc": item.teamFounIn?.TeamLeader?.purokCoors?.voter?.idNumber,
+              "2tl": item.teamFounIn?.TeamLeader?.voter?.idNumber,
+              "voter": item.voter?.idNumber
+            }));
+    
+            grouped.push(...data); // Flattening the array
+            skip += duplicated.length; // Correct pagination
+          }
+        }
+    
+        // Generate Excel file regardless of whether grouped.length is 0
+        const workbook = new ExcelJS.Workbook();
+        workbook.created = new Date();
+    
+        const worksheet = workbook.addWorksheet(municipal.name, {
+          pageSetup: {
+            paperSize: 9,
+            orientation: "landscape",
+            fitToPage: false,
+            showGridLines: true,
+            margins: {
+              left: 0.6,
+              right: 0.6,
+              top: 0.5,
+              bottom: 0.5,
+              header: 0.3,
+              footer: 0.3,
+            },
+          },
+          headerFooter: {
+            firstHeader: ``,
+            firstFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+            oddHeader: `&L&B${municipal.name} Double Entry List`,
+            oddFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+          },
+        });
+    
+        worksheet.columns = [
+          { header: "Barangay", key: "barangay", width: 12 },
+          { header: "1st BC", key: "1bc", width: 10 },
+          { header: "1st PC", key: "1pc", width: 10 },
+          { header: "1st TL", key: "1tl", width: 10 },
+          { header: "2nd BC", key: "2bc", width: 10 },
+          { header: "2nd PC", key: "2pc", width: 10 },
+          { header: "2nd TL", key: "2tl", width: 10 },
+          { header: "Voter ID", key: "voter", width: 10 },
+        ];
+    
+        worksheet.getRow(1).eachCell((cell) => {
+          cell.font = { bold: true };
+          cell.alignment = { horizontal: "center", vertical: "middle" };
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" },
+          };
+        });
+    
+        worksheet.addRows(grouped);
+    
+        res.setHeader(
+          "Content-Type",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        res.setHeader(
+          "Content-Disposition",
+          "attachment; filename=SupporterReport.xlsx"
+        );
+        await workbook.xlsx.write(res);
+        res.end();
+      } catch (error) {
+        console.log(error);
+        res.status(500).send("Internal Server Error");
+      }
     })
+    
     
   );
 
