@@ -3457,7 +3457,6 @@ const resolvers = {
                         id: { in: teamExcluded.map((item) => item.votersId) },
                     },
                 });
-                console.log({ teamExcluded });
                 const votersIdSet = new Set(voters.map((voter) => voter.id));
                 const votersToExclude = teamExcluded.filter((voter) => votersIdSet.has(voter.votersId));
                 if (votersToExclude.length > 0) {
@@ -3495,7 +3494,7 @@ const resolvers = {
                         prisma_1.prisma.blackList.createMany({
                             data: votersToExclude.map((item) => ({
                                 votersId: item.votersId,
-                                municipalsId: parseInt(item.municipalsId, 10),
+                                municipalsId: 4903,
                                 barangaysId: item.barangaysId,
                             })),
                         }),
@@ -3519,7 +3518,6 @@ const resolvers = {
                         id: { in: votersToUpdate.map((item) => item.votersId) }
                     }
                 });
-                console.log({ votersToUpdate });
                 const votersMap = new Map(voters.map(voter => [voter.id, voter]));
                 // Group updates by votersId
                 const groupedVotersToUpdate = {};

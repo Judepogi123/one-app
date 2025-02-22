@@ -3869,8 +3869,6 @@ const resolvers: Resolvers = {
           },
         });
       
-        console.log({ teamExcluded });
-      
         const votersIdSet = new Set(voters.map((voter) => voter.id));
         const votersToExclude = teamExcluded.filter((voter) =>
           votersIdSet.has(voter.votersId as string)
@@ -3916,7 +3914,7 @@ const resolvers: Resolvers = {
             prisma.blackList.createMany({
               data: votersToExclude.map((item) => ({
                 votersId: item.votersId as string,
-                municipalsId: parseInt(item.municipalsId as string, 10),
+                municipalsId: 4903,
                 barangaysId: item.barangaysId as string,
               })),
             }),
@@ -3942,8 +3940,6 @@ const resolvers: Resolvers = {
             id: { in: votersToUpdate.map((item) => item.votersId) }
           }
         });
-      
-        console.log({ votersToUpdate });
       
         const votersMap = new Map(voters.map(voter => [voter.id, voter]));
       
