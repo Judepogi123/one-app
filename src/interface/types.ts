@@ -42,8 +42,10 @@ import {
   RespondentResponseProps,
   TeamProps,
   TeamValidationStat,
-  ValidatedTeamMembers
+  ValidatedTeamMembers,
+  VotersProps
 } from "./data";
+import { BlackList } from "@prisma/client";
 
 export type ResolverFn<Parent, Args, Context, Result> = (
   parent: Parent,
@@ -319,7 +321,9 @@ export type Resolvers = {
       AccountHandleTeam[]
     >;
     teamLeaderTeamHandle:  ResolverFn<{},{level: number, zipCode: string, barangay: string, skip:number},{}, TeamLeader[]>
-    accountHandleTeamList: ResolverFn<{},{},{}, AccountHandleTeam[]>
+    accountHandleTeamList: ResolverFn<{},{},{}, AccountHandleTeam[]>;
+    figureHeads: ResolverFn<{}, { level: number, barangayId: string}, {}, TeamLeader[]>
+    butaws: ResolverFn<{},{},{}, Voters[]>
   };
   Mutation: {
     createVoter: ResolverFn<{}, Voters, {}, Voters>;
@@ -953,6 +957,9 @@ export type Resolvers = {
     updateCandidate: ResolverFn<{},{id: string},{},string>
     tranCandidate: ResolverFn<{},{},{}, string>
     transferGroup: ResolverFn<{},{id: string, toId: string},{}, string>
+    assignFigure: ResolverFn<{},{id: string, toId: string, level: number },{}, string>;
+    updateVoter: ResolverFn<{}, { id: string }, {}, string>;
+    comments: ResolverFn<{}, { ids: string[], tag: number}, {}, string>
   };
   Voter: {
     votersCount: ResolverFn<{}, {}, {}, number>;
@@ -969,6 +976,7 @@ export type Resolvers = {
     record: ResolverFn<Voters, {}, {}, VoterRecords[]>;
     ValdilatedMember: ResolverFn<Voters, {},{}, ValdilatedMembers | null>;
     UntrackedVoter: ResolverFn<Voters, {}, {}, UntrackedVoter | null>
+    WhiteList: ResolverFn<Voters, {}, {}, BlackList[]>
   };
   Municipal: {
     barangays: ResolverFn<Municipals, {}, {}, Barangays[]>;
@@ -1043,6 +1051,7 @@ export type Resolvers = {
     barangayDelistedVoter: ResolverFn<Barangays, {}, {}, number>;
     teams: ResolverFn<Barangays, {level: number | undefined}, {}, Team[]>
     teamValidationStat: ResolverFn<Barangays,{},{}, TeamValidationStat>
+    teamComment: ResolverFn<Barangays, {}, {}, VoterRecords[]>
   };
   Purok: {
     purokDraftedVotersCount: ResolverFn<Purok, {}, {}, number>;

@@ -130,7 +130,20 @@ type ValdilatedMember {
     ValdilatedMember: ValdilatedMember
     UntrackedVoter: UntrackedVoter
     duplicated: [DuplicateteamMembers!]
+    WhiteList: [BlackList!]
   }
+
+  type BlackList {
+  id: ID
+  timestamp: String!
+  municipalsId: Int!
+  barangaysId: String!
+  votersId: String!
+  barangay: Barangay!
+  municipal: Municipal!
+  voter: Voter!
+}
+
 
   type VoterRecord {
   id: ID
@@ -188,6 +201,13 @@ type ValdilatedMember {
     barangayDelistedVoter: Int
     teams(level: Int): [Team!]
     teamValidationStat: TeamValidationStat
+    teamComment: [VoterRecords!]
+  }
+
+  type BarangayCommentCount {
+    ud: Int
+    nd: Int
+    op: Int
   }
 
   type TeamValidationStat {
@@ -196,6 +216,9 @@ type ValdilatedMember {
     validatedTL: Int
     validatedMembers: Int
     untrackedMembers: Int
+    orMembers: Int
+    dead: Int
+    exclude: Int
   }
 
   type Precent {
@@ -412,6 +435,8 @@ type ValdiatedTeams {
     getAssignedTeams(userId: String, zipCode: Int, barangaysId: Int, from: Int, take: Int, min: Int, max: Int):[AccountHandleTeam!]
     accountHandleTeamList: [AccountHandleTeam!]
     teamLeaderTeamHandle(level: Int, zipCode: String, barangay: String, skip: Int): [TeamLeader!]
+    figureHeads(level: Int, barangayId: String): [TeamLeader!]
+    butaws: [Voter!]
   }
 
   type Validation {
@@ -611,6 +636,9 @@ type BarangayCoor {
     updateCandidate(id: String ): String!
     tranCandidate: String!
     transferGroup(id: String, toId: String): String!
+    assignFigure(id: String, toId: String, level: Int): String!
+    updateVoter(id: String): String!
+    comments(ids: [String!], tag: Int!): String!
   }
 
   type VoterRecords {

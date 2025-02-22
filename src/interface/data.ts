@@ -364,4 +364,7 @@ export interface TeamValidationStat {
   validatedTL: number;
   validatedMembers: number;
   untrackedMembers: number;
+  orMembers: number;
+  dead: number;
+  exclude: number;
 }

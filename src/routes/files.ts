@@ -1593,8 +1593,81 @@ export default (io: any) => {
         console.log(error);
         res.status(500).send("Internal Server Error");
       }
-    })
+    }),
+    router.post("validation-result", async(req: Request, res: Response)=>{
+      const zipCode = req.body.zipCode;
+      if(!zipCode){
+        res.status(400).json({ message: "Bad Request" });
+        return;
+      }
+      try {
+        const workbook = new ExcelJS.Workbook();
+        workbook.created = new Date();
     
+        let skip = 0;
+        let haveMore = true;
+        const municpal = await prisma.municipals.findUnique({
+          where: {
+            id: parseInt(zipCode, 10),
+          }
+        })
+        if(!municpal){
+          res.status(404).json({ message: "Municipal not found" });
+          return;
+        }
+        const barangays = await prisma.barangays.findMany({
+          where:{
+            municipalId: parseInt(zipCode, 10)
+          },
+          include: {
+            AccountValidateTean: {
+              select: {
+                id: true
+              }
+            },
+            voters: {
+              where:{
+                level: 0
+              },
+              select:{
+                id: true,
+                oor: true,
+                status: true,
+                inc: true
+              }
+            },
+            
+          }
+        })
+        const worksheet = workbook.addWorksheet(municpal.name, {
+          pageSetup: {
+            paperSize: 9,
+            orientation: "landscape",
+            fitToPage: false,
+            showGridLines: true,
+            margins: {
+              left: 0.6,
+              right: 0.6,
+              top: 0.5,
+              bottom: 0.5,
+              header: 0.3,
+              footer: 0.3,
+            },
+          },
+          headerFooter: {
+            firstHeader: ``,
+            firstFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+            oddHeader: `&L&B${municpal.name} Validation Results`,
+            oddFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+          },
+        });
+        for(let item of barangays){
+          
+        }
+      } catch (error) {
+        
+      }
+    })
     
   );
 
