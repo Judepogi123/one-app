@@ -206,7 +206,7 @@ export type Resolvers = {
     >;
     searchVoter: ResolverFn<
       {},
-      { query: string; skip: number; take: number, zipCode: number },
+      { query: string; skip: number; take: number, zipCode: number, barangayId: string },
       {},
       Voters[]
     >;
@@ -255,6 +255,7 @@ export type Resolvers = {
         skip: number;
         candidate: string;
         withIssues: boolean;
+        members: string
       },
       {},
       Team[]
@@ -753,7 +754,7 @@ export type Resolvers = {
     >;
     changeLeader: ResolverFn<
       {},
-      { id: string; teamId: string; level: number },
+      { id: string; teamId: string; level: number, currentTl: string },
       {},
       string
     >;
@@ -960,6 +961,10 @@ export type Resolvers = {
     assignFigure: ResolverFn<{},{id: string, toId: string, level: number },{}, string>;
     updateVoter: ResolverFn<{}, { id: string }, {}, string>;
     comments: ResolverFn<{}, { ids: string[], tag: number}, {}, string>
+    calibrateTeam: ResolverFn<{},{
+      id: string, tlID: string, pcID: string, bcID: string, level: number,
+    },{}, string>
+    calibrateTeamArea: ResolverFn<{}, { zipCode: number } , {}, TeamLeader[]>
   };
   Voter: {
     votersCount: ResolverFn<{}, {}, {}, number>;
@@ -977,6 +982,7 @@ export type Resolvers = {
     ValdilatedMember: ResolverFn<Voters, {},{}, ValdilatedMembers | null>;
     UntrackedVoter: ResolverFn<Voters, {}, {}, UntrackedVoter | null>
     WhiteList: ResolverFn<Voters, {}, {}, BlackList[]>
+    //team: ResolverFn<Voters, {}, {}, Team | null>;
   };
   Municipal: {
     barangays: ResolverFn<Municipals, {}, {}, Barangays[]>;
@@ -1040,6 +1046,7 @@ export type Resolvers = {
         equalToMin: number;
         belowMin: number;
         threeAndBelow: number;
+        clean: number;
       }
     >;
     leaders: ResolverFn<

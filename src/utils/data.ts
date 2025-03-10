@@ -36,6 +36,18 @@ export const handleLevel = (value: number) => {
     }
   };
 
+export const handleLevelLabel = (level: string, type: number) =>{
+  const levelList: any = [
+    { name: "TL", value: 1 },
+    { name: "PC", value: 2 },
+    { name: "BC", value: 3 },
+  ];
+  if(type === 1){
+    return  levelList.find((l: {name: string}) => l.name === level).name
+  }
+  return levelList.find((l: {name: string}) => l.name === level).value
+}
+
   export const handleDataType = (type: string, value: string)=>{
     
     if(type === "number"){
@@ -50,3 +62,17 @@ export const handleLevel = (value: number) => {
   }
 
   export const removeAllSpaces = (str: string) => str.replace(/\s+/g, '');
+
+  export const handleTeamVoters = (members: string)=>{
+
+  }
+
+  export const alphabetic = Array.from({ length: 26 }, (_, i) => String.fromCharCode(97 + i));
+  export const alphabeticCaps = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
+
+  export const calculatePercentage = (part: number, total: number) => {
+    if (total === 0) return 0;
+    const data = (part / total) * 100;
+    return data.toFixed(2)
+  };
+  

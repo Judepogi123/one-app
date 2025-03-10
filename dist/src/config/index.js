@@ -409,7 +409,8 @@ const resolvers = {
                 where: filter,
             });
         }),
-        searchVoter: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { query, skip, take, zipCode }) {
+        searchVoter: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { query, skip, take, zipCode, barangayId }) {
+            console.log({ query, skip, take, zipCode, barangayId });
             const filter = {
                 OR: [
                     {
@@ -434,6 +435,9 @@ const resolvers = {
             };
             if (zipCode) {
                 filter.municipalsId = zipCode;
+            }
+            if (barangayId) {
+                filter.barangaysId = barangayId;
             }
             return yield prisma_1.prisma.voters.findMany({
                 skip,
@@ -571,29 +575,8 @@ const resolvers = {
                 },
             });
         }),
-        teamList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode, barangayId, purokId, level, query, skip, candidate, withIssues, }) {
+        teamList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode, barangayId, purokId, level, query, skip, candidate, withIssues, members }) {
             const filter = {};
-            let select = {
-                id: true,
-                purokId: true,
-                barangaysId: true,
-                municipalsId: true,
-                hubId: true,
-                level: true,
-                teamLeaderId: true,
-                candidatesId: true,
-                _count: {
-                    select: {
-                        voters: {
-                            where: {
-                                VoterRecords: {
-                                    some: {},
-                                },
-                            },
-                        },
-                    },
-                },
-            };
             const levelList = [
                 { name: "TL", value: 1 },
                 { name: "PC", value: 2 },
@@ -622,9 +605,6 @@ const resolvers = {
             }
             if (level !== "all") {
                 filter.level = teamLevel.value;
-            }
-            if (!withIssues) {
-                select = {};
             }
             const teams = yield prisma_1.prisma.team.findMany({
                 where: filter,
@@ -658,7 +638,7 @@ const resolvers = {
                             lastname: "asc"
                         }
                     }
-                }
+                },
             });
             return teams;
         }),
@@ -913,11 +893,63 @@ const resolvers = {
             });
         }),
         butaws: () => __awaiter(void 0, void 0, void 0, function* () {
+            const [voters, team, tl] = yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.voters.findMany({
+                    where: {
+                        municipalsId: 4905,
+                        candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0",
+                        teamId: { not: null },
+                    }
+                }),
+                prisma_1.prisma.team.findMany({
+                    where: {
+                        municipalsId: 4905,
+                        candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0",
+                    }
+                }),
+                prisma_1.prisma.teamLeader.findMany({
+                    where: {
+                        municipalsId: 4905,
+                        candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0",
+                        teamId: { not: null },
+                    }
+                })
+            ]);
+            if (voters.length === 0 || team.length === 0 || tl.length === 0) {
+                throw new graphql_1.GraphQLError("Could not find participants");
+            }
+            console.log(voters.length, team.length, tl.length);
+            yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.voters.updateMany({
+                    where: {
+                        id: { in: voters.map((item) => item.id) }
+                    },
+                    data: {
+                        candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
+                    }
+                }),
+                prisma_1.prisma.team.updateMany({
+                    where: {
+                        id: { in: team.map((item) => item.id) }
+                    },
+                    data: {
+                        candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
+                    }
+                }),
+                prisma_1.prisma.teamLeader.updateMany({
+                    where: {
+                        id: { in: tl.map((item) => item.id) }
+                    },
+                    data: {
+                        candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
+                    }
+                })
+            ]);
             const data = yield prisma_1.prisma.voters.findMany({
                 where: {
                     municipalsId: 4905,
-                    candidatesId: { not: null },
-                    teamId: null,
+                    candidatesId: null,
+                    teamId: { not: null },
                     level: 0,
                 }
             });
@@ -963,7 +995,7 @@ const resolvers = {
                         privilege,
                         purpose,
                         role,
-                        forMunicipal: forMunicipal ? parseInt(forMunicipal, 10) : null
+                        forMunicipal: forMunicipal ? parseInt(forMunicipal, 10) : null,
                     },
                 });
                 // Generate QR code
@@ -1085,7 +1117,7 @@ const resolvers = {
             const data = yield prisma_1.prisma.survey.create({
                 data: {
                     type: "random",
-                    adminUserUid: survey.adminUserUid,
+                    adminUserUid: "35962b1b-6108-4e1e-a2ae-6940d1986edd",
                     tagID: tagID,
                 },
             });
@@ -2045,6 +2077,7 @@ const resolvers = {
                     id: headId,
                 },
             });
+            console.log({ headerData });
             if (!headerData) {
                 throw new graphql_1.GraphQLError("Head person unfound.", {
                     extensions: { code: "REQUEST_ERROR" },
@@ -2108,19 +2141,19 @@ const resolvers = {
                     });
                     return;
                 }
-                if (voter.oor === "YES") {
-                    rejectList.push({
-                        id: member.id,
-                        firstname: member.firstname,
-                        lastname: member.lastname,
-                        municipal: member.municipalsId,
-                        barangay: member.barangaysId,
-                        reason: "Wala sa nasabing ankop na lugar.",
-                        teamId: member.teamId,
-                        code: 11,
-                    });
-                    return;
-                }
+                // if (voter.oor === "YES") {
+                //   rejectList.push({
+                //     id: member.id,
+                //     firstname: member.firstname,
+                //     lastname: member.lastname,
+                //     municipal: member.municipalsId,
+                //     barangay: member.barangaysId,
+                //     reason: "Wala sa nasabing ankop na lugar.",
+                //     teamId: member.teamId,
+                //     code: 11,
+                //   });
+                //   return;
+                // }
                 if (voter.level === 3) {
                     rejectList.push({
                         id: member.id,
@@ -2521,22 +2554,27 @@ const resolvers = {
             }
             return "OK";
         }),
-        changeLeader: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id, teamId, level }) {
-            const data = yield prisma_1.prisma.voters.findUnique({
-                where: { id },
-            });
-            if (!data) {
-                throw new graphql_1.GraphQLError("Voter not found", {
+        changeLeader: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id, teamId, level, currentTl }) {
+            console.log({ id, teamId, level, currentTl });
+            const [data, team, tl] = yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.voters.findUnique({
+                    where: { id: id },
+                }),
+                prisma_1.prisma.team.findUnique({
+                    where: {
+                        id: teamId,
+                    },
+                }),
+                prisma_1.prisma.teamLeader.findUnique({
+                    where: {
+                        id: currentTl,
+                    }
+                })
+            ]);
+            if (!data || !team || !tl) {
+                throw new graphql_1.GraphQLError("Voter or Team or Team Leader not found", {
                     extensions: { code: "VOTER_NOT_FOUND" },
                 });
-            }
-            const team = yield prisma_1.prisma.team.findUnique({
-                where: {
-                    id: teamId,
-                },
-            });
-            if (!team) {
-                throw new graphql_1.GraphQLError("Team not found");
             }
             const teamLeader = yield prisma_1.prisma.teamLeader.create({
                 data: {
@@ -2548,20 +2586,24 @@ const resolvers = {
                     hubId: "Unknown",
                     level: 1,
                     candidatesId: team.candidatesId,
+                    barangayCoorId: tl.barangayCoorId,
+                    purokCoorsId: tl.purokCoorsId
                 },
             });
-            const newteam = yield prisma_1.prisma.team.update({
-                where: { id: teamId },
-                data: {
-                    teamLeaderId: teamLeader.id,
-                },
-            });
+            const [newteam] = yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.team.update({
+                    where: { id: teamId },
+                    data: {
+                        teamLeaderId: teamLeader.id,
+                    },
+                }),
+            ]);
             yield prisma_1.prisma.voters.update({
                 where: {
                     id,
                 },
                 data: {
-                    teamId: newteam.id,
+                    teamId: teamId,
                     candidatesId: team.candidatesId,
                     level: 1
                 },
@@ -4229,7 +4271,7 @@ const resolvers = {
             return "OK";
         }),
         transferGroup: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id, toId }) {
-            const [team, toTeam] = yield prisma_1.prisma.$transaction([
+            const [team, toTeam, voters] = yield prisma_1.prisma.$transaction([
                 prisma_1.prisma.team.findUnique({
                     where: {
                         id
@@ -4239,9 +4281,14 @@ const resolvers = {
                     where: {
                         id: toId
                     }
+                }),
+                prisma_1.prisma.voters.findMany({
+                    where: {
+                        teamId: id
+                    }
                 })
             ]);
-            if (!team || !toTeam) {
+            if (!team || !toTeam || voters.length === 0) {
                 throw new graphql_1.GraphQLError("Current Team or target team not found");
             }
             yield prisma_1.prisma.$transaction([
@@ -4249,6 +4296,14 @@ const resolvers = {
                     where: {
                         id: team.teamLeaderId
                     }, data: {
+                        teamId: toTeam.id
+                    }
+                }),
+                prisma_1.prisma.voters.updateMany({
+                    where: {
+                        id: { in: voters.map((item) => item.id) }
+                    },
+                    data: {
                         teamId: toTeam.id
                     }
                 })
@@ -4265,20 +4320,15 @@ const resolvers = {
             const [toTeam, tl] = yield prisma_1.prisma.$transaction([
                 prisma_1.prisma.teamLeader.findUnique({
                     where: { id: toId },
-                    include: {
-                        voter: true,
-                    },
                 }),
                 prisma_1.prisma.teamLeader.findUnique({
                     where: { id },
-                    include: { voter: true },
                 }),
             ]);
             // Ensure both teams exist
             if (!toTeam || !tl) {
                 throw new graphql_1.GraphQLError("Current Team or Target Team not found");
             }
-            console.log("✅ Teams Found:", { tl, toTeam });
             // Determine what to update
             const coor = {};
             if (level === 3) {
@@ -4288,7 +4338,6 @@ const resolvers = {
             if (level === 2) {
                 coor.barangayCoorId = toTeam.barangayCoorId;
                 coor.purokCoorsId = toTeam.id;
-                console.log("🔄 Updating team leader PC with:", coor);
             }
             // Update database
             yield prisma_1.prisma.$transaction([
@@ -4301,39 +4350,169 @@ const resolvers = {
                     data: coor,
                 }),
             ]);
-            console.log("✅ Assign Figure completed successfully");
             return "OK";
         }),
         updateVoter: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
-            console.log("Voter: ", id);
-            const voter = yield prisma_1.prisma.voters.findUnique({
-                where: {
-                    id
-                }
-            });
-            // console.log(voter);
-            // await prisma.voters.update({
+            // console.log("Voter: ", id);
+            // const voter = await prisma.voters.findUnique({
             //   where: {
-            //     id: voter?.id
-            //   }, 
-            //   data: {
-            //     level: 1
+            //     id
             //   }
             // })
-            const tl = yield prisma_1.prisma.teamLeader.findFirst({
-                where: {
-                    votersId: voter === null || voter === void 0 ? void 0 : voter.id
-                }
-            });
-            yield prisma_1.prisma.teamLeader.update({
-                where: {
-                    id: tl === null || tl === void 0 ? void 0 : tl.id
-                },
-                data: {
-                    level: 1,
-                    teamId: "57cbbae7-0645-4db9-bf7a-67786ff9c5df"
-                }
-            });
+            // console.log(voter);
+            // const tl = await prisma.teamLeader.findFirst({
+            //   where: {
+            //     votersId: voter?.id
+            //   }
+            // })
+            // const [target, account, butaw, queryTwo, optionTwo,] = await prisma.$transaction([
+            //   prisma.queries.findUnique({
+            //     where: {
+            //       id: "4725e09c-8d64-4387-ba56-c7bf089a9d1c"
+            //     }
+            //   }),
+            //   prisma.option.findMany({
+            //     where: {
+            //       queryId: "4725e09c-8d64-4387-ba56-c7bf089a9d1c"
+            //     }
+            //   }),
+            //   prisma.response.count({
+            //     where: {
+            //       queryId: "4725e09c-8d64-4387-ba56-c7bf089a9d1c"
+            //     }
+            //   }),
+            //   prisma.queries.findUnique({
+            //     where: {
+            //       id: "ea4ed6f7-1e47-4315-88d0-a29958ac522f"
+            //     }
+            //   }),
+            //   prisma.option.findMany({
+            //     where: {
+            //       queryId: "ea4ed6f7-1e47-4315-88d0-a29958ac522f"
+            //     },
+            //     include: {
+            //      _count: {
+            //        select: {
+            //         Response: true
+            //        }
+            //      },
+            //      Response: {
+            //       take: 5
+            //      },
+            //     }
+            //   }),
+            // ])
+            // const responseTwo = await prisma.response.groupBy({
+            //   by: ["respondentResponseId", "optionId", "queryId"],
+            //   where: {
+            //     queryId: "ea4ed6f7-1e47-4315-88d0-a29958ac522f"
+            //   },
+            //   _count: {
+            //     respondentResponseId: true, // Count occurrences of each respondentResponseId
+            //     optionId: true, // (Optional) Count responses for each optionId
+            //     queryId: true // (Optional) Count responses per queryId
+            //   }
+            // });
+            // console.log(responseTwo);      
+            // console.log(JSON.stringify({ target, account, butaw, queryTwo, optionTwo, responseTwo }, null, 2));
+            const [target, account] = yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.users.findFirst({
+                    where: {
+                        username: "ceejay"
+                    }
+                }),
+                prisma_1.prisma.users.findFirst({
+                    where: {
+                        username: "jopen"
+                    }
+                })
+            ]);
+            if (!target || !account) {
+                throw new graphql_1.GraphQLError("User not found");
+            }
+            console.log(target, account);
+            yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.users.update({
+                    where: {
+                        uid: target.uid,
+                    },
+                    data: {
+                        status: 1,
+                        role: 1
+                    }
+                }),
+                prisma_1.prisma.users.update({
+                    where: {
+                        uid: account.uid,
+                    },
+                    data: {
+                        status: 1,
+                        role: 1
+                    }
+                }),
+                // prisma.teamLeader.update({
+                //     where: {
+                //       id: tl?.id
+                //     },
+                //     data: {
+                //       purokCoorsId: null
+                //     }
+                //   }),
+                // prisma.team.update({
+                //   where: {
+                //     id: "85a69110-9d73-415e-a232-25dd610314d9"
+                //   },
+                //   data: {
+                //     level:1
+                //   }
+                // }),
+                // prisma.voters.update({
+                //   where: {
+                //     id: voter?.id
+                //   }, 
+                //   data: {
+                //     level: 0,
+                //     teamId: null
+                //   }
+                // })
+                // prisma.voters.updateMany({
+                //   where:{
+                //     municipalsId: 4905,
+                //     teamId: {not: null},
+                //     candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0"
+                //   },
+                //   data: {
+                //     candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
+                //   }
+                // }),
+                // prisma.team.updateMany({
+                //   where:{
+                //     municipalsId: 4905,
+                //     candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0"
+                //   },
+                //   data: {
+                //     candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
+                //   }
+                // }),
+                // prisma.teamLeader.updateMany({
+                //   where: {
+                //      municipalsId: 4905,
+                //     candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0"
+                //   },
+                //   data: {
+                //     candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
+                //   }
+                // })
+            ]);
+            // await prisma.teamLeader.update({
+            //   where: {
+            //     id: tl?.id
+            //   },
+            //   data: {
+            //     level: 1,
+            //     teamId: "57cbbae7-0645-4db9-bf7a-67786ff9c5df"
+            //   }
+            // })
             return "OK";
         }),
         comments: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { ids, tag }) {
@@ -4370,6 +4549,83 @@ const resolvers = {
                 });
             }
             return "OK";
+        }),
+        calibrateTeam: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id, bcID, pcID, tlID }) {
+            const [team, bc, pc, tl] = yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.team.findUnique({
+                    where: {
+                        id: id,
+                    },
+                }),
+                prisma_1.prisma.teamLeader.findUnique({
+                    where: {
+                        id: bcID,
+                    },
+                }),
+                prisma_1.prisma.teamLeader.findUnique({
+                    where: {
+                        id: pcID,
+                    },
+                }),
+                prisma_1.prisma.teamLeader.findUnique({
+                    where: {
+                        id: tlID,
+                    },
+                }),
+            ]);
+            if (!tl || !bc || !pc || !team) {
+                throw new graphql_1.GraphQLError("Bad Request");
+            }
+            const tlVoter = yield prisma_1.prisma.voters.findMany({
+                where: {
+                    id: tl.votersId
+                }
+            });
+            if (!tlVoter) {
+                throw new graphql_1.GraphQLError("TL voters not found");
+            }
+            yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.teamLeader.update({
+                    where: {
+                        id: tl.id,
+                    },
+                    data: {
+                        purokCoorsId: pc.id,
+                        barangayCoorId: bc.id
+                    },
+                }),
+                prisma_1.prisma.voters.update({
+                    where: {
+                        id: tl.votersId,
+                    },
+                    data: {
+                        teamId: pc.teamId,
+                        level: 1
+                    },
+                }),
+                // prisma.teamLeader.update({
+                //   where: {
+                //     id: pcID,
+                //   },
+                //   data: {
+                //     purokCoorsId: team.id,
+                //   },
+                // }),
+            ]);
+            return "OK";
+        }),
+        calibrateTeamArea: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode }) {
+            const calibratedTeams = [];
+            const tls = yield prisma_1.prisma.teamLeader.findMany({
+                where: {
+                    municipalsId: zipCode,
+                    OR: [
+                        { barangayCoorId: null },
+                        { purokCoorsId: null }
+                    ]
+                }
+            });
+            return tls;
         })
     },
     Voter: {
@@ -4572,26 +4828,34 @@ const resolvers = {
                     candidatesId: candidateId
                 },
                 include: {
-                    _count: {
-                        select: {
-                            voters: {
-                                where: {
-                                    barangaysId: parent.id,
-                                    candidatesId: candidateId
-                                }
-                            },
+                    voters: {
+                        where: {
+                            barangaysId: parent.id,
+                            candidatesId: candidateId,
                         },
+                        select: {
+                            VoterRecords: true,
+                            status: true,
+                            oor: true,
+                            DelistedVoter: true,
+                        }
                     },
                 },
             });
+            const cleanList = team.filter((item) => item.voters.length > 0 && // Ensure the team has voters
+                item.voters.every((voter) => voter.VoterRecords.every(rec => rec.type === 0) && // ALL VoterRecords must have type === 0
+                    voter.status === 1 &&
+                    voter.DelistedVoter.length === 0 &&
+                    voter.oor === "NO"));
             return {
-                aboveMax: team.filter((item) => item._count.voters > 10).length,
-                belowMax: team.filter((item) => item._count.voters < 10 && item._count.voters > 5).length,
-                equalToMax: team.filter((item) => item._count.voters === 10).length,
-                aboveMin: team.filter((item) => item._count.voters > 5).length,
-                equalToMin: team.filter((item) => item._count.voters === 5).length,
-                belowMin: team.filter((item) => item._count.voters === 4).length,
-                threeAndBelow: team.filter((item) => item._count.voters <= 3).length,
+                aboveMax: team.filter((item) => item.voters.length > 10).length,
+                belowMax: team.filter((item) => item.voters.length < 10 && item.voters.length > 5).length,
+                equalToMax: team.filter((item) => item.voters.length === 10).length,
+                aboveMin: team.filter((item) => item.voters.length > 5).length,
+                equalToMin: team.filter((item) => item.voters.length === 5).length,
+                belowMin: team.filter((item) => item.voters.length === 4).length,
+                threeAndBelow: team.filter((item) => item.voters.length <= 3).length,
+                clean: cleanList.length,
             };
         }),
         leaders: (parent_1, _a) => __awaiter(void 0, [parent_1, _a], void 0, function* (parent, { skip, candidateId }) {
@@ -4956,10 +5220,14 @@ const resolvers = {
             if (genderId !== "all") {
                 filters.genderId = genderId;
             }
-            const responses = yield prisma_1.prisma.response.count({
+            const responses = yield prisma_1.prisma.response.findMany({
                 where: filters,
+                select: {
+                    id: true
+                },
+                distinct: ["respondentResponseId", "optionId"]
             });
-            return responses;
+            return responses.length;
         }),
         ageCountRank: (parent_1, _a) => __awaiter(void 0, [parent_1, _a], void 0, function* (parent, { id, ageBracketId, barangayId, genderId }) {
             let filters = {
@@ -4989,9 +5257,14 @@ const resolvers = {
             if (genderId !== "all") {
                 filters.genderId = genderId;
             }
-            return yield prisma_1.prisma.response.count({
+            const data = yield prisma_1.prisma.response.findMany({
                 where: filters,
+                select: {
+                    id: true
+                },
+                distinct: ["respondentResponseId", "optionId"]
             });
+            return data.length;
         }),
         barangays: () => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.barangays.findMany({ where: { municipalId: 4905 } });

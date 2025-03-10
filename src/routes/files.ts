@@ -5,12 +5,13 @@ import fs from "fs";
 import path from "path";
 import XLSX from "xlsx";
 import ExcelJS from "exceljs";
+
 //utils
 import { extractYear } from "../utils/date";
-import { handleSpecialChar, handleGender } from "../utils/data";
+import { handleSpecialChar, handleGender, alphabetic, calculatePercentage } from "../utils/data";
 
 //database
-import { DuplicateteamMembers, prisma, Voters } from "../../prisma/prisma";
+import { Barangays, DuplicateteamMembers, prisma, Team, Voters } from "../../prisma/prisma";
 //props
 import {
   DataProps,
@@ -18,11 +19,49 @@ import {
   UpdateDataProps,
   BarangayProps,
   VotersProps,
+  TeamProps,
 } from "../interface/data";
 import { GraphQLError } from "graphql";
 
 const uploadDir = path.join(__dirname, "uploads");
 const upload = multer({ dest: uploadDir });
+
+const drawTable = (doc: PDFKit.PDFDocument, startY: number, headers: string[], title: string, data: BarangayProps[]) => {
+  const col1X = 60;
+  const col2X = 200;
+  const col3X = 350;
+  const rowHeight = 20;
+  let y = startY;
+
+  // Draw Table Header
+  doc.fontSize(12).text(title, 50, y);
+  y += 20;
+  doc.moveTo(50, y).lineTo(550, y).stroke();
+
+  // Centered Headers
+  [col1X, col2X, col3X].forEach((x, index) => {
+    const textWidth = doc.widthOfString(headers[index]);
+    doc.text(headers[index], x + (100 - textWidth) / 2, y + 5);
+  });
+
+  y += 20;
+  doc.moveTo(50, y).lineTo(550, y).stroke();
+  console.log(data);
+  
+
+  // Draw Table Rows with Centered Data
+  for (let i = 0; i < 5; i++) {
+    const rowData = [``];
+
+    [col1X, col2X, col3X].forEach((x, index) => {
+      const textWidth = doc.widthOfString(rowData[index]);
+      doc.text(rowData[index], x + (100 - textWidth) / 2, y + 5);
+    });
+
+    y += rowHeight;
+    doc.moveTo(50, y).lineTo(550, y).stroke();
+  }
+};
 
 export default (io: any) => {
   const router = express.Router();
@@ -469,8 +508,6 @@ export default (io: any) => {
       const zipCode = req.body.zipCode;
       const barangay = req.body.barangay;
 
-      console.log({ data: req.body });
-
       try {
         if (!req.file) {
           return res.status(400).send("No file uploaded.");
@@ -878,6 +915,7 @@ export default (io: any) => {
         });
       }
       const temp: BarangayProps = JSON.parse(req.body.barangay);
+      
 
       try {
         const workbook = new ExcelJS.Workbook();
@@ -1037,7 +1075,6 @@ export default (io: any) => {
       //   });
       // } catch (error) {}
     },
-
     router.post("/custom-list", async (req: Request, res: Response) => {
       const barangayId = req.body.barangayId;
     
@@ -1594,8 +1631,10 @@ export default (io: any) => {
         res.status(500).send("Internal Server Error");
       }
     }),
-    router.post("validation-result", async(req: Request, res: Response)=>{
+    router.post("/validation-result", async(req: Request, res: Response)=>{
       const zipCode = req.body.zipCode;
+      console.log(zipCode);
+      
       if(!zipCode){
         res.status(400).json({ message: "Bad Request" });
         return;
@@ -1603,9 +1642,7 @@ export default (io: any) => {
       try {
         const workbook = new ExcelJS.Workbook();
         workbook.created = new Date();
-    
-        let skip = 0;
-        let haveMore = true;
+
         const municpal = await prisma.municipals.findUnique({
           where: {
             id: parseInt(zipCode, 10),
@@ -1620,25 +1657,41 @@ export default (io: any) => {
             municipalId: parseInt(zipCode, 10)
           },
           include: {
-            AccountValidateTean: {
+            TeamLeader: {
               select: {
                 id: true
               }
             },
             voters: {
               where:{
-                level: 0
+                level: 0,
+                teamId: { not: null},
+                candidatesId: { not: null}
               },
               select:{
                 id: true,
                 oor: true,
                 status: true,
-                inc: true
+                inc: true,
+                ValdilatedMembers:{
+                  select:{
+                    id: true
+                  }
+                },
+                VoterRecords:{
+                  select:{
+                    type: true
+                  }
+                }
               }
             },
             
+          },
+          orderBy: {
+            name: "asc"
           }
         })
+        
         const worksheet = workbook.addWorksheet(municpal.name, {
           pageSetup: {
             paperSize: 9,
@@ -1661,13 +1714,762 @@ export default (io: any) => {
             oddFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
           },
         });
+
+        worksheet.columns = [
+          { header: "Barangay", key: "barangay", width: 14 },
+          { header: "TL", key: "tl", width: 6 },
+          { header: "Members", key: "Members", width: 6 },
+          { header: "Validated Members", key: "vm", width: 14 },
+          { header: "DEAD", key: "dead", width: 8 },
+          { header: "OR", key: "or", width: 6 },
+          { header: "UD", key: "ud", width: 6 },
+          { header: "ND", key: "nd", width: 6 },
+          { header: "OP", key: "op", width: 6 },
+          { header: "INC", key: "inc", width: 6 },
+        ];
+        const data: any[] = []
         for(let item of barangays){
+          data.push({
+            barangay: item.name,
+            tl: item.TeamLeader.length,
+            Members: item.voters.length,
+            vm: item.voters.filter((voter)=> voter.ValdilatedMembers.length > 0).length,
+            dead: item.voters.filter((voter)=> voter.status === 0).length,
+            or: item.voters.filter((voter)=> voter.oor === "YES").length,
+            inc: item.voters.filter((voter)=> voter.inc === "YES").length,
+          })
+        }
+
+        worksheet.addRows(data);
+    
+        res.setHeader(
+          "Content-Type",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        res.setHeader(
+          "Content-Disposition",
+          "attachment; filename=SupporterReport.xlsx"
+        );
+    
+        await workbook.xlsx.write(res);
+        res.end(); // Ensure the response is closed
+      } catch (error) {
+        res.status(500).send("Internal Server Error");
+      }
+    }),
+    router.get("/team-breakdown", async (req: Request, res: Response) => {
+      try {
+        const zipCode = req.query.zipCode as string;
+        const barangay = req.query.barangay as string;
+    
+        console.log({ zipCode, barangay });
+    
+        if (!zipCode || !barangay) {
+          return res.status(400).json({ message: "Bad Request" });
+        }
+    
+        // Fetch municipal and barangay info
+        const [municipal, barangayData] = await prisma.$transaction([
+          prisma.municipals.findUnique({
+            where: { id: parseInt(zipCode, 10) },
+            include: {
+              barangays: { select: { id: true, name: true } },
+            },
+          }),
+          prisma.barangays.findUnique({ where: { id: barangay } }),
+        ]);
+    
+        if (!municipal || !barangayData) {
+          return res.status(404).json({ message: "Area not found" });
+        }
+    
+        let teamToInsert: any[] = [];
+        let skip = 0;
+        let haveMore = true;
+    
+        while (haveMore) {
+          const teams = await prisma.team.findMany({
+            where: {
+              municipalsId: municipal.id,
+              barangaysId: barangay,
+              level: 1,
+            },
+            skip,
+            take: 50,
+            orderBy: { id: "asc" },
+            include: {
+              voters: {
+                select: { id: true, idNumber: true, firstname: true, lastname: true },
+              },
+              TeamLeader: {
+                select: {
+                  voter: {
+                    select: { id: true, idNumber: true, firstname: true, lastname: true },
+                  },
+                },
+              },
+              _count:{
+                select: {
+                  voters: true
+                }
+              }
+            },
+          });
+    
+          if (teams.length === 0) {
+            haveMore = false;
+          } else {
+            teamToInsert.push(...teams.filter((item)=> item._count.voters < 4));
+            skip += teams.length;
+          }
+        }
+    
+        if (teamToInsert.length === 0) {
+          return res.status(404).json({ message: "No teams found" });
+        }
+      
+        // Create Excel file
+        const workbook = new ExcelJS.Workbook();
+        workbook.created = new Date();
+    
+        const worksheet = workbook.addWorksheet(barangayData.name, {
+          pageSetup: {
+            paperSize: 9,
+            orientation: "portrait",
+            fitToPage: false,
+            showGridLines: true,
+            margins: {
+              left: 0.6,
+              right: 0.6,
+              top: 0.5,
+              bottom: 0.5,
+              header: 0.3,
+              footer: 0.3,
+            },
+          },
+          headerFooter: {
+            firstHeader: "",
+            firstFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+            oddHeader: `&L&B${municipal.name}-${barangayData.name} Team Members`,
+            oddFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+          },
+        });
+    
+        worksheet.columns = [
+          { header: "TL", key: "tl", width: 40 },
+          { header: "Members", key: "members", width: 40 },
+        ];
+        worksheet.getRow(1).eachCell((cell) => {
+          cell.font = { bold: true };
+          cell.alignment = { horizontal: "center", vertical: "middle" };
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" },
+          };
+        });
+    
+        // Prepare data for insertion
+        const dataRows: any[] = [];
+
+        teamToInsert.forEach((team) => {
+          const teamLeader = team.TeamLeader?.voter
+            ? `${team.TeamLeader.voter.idNumber} - ${team.TeamLeader.voter.lastname}, ${team.TeamLeader.voter.firstname} (${team.voters.length})`
+            : "No Leader";
+    
+          const members = team.voters.map((voter: { lastname: any; firstname: any; idNumber: any }) => `${voter.idNumber} - ${voter.lastname}, ${voter.firstname}`);
+    
+          // First row with Team Leader
+          dataRows.push([teamLeader, members[0] || ""]);
+    
+          // Remaining members in separate rows
+          for (let i = 1; i < members.length; i++) {
+            dataRows.push(["", members[i]]);
+          }
+          dataRows.push(["", ""]);
+        });
+    
+        worksheet.addRows(dataRows);
+    
+        // Send file as response
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader("Content-Disposition", 'attachment; filename="team_breakdown.xlsx"');
+    
+        await workbook.xlsx.write(res);
+        res.end();
+      } catch (error) {
+        console.error("Error generating report:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+      }
+    }),
+    router.post("/generate-team", async(req: Request, res: Response)=>{
+      try {
+        const {
+          delisted,
+          ud,
+          nd,
+          op,
+          or,
+          inc,
+          dead,
+          selected,
+          min,
+          max,
+          barangay,
+          zipCode,
+          selectedId,
+          membersCount,
+          level
+        } = req.body;
+        const workbook = new ExcelJS.Workbook();
+        workbook.created = new Date();
+        const filter: any = {};
+
+        if (delisted) {
+          filter.DelistedVoter = {
+            some: {}
+          };
+        }
+        if (dead) {
+          filter.status = 0;
+        }
+
+        if (ud) {
+          filter.VoterRecords= {
+            some: {
+              type: 1
+            }
+          }
+        }
+
+        if (nd) {
+          filter.VoterRecords= {
+            some: {
+              type: 2
+            }
+          }
+        }
+
+        if (op) {
+          filter.VoterRecords= {
+            some: {
+              type: 3
+            }
+          }
+        }
+
+        if (or) {
+          filter.oor = "YES";
+        }
+        const [municipal, barangayData] = await prisma.$transaction([
+          prisma.municipals.findUnique({
+            where: {
+              id: parseInt(zipCode, 10)
+            }
+          }),
+          prisma.barangays.findUnique({
+            where: {
+              id: barangay
+            }
+          })
+        ])
+
+        if(!municipal || !barangayData){
+          return res.status(400).json({ message: "Bad request" })
+        }
+
+        console.log({
+          delisted,
+          ud,
+          nd,
+          op,
+          or,
+          inc,
+          dead,
+          selected,
+          min,
+          max,
+          barangay,
+          zipCode,
+          selectedId,
+          membersCount,
+          level
+        });
+        
+
+        // const teams = await prisma.team.findMany({
+        //   where: {
+        //     barangaysId: barangay.id,
+        //     municipalsId: municipal.id,
+        //     voters: {
+        //       some: filter
+        //     }
+        //   },
+        //   include: { 
+        //     _count: {
+        //       select: {
+        //         voters: true
+        //       }
+        //     },
+        //     voters: {
+        //       select: {
+        //         idNumber: true,
+        //         firstname: true,
+        //         lastname: true,
+        //         status: true,
+        //         oor: true,
+        //         DelistedVoter: true,
+        //         VoterRecords: true
+        //       }
+        //     }
+        //   },
+        //   take: 50
+        // })
+
+        // console.log(JSON.stringify(teams, null,2));
+        
+        
+
+      } catch (error) {
+        console.log(error);
+        
+        res.status(500).send("Internal Server Error")
+      }
+    }),
+    router.post("/generate-survey-report", async (req: Request, res: Response) => {
+      const { code, zipCode, barangayId } = req.body;
+      if (!code || !zipCode || !barangayId) {
+        return res.status(400).send("Bad request");
+      }
+    
+      const municipalId = parseInt(zipCode as string, 10);
+    
+      try {
+        
+        const barangayResponseResponse = async(id: string)=>{
+          return await prisma.respondentResponse.count({
+            where: {
+              Response: {
+                some: {
+                  queryId: id
+                }
+              }
+            }
+          })
+        }
+        let barangay: Barangays | null = null
+        const filter: any = {}
+        if(barangayId !== "all"){
+          filter.barangaysId = barangayId
+          barangay = await prisma.barangays.findUnique({
+            where: {
+              id: barangayId as string
+            }
+          })
+        }
+        const [barangays, survey] = await prisma.$transaction([
+          prisma.barangays.findMany({
+            where: {
+              municipalId: municipalId,
+            },
+            include: {
+              RespondentResponse: {
+                where: {
+                  surveyId: code as string
+                },
+                include: {
+                  gender: {
+                    select: {
+                      id: true,
+                      name: true,
+                    },
+                  },
+                  Response: {
+                    select: {
+                      queries: {
+                        select: {
+                          id: true,
+                          queries: true,
+                          access: true
+                        }
+                      },
+                      option: {
+                        select: {
+                          id: true,
+                          title: true,
+                        },
+                      }
+                    },
+                    distinct: ["respondentResponseId", "optionId"]
+                  }
+                },
+                distinct: ["surveyId"]
+              },
+              
+            },
+            orderBy: {
+              name: "asc"
+            }
+          }),
+          prisma.survey.findUnique({
+            where: {
+              id: code as string,
+            },
+            include: {
+              queries: {
+                include: {
+                  Option: {
+                    include: {
+                      Response: {
+                        where: {
+                          municipalsId: municipalId,
+                          ...filter
+                        },
+                        include: {
+                          respondentResponse: {
+                            select: {
+                              gender: {
+                                select: {
+                                  id: true,
+                                  name: true,
+                                },
+                              },
+                            },
+                            
+                          },
+                        },
+                        distinct: ["respondentResponseId", "optionId"]
+                      },
+                      
+                    },
+                  },
+                  Response: true,
+                },
+              },
+              _count: {
+                select: {
+                  RespondentResponse: {
+                    where: {
+                      surveyId: code as string,
+                      ...filter
+                    },
+                  },
+                },
+              },
+            },
+          }),
+        ]);
+        const barangayData = await prisma.barangays.findMany({
+          where: {
+            municipalId: municipalId,
+          },
+          include: {
+            RespondentResponse: {
+              where: {
+                surveyId: code as string,
+                ...filter
+              },
+              include: {
+                gender: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+                Response: {
+                  select: {
+                    queries: {
+                      select: {
+                        id: true,
+                        queries: true,
+                        access: true,
+                        type: true
+                      }
+                    },
+                    option: {
+                      select: {
+                        id: true,
+                        title: true,
+                        queryId: true
+                      },
+                    }
+                  }
+                }
+              },
+            }
+          },
+          orderBy: {
+            name: "asc"
+          }
+        });
+        
+        const structuredResponse = {
+          barangays: barangayData.map(barangay => {
+            const queryMap = new Map();
+            const uniqueResponses = new Set(); // Track unique respondent responses
+        
+            barangay.RespondentResponse.forEach(respondent => {
+              uniqueResponses.add(respondent.id); // Count each unique respondent response
+        
+              respondent.Response.forEach(response => {
+                const queryId = response.queries.id;
+                const queryText = response.queries.queries;
+                const queryAccess = response.queries.access;
+                const optionId = response.option?.id;
+                const optionTitle = response.option?.title;
+                const gender = respondent.gender.name.toLowerCase();
+        
+                // **Fix: Ensure option belongs to the correct query**
+                if (!optionId || response?.option?.queryId !== queryId) {
+                  return; // Skip this option if it doesn’t match the query
+                }
+        
+                if (!queryMap.has(queryId)) {
+                  queryMap.set(queryId, {
+                    query: queryText,
+                    access: queryAccess,
+                    totalQueryResponse: 0,
+                    options: new Map()
+                  });
+                }
+        
+                const queryObj = queryMap.get(queryId);
+                queryObj.totalQueryResponse++;
+        
+                if (!queryObj.options.has(optionId)) {
+                  queryObj.options.set(optionId, {
+                    title: optionTitle,
+                    response: {
+                      respondentResponse: {
+                        gender: { male: 0, female: 0 }
+                      }
+                    }
+                  });
+                }
+        
+                // **Fix: Increment gender count only for valid options**
+                const optionObj = queryObj.options.get(optionId);
+                if (optionObj) {
+                  optionObj.response.respondentResponse.gender[gender]++;
+                }
+              });
+            });
+        
+            return {
+              name: barangay.name,
+              totalResponse: uniqueResponses.size, // Count only unique respondent responses
+              queries: Array.from(queryMap.values()).map(q => ({
+                query: q.query,
+                access: q.access,
+                totalQueryResponse: q.totalQueryResponse,
+                options: Array.from(q.options.values())
+              }))
+            };
+          })
+        };
+        
+        if (!survey) {
+          return res.status(404).json({ message: "NOT Found" });
+        }
+    
+        const { queries } = survey;
+        const doc = new PDFDocument({ size: "Letter", margin: 10, compress: false });
+
+        const area = barangayId !== "all" ? `-${barangay?.name}` : "-All"
+    
+        doc.pipe(res);
+    
+        // Report Header
+        doc.fontSize(12).text(`Survey CODE: ${survey.tagID}`, 20, 20);
+        doc.fontSize(12).text(`Area: ${zipCode}${area}`, 20, 40);
+        doc.moveDown(1);
+        doc.fontSize(12).text("Report Summary", 20, 100);
+        doc.fontSize(10).text(`Target Response: ${1500}`, 20, 120);
+        doc.fontSize(10).text(`Total Response: ${survey._count.RespondentResponse}`, 20, 140);
+        doc.fontSize(10).text(`Percentage: ${calculatePercentage(survey._count.RespondentResponse, 1500)}%`, 20, 160);
+        doc.moveDown(2);
+    
+        // Survey Queries
+        queries
+          .filter((item) => item.access !== "admin")
+          .forEach((query, i) => {
+            doc.fontSize(12).text(`${i + 1}. ${query.queries}`, { indent: 20 });
+            doc.moveDown(0.5);
+    
+            if (query.Option) {
+              query.Option.forEach((option, j) => {
+                doc.fontSize(10).text(`${alphabetic[j]}. ${option.title}`, { indent: 40 });
+                const male = option.Response.filter((item) => item.respondentResponse.gender.name.toLowerCase() === "male").length;
+                const female = option.Response.filter((item) => item.respondentResponse.gender.name.toLowerCase() === "female").length;
+    
+                doc.moveDown(0.5);
+                doc.fontSize(10).text(
+                  `Total: ${option.Response.length} (${calculatePercentage(option.Response.length, query.Response.length)}%)     Male: ${male} (${calculatePercentage(male, option.Response.length)}%) | Female: ${female} (${calculatePercentage(female, option.Response.length)}%)`,
+                  { indent: 60 }
+                );
+                doc.moveDown(0.5);
+              });
+            }
+            doc.moveDown(1);
+          });
+          if(barangayId === "all"){
+            doc.fontSize(12).text(`Barangay Breakdown`, { indent: 10 });
+            doc.moveDown(0.5);
+            structuredResponse.barangays.forEach((barangay, one)=> {
+              doc.fontSize(12).text(`${one + 1}. ${barangay.name}`, { indent: 10 });
+              doc.moveDown(1);
+              doc.fontSize(10).text(`Total Response: ${barangay.totalResponse}`, { indent: 10 });
+              barangay.queries.filter((item)=> item.access !== "admin").forEach((query, two)=> {
+                doc.moveDown(2);
+                doc.fontSize(10).text(`${two + 1}. ${query.query}`, { indent: 40 });
+                doc.moveDown(1);
+                doc.fontSize(10).text(`Total: ${query.totalQueryResponse}`, { indent: 15 });
+                const optionList = query.options as { title: string,
+                  response: {
+                    respondentResponse: {
+                      gender: { male: number, female: number }
+                    }
+                  }  }[]
+                  optionList.forEach((option, three)=>{
+                  doc.fontSize(10).text(`${alphabetic[three]}. ${option.title}`, { indent: 60 });
+                  doc.fontSize(10).text(`Total: ${option.response.respondentResponse.gender.male + option.response.respondentResponse.gender.female}`, { indent: 60 });
+                  doc.fontSize(10).text(`Male: ${option.response.respondentResponse.gender.male} Female: ${option.response.respondentResponse.gender.female}`, { indent: 70 });
+                  doc.moveDown(1);
+                })
+              })
+            })
+          }else{
+            const barangayResult = structuredResponse.barangays.find((item)=> item.name === barangay?.name)
+              doc.moveDown(2);
+              doc.fontSize(12).text(`Barangay: ${barangayResult?.name}`, { indent: 10 });
+              doc.moveDown(0.5);
+              doc.fontSize(10).text(`Total Response: ${barangayResult?.totalResponse}`, { indent: 10 });
+              doc.moveDown(0.5);
+              barangayResult?.queries.filter((item)=> item.access !== "admin").forEach((query, two)=> {
+                doc.moveDown(2);
+                doc.fontSize(10).text(`${two + 1}. ${query.query}`, { indent: 40 });
+                doc.moveDown(1);
+                doc.fontSize(10).text(`Total: ${query.totalQueryResponse}`, { indent: 15 });
+                const optionList = query.options as { title: string,
+                  response: {
+                    respondentResponse: {
+                      gender: { male: number, female: number }
+                    }
+                  }  }[]
+                  optionList.forEach((option, three)=>{
+                  doc.fontSize(10).text(`${alphabetic[three]}. ${option.title}`, { indent: 60 });
+                  doc.fontSize(10).text(`Total: ${option.response.respondentResponse.gender.male + option.response.respondentResponse.gender.female}`, { indent: 60 });
+                  doc.fontSize(10).text(`Male: ${option.response.respondentResponse.gender.male} Female: ${option.response.respondentResponse.gender.female}`, { indent: 70 });
+                  doc.moveDown(1);
+                })
+              })
+          }
+          
+        if(barangayId === "all"){
+          const tableStartY = doc.y;
+          const docW = doc.page.width - 60; // Reduce width slightly for padding
+          const headers = ["Barangay", "Quota","Male","Female", "Actual"];
+          const perColW = docW / headers.length;
+          const finalW = Number(perColW.toFixed(2));
+  
+          const rowHeight = 20;
+          const startX = 50; // Start position of the table
+          let y = tableStartY;
+  
+          // Draw Table Header
+          doc.fontSize(12).text("Barangay", startX, y);
+          y += 20;
+          doc.moveTo(startX, y).lineTo(startX + docW, y).stroke();
+  
+          // Centered Headers using finalW
+          headers.forEach((header, index) => {
+            const textWidth = doc.widthOfString(header);
+            let posX = startX + index * finalW + (finalW - textWidth) / 2;
+  
+            // Ensure last column does not overflow
+            if (index === headers.length - 1) {
+              posX = startX + index * finalW + (finalW - textWidth - 10) / 2;
+            }
+  
+            doc.text(header, posX, y + 5);
+          });
+  
+          y += 20;
+          doc.moveTo(startX, y).lineTo(startX + docW, y).stroke();
+  
+          const totalActual = barangays.reduce((acc, base)=> {
+            return acc + base.RespondentResponse.length
+          }, 0)
+  
+          const totalMale = barangays.reduce((acc, base)=> {
+            if(!base.maleSize){
+              return 0
+            }
+            return acc + base.maleSize
+          }, 0)
+  
+          const totalFemale = barangays.reduce((acc, base)=> {
+            if(!base.femaleSize){
+              return 0
+            }
+            return acc + base.femaleSize
+          }, 0)
+  
+          const allgender = barangays.reduce((acc, base)=> {
+            if(!base.femaleSize || !base.maleSize){
+              return 0
+            }
+            return acc + base.femaleSize + base.maleSize
+          }, 0)
+  
+          
+          // Draw Table Rows with Centered Data
+          for (let i = 0; i < (barangays?.length ?? 0); i++) {
+            const maleSize = barangays[i].maleSize ?? 0;
+            const femaleSize = barangays[i].femaleSize ?? 0;
+            const totalGender = maleSize + femaleSize;
+            const rowData = [`${barangays[i].name}`, `${barangays[i].maleSize}`,`${barangays[i].femaleSize}`, `${totalGender}`, `${barangays[i].RespondentResponse.length}`];
+  
+            rowData.forEach((data, index) => {
+              const textWidth = doc.widthOfString(data);
+              let posX = startX + index * finalW + (finalW - textWidth) / 2;
+  
+              // Ensure last column is correctly positioned
+              if (index === headers.length - 1) {
+                posX = startX + index * finalW + (finalW - textWidth - 10) / 2;
+              }
+  
+              doc.text(data, posX, y + 5);
+            });
+  
+            y += rowHeight;
+            doc.moveTo(startX, y).lineTo(startX + docW, y).stroke();
+          }
+          [barangays.length, totalMale, totalFemale, allgender  ,totalActual].forEach((header, index) => {
+            const textWidth = doc.widthOfString(header.toString());
+            let posX = startX + index * finalW + (finalW - textWidth) / 2;
+  
+            // Ensure last column does not overflow
+            if (index === headers.length - 1) {
+              posX = startX + index * finalW + (finalW - textWidth - 10) / 2;
+            }
+  
+            doc.text(header.toString(), posX, y + 5);
+          });
+
+
           
         }
-      } catch (error) {
+
         
+        doc.end();
+      } catch (error) {
+        console.log(error);
+        res.status(500).send("Internal Server Error");
       }
     })
+    
     
   );
 

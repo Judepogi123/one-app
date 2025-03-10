@@ -134,6 +134,8 @@ type ValdilatedMember {
     UntrackedVoter: UntrackedVoter
     duplicated: [DuplicateteamMembers!]
     WhiteList: [BlackList!]
+    team: Team
+    TeamLeader: TeamLeader
   }
 
   type BlackList {
@@ -363,7 +365,7 @@ type ValdiatedTeams {
     voters(skip: Int, zipCode: Int): [Voter!]!
     voter(id: String!): Voter
     searchDraftVoter(query: SearchDraftQueryInput!): [Voter]!
-    searchVoter(query: String!,skip: Int!,take: Int, zipCode: Int): [Voter!]
+    searchVoter(query: String!,skip: Int!,take: Int, zipCode: Int, barangayId: String): [Voter!]
     votersCount: Int!
     municipals: [Municipal!]!
     municipal(id: Int!): Municipal
@@ -419,7 +421,7 @@ type ValdiatedTeams {
     getAllTeamLeader(skip: Int, zipCode: Int): [TeamLeader!]
     getVotersList(level: String!, take: Int, skip: Int, zipCode: String, barangayId: String,purokId: String, query: String, pwd: String, illi: String,inc: String,oor: String,dead: String,youth: String,senior: String,gender: String, withoutTeam: String, mode: String): VotersList
     getPurokList(id: String!): [Purok!]
-    teamList(zipCode: String!, barangayId: String!, purokId: String!, level: String!,query: String!, skip: Int!, candidate: String, withIssues: Boolean): [Team!]
+    teamList(zipCode: String!, barangayId: String!, purokId: String!, level: String!,query: String!, skip: Int!, candidate: String, withIssues: Boolean, members: String): [Team!]
     candidates(zipCode: String): [Candidates!]
     candidate(id: String!):Candidates
     team(id: String!): Team
@@ -594,7 +596,7 @@ type BarangayCoor {
     addNewCandidate(firstname: String!, lastname: String!, code: String!,colorCode: String): String!
     updateLeader(id: String!, level: Int!, teamId: String!, method: Int!): String!
     setVoterLevel(level: Int!, id: String!,code: String!): String!
-    changeLeader(id: String!, teamId: String!, level: Int!): String!
+    changeLeader(id: String!, teamId: String!, level: Int!, currentTl: String): String!
     assignBarangayIDnumber(zipCode: Int!): String!
     assignTeam(team: NewTeamInput!): String!
     composeTeam(team: NewTeamInput!, code: String): String!
@@ -642,6 +644,8 @@ type BarangayCoor {
     assignFigure(id: String, toId: String, level: Int): String!
     updateVoter(id: String): String!
     comments(ids: [String!], tag: Int!): String!
+    calibrateTeam(id: String, tlID: String, pcID: String, bcID: String, level: Int): String!
+    calibrateTeamArea(zipCode: Int): [TeamLeader!]
   }
 
   type VoterRecords {
@@ -690,6 +694,7 @@ type AllTeamStatus {
   equalToMin: Int
   belowMin: Int
   threeAndBelow: Int
+  clean: Int
 }
 
   type QRcode {

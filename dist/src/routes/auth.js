@@ -35,10 +35,7 @@ router.post("/user", (req, res) => __awaiter(void 0, void 0, void 0, function* (
         }
         const userData = yield prisma_1.prisma.users.findFirst({
             where: {
-                username: {
-                    contains: user,
-                    mode: "insensitive",
-                },
+                username: user
             },
         });
         if (!userData) {
@@ -49,14 +46,13 @@ router.post("/user", (req, res) => __awaiter(void 0, void 0, void 0, function* (
             return;
         }
         if (userData.role !== 2) {
-            res.status(200).json({
+            return res.status(200).json({
                 error: 2,
                 message: "Unauthorized Account",
             });
-            return;
         }
         if (userData.status === 0) {
-            res.status(200).json({
+            return res.status(200).json({
                 error: 3,
                 message: "Account Suspended",
             });
@@ -64,11 +60,10 @@ router.post("/user", (req, res) => __awaiter(void 0, void 0, void 0, function* (
         }
         const isPasswordValid = yield argon2_1.default.verify(userData.password, password);
         if (!isPasswordValid) {
-            res.status(200).json({
+            return res.status(200).json({
                 error: 4,
                 message: "Incorrect password",
             });
-            return;
         }
         const accessToken = jsonwebtoken_1.default.sign({ user: userData.username }, secretToken, {
             expiresIn: "8h",

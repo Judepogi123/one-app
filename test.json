@@ -1,0 +1,27 @@
+{
+  "barangays": [
+    {
+      "name": "barangay 1",
+      "totalResponse": 3,
+      "queries": [
+        {
+          "query": "query example 1",
+          "totalQueryResponse": 3,
+          "options": [
+            {
+              "title": "Option Title One",
+              "response": {
+                "respondentResponse": {
+                  "gender": {
+                    "male": 1,
+                    "female": 2
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

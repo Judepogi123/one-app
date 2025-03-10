@@ -26,10 +26,7 @@ router.post("/user", async (req: Request, res: Response) => {
 
     const userData = await prisma.users.findFirst({
       where: {
-        username: {
-          contains: user,
-          mode: "insensitive",
-        },
+        username: user
       },
     });
 
@@ -42,15 +39,15 @@ router.post("/user", async (req: Request, res: Response) => {
     }
 
     if(userData.role !== 2 ){
-      res.status(200).json({
+      return res.status(200).json({
         error: 2,
         message: "Unauthorized Account",
       });
-      return
+      
     }
 
     if(userData.status === 0 ){
-      res.status(200).json({
+      return res.status(200).json({
         error: 3,
         message: "Account Suspended",
       });
@@ -59,11 +56,10 @@ router.post("/user", async (req: Request, res: Response) => {
 
     const isPasswordValid = await argon2.verify(userData.password, password);
     if (!isPasswordValid) {
-      res.status(200).json({
+      return res.status(200).json({
         error: 4,
         message: "Incorrect password",
       });
-      return;
     }
 
     const accessToken = jwt.sign({ user: userData.username }, secretToken, {

@@ -122,6 +122,7 @@ export interface TeamLeaderProps {
     voter?: VotersProps | null;
   };
   teamList: TeamsProps[]
+  voters: VotersProps[]
 }
 
 
@@ -303,6 +304,8 @@ export interface Team {
   level: number;
   teamLeaderId: string;
   candidatesId?: string | null;
+  TeamLeader: TeamLeaderProps | null;
+  voters: VotersProps[];
 }
 
 export interface TeamProps extends Omit<Team, ""> {
