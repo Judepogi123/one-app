@@ -1014,14 +1014,16 @@ const resolvers: Resolvers = {
       })
     },
     figureHeads: async (_, { level, barangayId }) => {
-      console.log({level, barangayId});
+      console.log("con: ",{level, barangayId});
       
       return await prisma.teamLeader.findMany({
         where: {
           level,
           barangaysId: barangayId,
         },include: {
-          voter:true
+          voter:true,
+          barangayCoor: true,
+          purokCoors: true
         },
         orderBy:{
           voter:{
@@ -4834,19 +4836,6 @@ const resolvers: Resolvers = {
       if (!toTeam || !tl) {
         throw new GraphQLError("Current Team or Target Team not found");
       }
-    
-      // Determine what to update
-      const coor: { barangayCoorId?: string; purokCoorsId?: string } = {};
-    
-      if (level === 3) {
-        coor.barangayCoorId = toTeam.id;
-        console.log("🔄 Updating team leader BC with:", coor);
-      } 
-      if (level === 2) {
-        coor.barangayCoorId = toTeam.barangayCoorId as string;
-        coor.purokCoorsId = toTeam.id;
-      }
-    
       // Update database
       await prisma.$transaction([
         prisma.voters.update({
@@ -4855,7 +4844,10 @@ const resolvers: Resolvers = {
         }),
         prisma.teamLeader.update({
           where: { id: tl.id },
-          data: coor,
+          data: {
+            barangayCoorId: toTeam.barangayCoorId as string,
+            purokCoorsId: toTeam.id,
+          },
         }),
       ]);
       return "OK";

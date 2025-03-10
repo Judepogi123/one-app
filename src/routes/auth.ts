@@ -26,7 +26,10 @@ router.post("/user", async (req: Request, res: Response) => {
 
     const userData = await prisma.users.findFirst({
       where: {
-        username: user
+        username: {
+          contains: user,
+          mode: "insensitive",
+        },
       },
     });
 
