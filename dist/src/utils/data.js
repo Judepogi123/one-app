@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.calculatePercentage = exports.alphabeticCaps = exports.alphabetic = exports.handleTeamVoters = exports.removeAllSpaces = exports.handleDataType = exports.handleLevelLabel = exports.handleLevel = exports.handleGender = exports.handleSpecialChar = exports.handleGenTagID = void 0;
+exports.formatToLocalPHTime = exports.memberTags = exports.teamMembersCount = exports.calculatePercentage = exports.alphabeticCaps = exports.alphabetic = exports.handleTeamVoters = exports.removeAllSpaces = exports.handleDataType = exports.handleLevelLabel = exports.handleLevel = exports.handleGender = exports.handleSpecialChar = exports.handleGenTagID = void 0;
 const handleGenTagID = (min = 100000, max = 999999) => {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 };
@@ -40,6 +40,7 @@ const handleLevel = (value) => {
 };
 exports.handleLevel = handleLevel;
 const handleLevelLabel = (level, type) => {
+    var _a;
     const levelList = [
         { name: "TL", value: 1 },
         { name: "PC", value: 2 },
@@ -48,7 +49,7 @@ const handleLevelLabel = (level, type) => {
     if (type === 1) {
         return levelList.find((l) => l.name === level).name;
     }
-    return levelList.find((l) => l.name === level).value;
+    return (_a = levelList.find((l) => l.name === level).value) !== null && _a !== void 0 ? _a : 1;
 };
 exports.handleLevelLabel = handleLevelLabel;
 const handleDataType = (type, value) => {
@@ -77,3 +78,46 @@ const calculatePercentage = (part, total) => {
     return data.toFixed(2);
 };
 exports.calculatePercentage = calculatePercentage;
+const teamMembersCount = (value) => {
+    var _a, _b;
+    const count = [
+        { value: "all", count: "all" },
+        { value: "noMembers", count: 0 },
+        { value: "threeAndBelow", count: 3 },
+        { value: "four", count: 4 },
+        { value: "five", count: 5 },
+        { value: "sixToNine", count: 6 },
+        { value: "equalToMax", count: 10 },
+        { value: "aboveMax", count: 11 },
+    ];
+    return (_b = (_a = count.find((item) => item.value === value)) === null || _a === void 0 ? void 0 : _a.count) !== null && _b !== void 0 ? _b : 0;
+};
+exports.teamMembersCount = teamMembersCount;
+const memberTags = (value) => {
+    // const count = [
+    //   { value: "delisted", desc: "DL" },
+    //   { value: "dead", desc: "D" },
+    //   { value: 1, desc: "UD" },
+    //   { value: 2, desc: "ND" },
+    //   { value: 3, desc: "OP" },
+    //   { value: "inc", desc: "INC" },
+    //   { value: "or", desc: "OR" },
+    // ];
+    switch (value) {
+        case 1:
+            return "UD";
+        case 2:
+            return "ND";
+        case 3:
+            return "OP";
+        default:
+            return "";
+    }
+};
+exports.memberTags = memberTags;
+const formatToLocalPHTime = (utcString) => {
+    return new Date(utcString).toLocaleString("en-PH", {
+        timeZone: "Asia/Manila",
+    });
+};
+exports.formatToLocalPHTime = formatToLocalPHTime;

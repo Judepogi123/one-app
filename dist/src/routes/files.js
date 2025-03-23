@@ -1668,55 +1668,260 @@ exports.default = (io) => {
             if (!municipal || !barangayData) {
                 return res.status(400).json({ message: "Bad request" });
             }
-            console.log({
-                delisted,
-                ud,
-                nd,
-                op,
-                or,
-                inc,
-                dead,
-                selected,
-                min,
-                max,
-                barangay,
-                zipCode,
-                selectedId,
-                membersCount,
-                level
+            // console.log({
+            //   delisted,
+            //   ud,
+            //   nd,
+            //   op,
+            //   or,
+            //   inc,
+            //   dead,
+            //   selected,
+            //   min,
+            //   max,
+            //   barangay,
+            //   zipCode,
+            //   selectedId,
+            //   membersCount,
+            //   level
+            // });
+            // console.log({filter});
+            let teamToInsert = [];
+            let skip = 0;
+            let haveMore = true;
+            const count = (0, data_1.teamMembersCount)(membersCount);
+            console.log("Count: ", {
+                count
             });
-            // const teams = await prisma.team.findMany({
-            //   where: {
-            //     barangaysId: barangay.id,
-            //     municipalsId: municipal.id,
-            //     voters: {
-            //       some: filter
-            //     }
-            //   },
-            //   include: { 
-            //     _count: {
-            //       select: {
-            //         voters: true
-            //       }
-            //     },
-            //     voters: {
-            //       select: {
-            //         idNumber: true,
-            //         firstname: true,
-            //         lastname: true,
-            //         status: true,
-            //         oor: true,
-            //         DelistedVoter: true,
-            //         VoterRecords: true
-            //       }
-            //     }
-            //   },
-            //   take: 50
-            // })
-            // console.log(JSON.stringify(teams, null,2));
+            let levels = {};
+            let headerLevel;
+            if (level !== "all") {
+                headerLevel = (0, data_1.handleLevelLabel)(level, 0);
+                levels.level = headerLevel;
+            }
+            while (haveMore) {
+                const teams = yield prisma_1.prisma.team.findMany({
+                    where: Object.assign({ barangaysId: barangayData.id, municipalsId: municipal.id, voters: {
+                            some: filter
+                        } }, levels),
+                    include: {
+                        _count: {
+                            select: {
+                                voters: true
+                            }
+                        },
+                        voters: {
+                            select: {
+                                idNumber: true,
+                                firstname: true,
+                                lastname: true,
+                                status: true,
+                                oor: true,
+                                DelistedVoter: true,
+                                VoterRecords: true,
+                                level: true,
+                                inc: true
+                            }
+                        },
+                        TeamLeader: {
+                            select: {
+                                voter: {
+                                    select: {
+                                        idNumber: true,
+                                        firstname: true,
+                                        lastname: true,
+                                        level: true
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    take: 50,
+                    skip,
+                });
+                const fitleredTeams = teams.filter((item) => {
+                    if (typeof count === "string" && count === "all") {
+                        return item;
+                    }
+                    if (typeof count === "number" && count === 3) {
+                        return item._count.voters <= 3 && item._count.voters >= 1;
+                    }
+                    if (typeof count === "number" && count === 6) {
+                        return item._count.voters >= 6 && item._count.voters <= 9;
+                    }
+                    if (typeof count === "number" && count === 11) {
+                        return item._count.voters >= 11;
+                    }
+                    return item._count.voters === count;
+                });
+                if (teams.length === 0) {
+                    haveMore = false;
+                    break;
+                }
+                else {
+                    teamToInsert.push(...fitleredTeams);
+                    skip += teams.length;
+                }
+            }
+            if (teamToInsert.length > 0) {
+                const worksheet = workbook.addWorksheet(`${barangayData.name}-(${teamToInsert.length})`, {
+                    pageSetup: {
+                        paperSize: undefined,
+                        orientation: "portrait",
+                        fitToPage: false,
+                        showGridLines: true,
+                        margins: {
+                            left: 0.6,
+                            right: 0.6,
+                            top: 0.5,
+                            bottom: 0.5,
+                            header: 0.3,
+                            footer: 0.3,
+                        },
+                    },
+                    headerFooter: {
+                        firstHeader: "",
+                        firstFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+                        oddHeader: `&L&B${municipal.name}-${barangayData.name} ${(0, data_1.handleLevel)(headerLevel)} Team Members -(${teamToInsert.length})`,
+                        oddFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+                    },
+                });
+                worksheet.columns = [
+                    { header: "Teams", key: "tl", width: 45 },
+                    // { header: "Members", key: "members", width: 40 },
+                    { header: "Tags", key: "members", width: 15 },
+                ];
+                worksheet.getRow(1).eachCell((cell) => {
+                    cell.font = { bold: true };
+                    cell.alignment = { horizontal: "center", vertical: "middle" };
+                    cell.border = {
+                        top: { style: "thin" },
+                        left: { style: "thin" },
+                        bottom: { style: "thin" },
+                        right: { style: "thin" },
+                    };
+                });
+                const dataRows = [];
+                teamToInsert.forEach((team) => {
+                    var _a;
+                    const teamLeader = ((_a = team.TeamLeader) === null || _a === void 0 ? void 0 : _a.voter)
+                        ? `${(0, data_1.handleLevel)(team.TeamLeader.voter.level)} = ${team.TeamLeader.voter.idNumber} - ${team.TeamLeader.voter.lastname}, ${team.TeamLeader.voter.firstname} (${team.voters.length})`
+                        : "No Leader";
+                    const members = team.voters.map((voter) => `     ${voter.idNumber} - ${voter.lastname}, ${voter.firstname}`);
+                    const membersTags = team.voters.map((voter) => `[${voter.status === 0 ? "D," : ""} ${voter.oor === "YES" ? "OR," : ""} ${voter.inc === "YES" ? "INC," : ""} ${(0, data_1.memberTags)(voter.VoterRecords.type)}]`);
+                    // First row with Team Leader ${voter.DelistedVoter ? "DL," : ""}
+                    dataRows.push([teamLeader]);
+                    dataRows.push([`Members - ${(0, data_1.handleLevel)(headerLevel - 1)}`]);
+                    dataRows.push([members[0], membersTags[0]]);
+                    // Remaining members in separate rows
+                    for (let i = 1; i < members.length; i++) {
+                        dataRows.push([members[i], membersTags[i]]);
+                    }
+                    dataRows.push([""]);
+                });
+                worksheet.addRows(dataRows);
+            }
+            res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            res.setHeader("Content-Disposition", 'attachment; filename="team_breakdown.xlsx"');
+            yield workbook.xlsx.write(res);
+            res.end();
         }
         catch (error) {
             console.log(error);
+            res.status(500).send("Internal Server Error");
+        }
+    })), router.post("/barangay-attendance", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+        const { day, barangayId } = req.body;
+        try {
+            if (!day) {
+                return res.status(400).send("Bad Request");
+            }
+            console.log({ day, barangayId });
+            let barangay = null;
+            if (barangay) {
+                barangay = yield prisma_1.prisma.barangays.findUnique({
+                    where: {
+                        id: barangayId
+                    }
+                });
+            }
+            const targetDate = new Date(day).toISOString();
+            console.log({ targetDate });
+            const doc = new pdfkit_1.default({ size: "Letter", margin: 40, compress: false });
+            doc.pipe(res);
+            const startDate = new Date(day);
+            startDate.setUTCHours(0, 0, 0, 0);
+            const endDate = new Date(startDate);
+            endDate.setUTCDate(endDate.getUTCDate() + 1);
+            let fitler = {};
+            if (barangayId) {
+                fitler.teamLeader = {
+                    barangaysId: barangay === null || barangay === void 0 ? void 0 : barangay.id
+                };
+            }
+            const data = yield prisma_1.prisma.teamLeaderAttendance.findMany({
+                where: Object.assign({ date: {
+                        gte: startDate,
+                        lt: endDate,
+                    } }, fitler),
+                include: {
+                    teamLeader: {
+                        select: {
+                            voter: {
+                                select: {
+                                    idNumber: true,
+                                    lastname: true,
+                                    firstname: true,
+                                    level: true
+                                },
+                            },
+                            level: true,
+                            barangay: {
+                                select: {
+                                    name: true,
+                                    id: true,
+                                }
+                            }
+                        },
+                    }
+                },
+                orderBy: {
+                    date: "desc"
+                }
+            });
+            console.log({ data });
+            barangayId ? doc.fontSize(16).text(`${barangay === null || barangay === void 0 ? void 0 : barangay.name}-(${(0, data_1.formatToLocalPHTime)(day)})`, {
+                align: "left",
+            }) : doc.fontSize(16).text(`${(0, data_1.formatToLocalPHTime)(day)}`, {
+                align: "left",
+            });
+            doc.moveDown(2);
+            doc.fontSize(14).text(`Total Attendee/s: ${data.length}`, {
+                align: "left",
+            });
+            doc.moveDown(1);
+            doc.fontSize(14).text(`BC Attendee/s: ${data.filter((item) => item.teamLeader.level === 3).length || 0}`, {
+                align: "left",
+            });
+            doc.moveDown(1);
+            doc.fontSize(14).text(`PC Attendee/s: ${data.filter((item) => item.teamLeader.level === 2).length || 0}`, {
+                align: "left",
+            });
+            doc.moveDown(1);
+            doc.fontSize(14).text(`TL Attendee/s: ${data.filter((item) => item.teamLeader.level === 1).length || 0}`, {
+                align: "left",
+            });
+            doc.moveDown(2);
+            if (data.length > 0) {
+                data.map((item, i) => {
+                    var _a, _b, _c, _d;
+                    doc.fontSize(12).text(`${i + 1}. ${item.teamLeader.barangay.name} ${(0, data_1.handleLevel)((_b = (_a = item.teamLeader) === null || _a === void 0 ? void 0 : _a.voter) === null || _b === void 0 ? void 0 : _b.level)} - ${(_c = item.teamLeader.voter) === null || _c === void 0 ? void 0 : _c.lastname}, ${(_d = item.teamLeader.voter) === null || _d === void 0 ? void 0 : _d.firstname}      ${(0, data_1.formatToLocalPHTime)(item.date)}`, { indent: 20, align: "left" });
+                    doc.moveDown(1);
+                });
+            }
+            doc.end();
+        }
+        catch (error) {
             res.status(500).send("Internal Server Error");
         }
     })), router.post("/generate-survey-report", (req, res) => __awaiter(void 0, void 0, void 0, function* () {

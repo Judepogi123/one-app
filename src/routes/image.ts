@@ -9,6 +9,7 @@ import { prisma } from "../config/prisma";
 import qrcode from "qrcode";
 import { size } from "pdfkit/js/page";
 import { alphabeticCaps, handleLevelLabel } from "../utils/data";
+import { TeamLeader } from "@prisma/client";
 const router = express.Router();
 
 const uploadDir = path.join(__dirname, "uploads");
@@ -38,33 +39,50 @@ router.post(
 );
 
 router.post("/generate-id", async (req: Request, res: Response) => {
-  const { id, level } = req.body;
+  const { id, level, barangay, selectedOnly} = req.body;
 
   console.log({  level, id });
-
   const headerLevel = handleLevelLabel(level, 0)
-  console.log(headerLevel);
-  if (id.length === 0 || !level) {
+  console.log({ id, level, barangay, selectedOnly});
+  if (!level ||  !barangay) {
     return res.status(400).send("Bad request");
   }
 
+  const sizes = [{w: 8.5, h: 10.5, Lfont: 20, Sfont: 24, LYname: 140, GYname: 125}, {w: 9.4, h: 13.5,Lfont: 26, Sfont: 26, LYname: 120, GYname: 160}]
+  const imageSize = headerLevel === 1 ? sizes[0] : sizes[1]
   const cmToPx = 37.7953;
   const CM_TO_PT = 28.3465;
   const scaleFactor = 4;
   const IDsPerPage = 4; // Limit per page
 
   try {
-    const tlData = await prisma.teamLeader.findMany({
-      where: { id: { in: id }, level: headerLevel },
-      include: {
-        voter: { select: { firstname: true, lastname: true, level: true } },
-        barangay:{
-          select: {
-            number: true
+    let tlData: any[] = []
+    if(selectedOnly && id.length > 0){
+      tlData = await prisma.teamLeader.findMany({
+        where: { id: { in: id }, level: headerLevel },
+        include: {
+          voter: { select: { firstname: true, lastname: true, level: true } },
+          barangay:{
+            select: {
+              number: true
+            }
           }
-        }
-      },
-    });
+        },
+      });
+    }else{
+      tlData = await prisma.teamLeader.findMany({
+        where: { barangaysId: barangay, level: headerLevel },
+        include: {
+          voter: { select: { firstname: true, lastname: true, level: true } },
+          barangay:{
+            select: {
+              number: true
+            }
+          }
+        },
+      });
+    }
+
 
     if (tlData.length === 0) {
       return res.status(404).send("Voter not found");
@@ -92,8 +110,8 @@ router.post("/generate-id", async (req: Request, res: Response) => {
         const { voter } = tl;
 
         // ✅ Use levelIndex instead of voter.level
-        const baseWidth = 8.5 * cmToPx;
-        const baseHeight = 10.5 * cmToPx;
+        const baseWidth = imageSize.w * cmToPx;
+        const baseHeight = imageSize.h * cmToPx;
         const width = baseWidth * scaleFactor;
         const height = baseHeight * scaleFactor;
 
@@ -129,11 +147,11 @@ router.post("/generate-id", async (req: Request, res: Response) => {
           const base64Data = voterQR.replace(/^data:image\/png;base64,/, "");
           const qrImage = await loadImage(Buffer.from(base64Data, "base64"));
 
-          const qrSize = 500;
+          const qrSize = headerLevel === 1 ?500 : 550
           const qrX = (width - qrSize) / 2;
           const qrY = (height - qrSize) / 2;
-
-          ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
+          const codeY = headerLevel !== 1? qrY + 20 : qrY
+          ctx.drawImage(qrImage, qrX, codeY, qrSize, qrSize);
         }
 
         const bNumberX = (width - width) + 30
@@ -145,32 +163,41 @@ router.post("/generate-id", async (req: Request, res: Response) => {
         
         ctx.fillText(tl.barangay.number.toString(), bNumberX, bNumberY);
 
+        // ctx.font = `bold ${14 * scaleFactor}px Arial, sans-serif`;
+        // ctx.fillStyle = "black";
+        // ctx.textAlign = "right"; // Align text to the right of `letterW`
+        // ctx.textBaseline = "middle";
+        
+        // ctx.fillText(`${(index * 4) + i + 1}`, width - 30, bNumberY);
+
         const lastnameCount = voter?.lastname.length ?? 0
         const firstnameCount = voter?.firstname.length ?? 0
         const totalNameCount = firstnameCount + lastnameCount
-        console.log(totalNameCount);
-        const fontSize = totalNameCount >= 20 ? 18 : 20
-        if(totalNameCount >= 20){
+        const fontSize = totalNameCount >= 16 ? imageSize.Lfont : imageSize.Sfont
+        if(totalNameCount >= 16){
+          console.log("FontSize 1: ", fontSize);
           ctx.font = `900 ${fontSize * scaleFactor}px Arial, sans-serif`;
           ctx.fillStyle = "black";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
 
+          const yMinus = headerLevel === 1 ? 20 : 30
           const centerX = width / 2;
-          const nameY = height - 125 * scaleFactor;
-          const lastName = height - 105 * scaleFactor;
+          const nameY = height - imageSize.GYname * scaleFactor;
+          const lastName = height - (imageSize.GYname - yMinus) * scaleFactor;
           ctx.fillText(`${voter?.lastname},`, centerX, nameY);
           ctx.fillText(`${voter?.firstname}`, centerX, lastName);
         }else{
+          console.log("FontSize 2: ", fontSize);
+          
           ctx.font = `900 ${fontSize * scaleFactor}px Arial, sans-serif`;
           ctx.fillStyle = "black";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
   
           const centerX = width / 2;
-          const nameY = height - 120 * scaleFactor;
+          const nameY = height - 125 * scaleFactor;
           ctx.fillText(`${voter?.lastname}, ${voter?.firstname}`, centerX, nameY);
-          
         }
 
         const imageBuffer = canvas.toBuffer("image/png", {
@@ -178,15 +205,14 @@ router.post("/generate-id", async (req: Request, res: Response) => {
           resolution: 300,
         });
 
-        // ✅ Use levelIndex instead of voter.level
         const col = i % 2;
         const row = Math.floor(i / 2);
-        const xOffset = 25 + col * ((8.5 * CM_TO_PT) + 15);
-        const yOffset = 25 + row * ((10.5 * CM_TO_PT) + 15);
+        const xOffset = 25 + col * ((imageSize.w * CM_TO_PT) + 15);
+        const yOffset = 25 + row * ((imageSize.h * CM_TO_PT) + 15);
 
         doc.image(imageBuffer, xOffset, yOffset, {
-          width: 8.5 * CM_TO_PT + 3,
-          height: 10.5 * CM_TO_PT,
+          width: imageSize.w * CM_TO_PT + 3,
+          height: imageSize.h * CM_TO_PT,
         });
       }
     }

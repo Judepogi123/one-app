@@ -1,5 +1,5 @@
 // types.ts
-import { GraphQLResolveInfo } from "graphql";
+import { GraphQLResolveInfo } from 'graphql';
 import {
   Candidates,
   Voters,
@@ -35,29 +35,29 @@ import {
   AccountHandleTeam,
   AccountValidateTeam,
   ValdilatedMembers,
-  UntrackedVoter
-} from "../../prisma/prisma";
+  UntrackedVoter,
+} from '../../prisma/prisma';
 import {
   BarangayOptionResponse,
   RespondentResponseProps,
   TeamProps,
   TeamValidationStat,
   ValidatedTeamMembers,
-  VotersProps
-} from "./data";
-import { BlackList } from "@prisma/client";
+  VotersProps,
+} from './data';
+import { BlackList, TeamlLeaderQRcodes } from '@prisma/client';
 
 export type ResolverFn<Parent, Args, Context, Result> = (
   parent: Parent,
   args: Args,
   context: Context,
-  info: GraphQLResolveInfo
+  info: GraphQLResolveInfo,
 ) => Promise<Result> | Result;
 
 export type Resolvers = {
   Query: {
     users: ResolverFn<{}, {}, {}, Users[]>;
-    voters: ResolverFn<{}, { skip: number; zipCode: number }, {}, Voters[]>;
+    voters: ResolverFn<{}, { skip: number; zipCode: number; barangayId: string }, {}, Voters[]>;
     voter: ResolverFn<{}, { id: string }, {}, Voters | null>;
     searchDraftVoter: ResolverFn<
       {},
@@ -88,12 +88,7 @@ export type Resolvers = {
     >;
     barangaysCount: ResolverFn<{}, {}, {}, number>;
     barangayList: ResolverFn<{}, { zipCode: number }, {}, Barangays[] | []>;
-    puroks: ResolverFn<
-      {},
-      { municipalId: number; barangayId: string },
-      {},
-      Purok[]
-    >;
+    puroks: ResolverFn<{}, { municipalId: number; barangayId: string }, {}, Purok[]>;
     purok: ResolverFn<{}, { id: string }, {}, Purok | null>;
     barangayVotersList: ResolverFn<
       {},
@@ -123,12 +118,7 @@ export type Resolvers = {
     queries: ResolverFn<{}, { id: string }, {}, Queries | null>;
     option: ResolverFn<{}, { id: string }, {}, Option | null>;
     getRespondentResponse: ResolverFn<{}, {}, {}, RespondentResponse[]>;
-    respondentResponse: ResolverFn<
-      {},
-      { id: string },
-      {},
-      RespondentResponse[]
-    >;
+    respondentResponse: ResolverFn<{}, { id: string }, {}, RespondentResponse[]>;
     surveyResponseList: ResolverFn<{}, {}, {}, SurveyResponse[]>;
     allSurveyResponse: ResolverFn<
       {},
@@ -136,34 +126,14 @@ export type Resolvers = {
       {},
       SurveyResponse[]
     >;
-    surveyResponseInfo: ResolverFn<
-      {},
-      { id: string },
-      {},
-      SurveyResponse | null
-    >;
+    surveyResponseInfo: ResolverFn<{}, { id: string }, {}, SurveyResponse | null>;
     quotas: ResolverFn<{}, {}, {}, Quota[]>;
     barangayQuota: ResolverFn<{}, { id: string }, {}, Quota[]>;
     gendersSize: ResolverFn<{}, {}, {}, GenderSize[]>;
-    responseRespondent: ResolverFn<
-      {},
-      { id: string },
-      {},
-      RespondentResponseProps[]
-    >;
-    getRespondentResponseById: ResolverFn<
-      {},
-      { id: string },
-      {},
-      RespondentResponse | null
-    >;
+    responseRespondent: ResolverFn<{}, { id: string }, {}, RespondentResponseProps[]>;
+    getRespondentResponseById: ResolverFn<{}, { id: string }, {}, RespondentResponse | null>;
     surveyQueriesList: ResolverFn<{}, { id: string }, {}, Queries[]>;
-    optionCountAge: ResolverFn<
-      {},
-      { optionId: string; ageBracketId: string },
-      {},
-      number
-    >;
+    optionCountAge: ResolverFn<{}, { optionId: string; ageBracketId: string }, {}, number>;
     optionRank: ResolverFn<
       {},
       {
@@ -206,7 +176,7 @@ export type Resolvers = {
     >;
     searchVoter: ResolverFn<
       {},
-      { query: string; skip: number; take: number, zipCode: number, barangayId: string },
+      { query: string; skip: number; take: number; zipCode: number; barangayId: string },
       {},
       Voters[]
     >;
@@ -215,7 +185,7 @@ export type Resolvers = {
     getAllPurokCoor: ResolverFn<{}, {}, {}, PurokCoor[]>;
     getAllTeamLeader: ResolverFn<
       {},
-      { skip: number; zipCode: number },
+      { skip: number; zipCode: number; barangayId: string },
       {},
       TeamLeader[]
     >;
@@ -237,8 +207,8 @@ export type Resolvers = {
         youth: string;
         senior: string;
         gender: string;
-        withoutTeam: string, 
-        mode: string
+        withoutTeam: string;
+        mode: string;
       },
       {},
       { voters: Voters[]; results: number }
@@ -255,16 +225,16 @@ export type Resolvers = {
         skip: number;
         candidate: string;
         withIssues: boolean;
-        members: string
+        members: string;
       },
       {},
       Team[]
     >;
-    candidates: ResolverFn<{}, {zipCode: string}, {}, Candidates[]>;
+    candidates: ResolverFn<{}, { zipCode: string }, {}, Candidates[]>;
     team: ResolverFn<{}, { id: string }, {}, Team | null>;
     validationList: ResolverFn<{}, { id: string }, {}, Validation[]>;
     getAllTL: ResolverFn<{}, {}, {}, TeamLeader[]>;
-    teams: ResolverFn<{}, { skip: number, zipCode: number}, {}, Team[]>;
+    teams: ResolverFn<{}, { skip: number; zipCode: number; barangayId: string }, {}, Team[]>;
     teamRecord: ResolverFn<
       {},
       { query: string; barangay: string; municipal: string; skip: number },
@@ -272,15 +242,10 @@ export type Resolvers = {
       ValidatedTeams[]
     >;
     getTeamRecord: ResolverFn<{}, { id: string }, {}, ValidatedTeams | null>;
-    userList: ResolverFn<{}, {zipCode: number}, {}, Users[]>;
+    userList: ResolverFn<{}, { zipCode: number }, {}, Users[]>;
     userQRCodeList: ResolverFn<{}, {}, {}, UserQRCode[]>;
-    purokList: ResolverFn<{}, { zipCode: number, skip: number, take: number }, {}, Purok[]>;
-    voterRecords: ResolverFn<
-      {},
-      { skip: number; zipCode: number },
-      {},
-      VoterRecords[]
-    >;
+    purokList: ResolverFn<{}, { zipCode: number; skip: number; take: number }, {}, Purok[]>;
+    voterRecords: ResolverFn<{}, { skip: number; zipCode: number }, {}, VoterRecords[]>;
     printOptionResponse: ResolverFn<
       {},
       { zipCode: number; queryId: string; surveyId: string },
@@ -294,18 +259,8 @@ export type Resolvers = {
       {},
       DuplicateteamMembers[]
     >;
-    delistedVotes: ResolverFn<
-      {},
-      { skip: number; zipCode: number },
-      {},
-      DelistedVoter[]
-    >;
-    accountTeamHandle: ResolverFn<
-      {},
-      { id: string; skip: number },
-      {},
-      AccountHandleTeam[]
-    >;
+    delistedVotes: ResolverFn<{}, { skip: number; zipCode: number }, {}, DelistedVoter[]>;
+    accountTeamHandle: ResolverFn<{}, { id: string; skip: number }, {}, AccountHandleTeam[]>;
     user: ResolverFn<{}, { id: string; skip: number }, {}, Users | null>;
     getAssignedTeams: ResolverFn<
       {},
@@ -321,10 +276,17 @@ export type Resolvers = {
       {},
       AccountHandleTeam[]
     >;
-    teamLeaderTeamHandle:  ResolverFn<{},{level: number, zipCode: string, barangay: string, skip:number},{}, TeamLeader[]>
-    accountHandleTeamList: ResolverFn<{},{},{}, AccountHandleTeam[]>;
-    figureHeads: ResolverFn<{}, { level: number, barangayId: string}, {}, TeamLeader[]>
-    butaws: ResolverFn<{},{},{}, Voters[]>
+    teamLeaderTeamHandle: ResolverFn<
+      {},
+      { level: number; zipCode: string; barangay: string; skip: number },
+      {},
+      TeamLeader[]
+    >;
+    accountHandleTeamList: ResolverFn<{}, {}, {}, AccountHandleTeam[]>;
+    figureHeads: ResolverFn<{}, { level: number; barangayId: string }, {}, TeamLeader[]>;
+    butaws: ResolverFn<{}, {}, {}, Voters[]>;
+    getTLQrCode: ResolverFn<{}, { skip: number; barangayId: string }, {}, TeamlLeaderQRcodes[]>;
+    getVoterQRcode: ResolverFn<{}, { skip: number; barangayId: string }, {}, QRcode[]>;
   };
   Mutation: {
     createVoter: ResolverFn<{}, Voters, {}, Voters>;
@@ -338,8 +300,8 @@ export type Resolvers = {
           purpose: number;
           role: number;
           privilege: number[];
-          encryptPassword: boolean
-          forMunicipal: string
+          encryptPassword: boolean;
+          forMunicipal: string;
         };
       },
       {},
@@ -379,24 +341,9 @@ export type Resolvers = {
       Precents
     >;
     removeDraft: ResolverFn<{}, { id: string }, {}, NewBatchDraft>;
-    changePurokName: ResolverFn<
-      {},
-      { purok: { id: string; value: string } },
-      {},
-      Purok
-    >;
-    mergePurok: ResolverFn<
-      {},
-      { purok: { id: string[]; newName: string | undefined } },
-      {},
-      Purok
-    >;
-    createSurvey: ResolverFn<
-      {},
-      { survey: { adminUserUid: string } },
-      {},
-      Survey
-    >;
+    changePurokName: ResolverFn<{}, { purok: { id: string; value: string } }, {}, Purok>;
+    mergePurok: ResolverFn<{}, { purok: { id: string[]; newName: string | undefined } }, {}, Purok>;
+    createSurvey: ResolverFn<{}, { survey: { adminUserUid: string } }, {}, Survey>;
     createQuery: ResolverFn<
       {},
       {
@@ -455,27 +402,12 @@ export type Resolvers = {
     >;
     createAge: ResolverFn<{}, { age: string }, {}, AgeBracket>;
     deleteAge: ResolverFn<{}, { id: string }, {}, AgeBracket>;
-    updateAge: ResolverFn<
-      {},
-      { age: { id: string; value: string } },
-      {},
-      AgeBracket
-    >;
+    updateAge: ResolverFn<{}, { age: { id: string; value: string } }, {}, AgeBracket>;
     createGender: ResolverFn<{}, { gender: string }, {}, Gender>;
     deleteGender: ResolverFn<{}, { id: string }, {}, Gender>;
-    updateGender: ResolverFn<
-      {},
-      { gender: { id: string; value: string } },
-      {},
-      Gender
-    >;
+    updateGender: ResolverFn<{}, { gender: { id: string; value: string } }, {}, Gender>;
     deleteOption: ResolverFn<{}, { id: string }, {}, Option>;
-    deleteOptionMedia: ResolverFn<
-      {},
-      { option: { id: string; optionID: string } },
-      {},
-      MediaUrl
-    >;
+    deleteOptionMedia: ResolverFn<{}, { option: { id: string; optionID: string } }, {}, MediaUrl>;
     getSurvey: ResolverFn<{}, { tagID: string }, {}, Survey | null>;
     deleteQuery: ResolverFn<{}, { id: string }, {}, Queries>;
     updateOptionImage: ResolverFn<
@@ -685,12 +617,17 @@ export type Resolvers = {
         firstname: string;
       }
     >;
-    userLogin: ResolverFn<{},{user:{username: string, password: string}},{}, {
-      username: string,
-      role: number,
-      uid: string;
-      accessToken: string
-    }>;
+    userLogin: ResolverFn<
+      {},
+      { user: { username: string; password: string } },
+      {},
+      {
+        username: string;
+        role: number;
+        uid: string;
+        accessToken: string;
+      }
+    >;
     updateQueryType: ResolverFn<{}, { id: string; type: string }, {}, Queries>;
     updateOptionTop: ResolverFn<{}, { id: string; value: boolean }, {}, Option>;
     resetSurveyResponse: ResolverFn<
@@ -702,28 +639,13 @@ export type Resolvers = {
     removeResponse: ResolverFn<{}, { id: string }, {}, RespondentResponse>;
     updateQueryAccess: ResolverFn<{}, { id: string }, {}, Queries>;
     optionForAll: ResolverFn<{}, { id: string; value: boolean }, {}, Option>;
-    changeQueryOnTop: ResolverFn<
-      {},
-      { id: string; value: boolean },
-      {},
-      Queries
-    >;
+    changeQueryOnTop: ResolverFn<{}, { id: string; value: boolean }, {}, Queries>;
     discardDraftedVoter: ResolverFn<{}, { id: string }, {}, string>;
     saveDraftedVoter: ResolverFn<{}, { batchId: string }, {}, NewBatchDraft>;
     removeVoter: ResolverFn<{}, { id: string }, {}, string>;
     removeMultiVoter: ResolverFn<{}, { list: string[] }, {}, string>;
-    setVoterLevel: ResolverFn<
-      {},
-      { level: number; id: string; code: string },
-      {},
-      string
-    >;
-    addTeam: ResolverFn<
-      {},
-      { headId: string; teamIdList: Voters[]; level: number },
-      {},
-      string
-    >;
+    setVoterLevel: ResolverFn<{}, { level: number; id: string; code: string }, {}, string>;
+    addTeam: ResolverFn<{}, { headId: string; teamIdList: Voters[]; level: number }, {}, string>;
     addMember: ResolverFn<
       {},
       { headId: string; teamIdList: Voters[]; level: number; teamId: string },
@@ -754,7 +676,7 @@ export type Resolvers = {
     >;
     changeLeader: ResolverFn<
       {},
-      { id: string; teamId: string; level: number, currentTl: string },
+      { id: string; teamId: string; level: number; currentTl: string },
       {},
       string
     >;
@@ -786,7 +708,7 @@ export type Resolvers = {
           teamLeaderId: string;
           members: string[];
         };
-        code: string
+        code: string;
       },
       {},
       string
@@ -801,18 +723,8 @@ export type Resolvers = {
     removeTeam: ResolverFn<{}, { id: string }, {}, string>;
     removeAllTeams: ResolverFn<{}, {}, {}, string>;
     createCustomOption: ResolverFn<{}, { id: string }, {}, string>;
-    resetTeamList: ResolverFn<
-      {},
-      { zipCode: string; barangayId: string },
-      {},
-      string
-    >;
-    teamMerger: ResolverFn<
-      {},
-      { firstId: string; secondId: string },
-      {},
-      string
-    >;
+    resetTeamList: ResolverFn<{}, { zipCode: string; barangayId: string }, {}, string>;
+    teamMerger: ResolverFn<{}, { firstId: string; secondId: string }, {}, string>;
     //removeValidateTeamleader: ResolverFn<{}, {}, {}, string>;
     validationUpdate: ResolverFn<
       {},
@@ -846,7 +758,7 @@ export type Resolvers = {
           barangaysId: string;
           purokId: string;
           timestamp: string;
-          account_id: string
+          account_id: string;
         }[];
         validateDuplicate: {
           id: string;
@@ -866,7 +778,7 @@ export type Resolvers = {
           desc: string;
           questionable: number;
           account_id: string;
-          type: number
+          type: number;
         }[];
         appoinments: {
           id: string;
@@ -929,7 +841,7 @@ export type Resolvers = {
       {},
       string
     >;
-    resetAccountTeamhandle: ResolverFn<{},{},{}, string>
+    resetAccountTeamhandle: ResolverFn<{}, {}, {}, string>;
     assignedTeamsOnAccount: ResolverFn<
       {},
       {
@@ -944,27 +856,66 @@ export type Resolvers = {
       {},
       string
     >;
-    deleteAssignTeam: ResolverFn<{},{id: string},{}, string>
-    selectedTeamAssign: ResolverFn<{},{ids: string[],userId: string},{}, string>
-    creatCandidateBatch: ResolverFn<{},{zipCode: number},{}, string>;
-    markTeamVerified: ResolverFn<{},{teamId: string,accountID: string},{},string>
-    markMemberVerified: ResolverFn<{},{memberId: string[],accountID: string},{},string>
-    updateTeamMemberProps: ResolverFn<{},{memberId: string[], props: string},{}, string>
-    memberExclude: ResolverFn<{},{membersId: string[]},{}, string>;
-    swapVoters: ResolverFn<{},{levelToSwap: number, levelToBeSwapped: number, voterOneId: string, voterTwoId: string},{}, string>
-    markUntracked: ResolverFn<{},{ memberId: string[]},{}, string>
-    transferVotersArea: ResolverFn<{},{memberId: string[], zipCode: number, barangay: string},{}, string>
-    resetPassword: ResolverFn<{},{id: string, newPassword: string},{}, string>
-    updateCandidate: ResolverFn<{},{id: string},{},string>
-    tranCandidate: ResolverFn<{},{},{}, string>
-    transferGroup: ResolverFn<{},{id: string, toId: string},{}, string>
-    assignFigure: ResolverFn<{},{id: string, toId: string, level: number },{}, string>;
+    deleteAssignTeam: ResolverFn<{}, { id: string }, {}, string>;
+    selectedTeamAssign: ResolverFn<{}, { ids: string[]; userId: string }, {}, string>;
+    creatCandidateBatch: ResolverFn<{}, { zipCode: number }, {}, string>;
+    markTeamVerified: ResolverFn<{}, { teamId: string; accountID: string }, {}, string>;
+    markMemberVerified: ResolverFn<{}, { memberId: string[]; accountID: string }, {}, string>;
+    updateTeamMemberProps: ResolverFn<{}, { memberId: string[]; props: string }, {}, string>;
+    memberExclude: ResolverFn<{}, { membersId: string[] }, {}, string>;
+    swapVoters: ResolverFn<
+      {},
+      { levelToSwap: number; levelToBeSwapped: number; voterOneId: string; voterTwoId: string },
+      {},
+      string
+    >;
+    markUntracked: ResolverFn<{}, { memberId: string[] }, {}, string>;
+    transferVotersArea: ResolverFn<
+      {},
+      { memberId: string[]; zipCode: number; barangay: string },
+      {},
+      string
+    >;
+    resetPassword: ResolverFn<{}, { id: string; newPassword: string }, {}, string>;
+    updateCandidate: ResolverFn<{}, { id: string }, {}, string>;
+    tranCandidate: ResolverFn<{}, {}, {}, string>;
+    transferGroup: ResolverFn<{}, { id: string; toId: string }, {}, string>;
+    assignFigure: ResolverFn<{}, { id: string; toId: string; level: number }, {}, string>;
     updateVoter: ResolverFn<{}, { id: string }, {}, string>;
-    comments: ResolverFn<{}, { ids: string[], tag: number}, {}, string>
-    calibrateTeam: ResolverFn<{},{
-      id: string, tlID: string, pcID: string, bcID: string, level: number,
-    },{}, string>
-    calibrateTeamArea: ResolverFn<{}, { zipCode: number } , {}, TeamLeader[]>
+    comments: ResolverFn<{}, { ids: string[]; tag: number }, {}, string>;
+    calibrateTeam: ResolverFn<
+      {},
+      {
+        id: string;
+        tlID: string;
+        pcID: string;
+        bcID: string;
+        level: number;
+      },
+      {},
+      string
+    >;
+    calibrateTeamArea: ResolverFn<{}, { zipCode: number }, {}, TeamLeader[]>;
+    changeMerits: ResolverFn<{}, { id: string[]; level: number }, {}, string>;
+    transferSelectMembers: ResolverFn<
+      {},
+      { ids: string[]; toTeam: string; level: number; currTL: string; toTL: string },
+      {},
+      string
+    >;
+    changeLevel: ResolverFn<
+      {},
+      {
+        teamID: string;
+        level: number;
+        targetLevel: number;
+        targetHeads: string;
+        currentTl: string;
+        targetTeam: string;
+      },
+      {},
+      string
+    >;
   };
   Voter: {
     votersCount: ResolverFn<{}, {}, {}, number>;
@@ -979,9 +930,9 @@ export type Resolvers = {
     qrCodes: ResolverFn<Voters, {}, {}, QRcode[]>;
     leader: ResolverFn<Voters, {}, {}, TeamLeader | null>;
     record: ResolverFn<Voters, {}, {}, VoterRecords[]>;
-    ValdilatedMember: ResolverFn<Voters, {},{}, ValdilatedMembers | null>;
-    UntrackedVoter: ResolverFn<Voters, {}, {}, UntrackedVoter | null>
-    WhiteList: ResolverFn<Voters, {}, {}, BlackList[]>
+    ValdilatedMember: ResolverFn<Voters, {}, {}, ValdilatedMembers | null>;
+    UntrackedVoter: ResolverFn<Voters, {}, {}, UntrackedVoter | null>;
+    WhiteList: ResolverFn<Voters, {}, {}, BlackList[]>;
     //team: ResolverFn<Voters, {}, {}, Team | null>;
   };
   Municipal: {
@@ -1005,20 +956,10 @@ export type Resolvers = {
       {},
       RespondentResponse[]
     >;
-    RespondentResponse: ResolverFn<
-      Barangays,
-      { id: string; zipCode: number },
-      {},
-      number
-    >;
+    RespondentResponse: ResolverFn<Barangays, { id: string; zipCode: number }, {}, number>;
     quota: ResolverFn<Barangays, {}, {}, Quota[]>;
     quotas: ResolverFn<Barangays, { id: string }, {}, Quota | null>;
-    optionResponse: ResolverFn<
-      Barangays,
-      { id: string; surveyId: string },
-      {},
-      number
-    >;
+    optionResponse: ResolverFn<Barangays, { id: string; surveyId: string }, {}, number>;
     selectedQuery: ResolverFn<Barangays, { id: string }, {}, Option[]>;
     validationList: ResolverFn<Barangays, {}, {}, Validation[]>;
     supporters: ResolverFn<
@@ -1036,7 +977,7 @@ export type Resolvers = {
     >;
     teamStat: ResolverFn<
       Barangays,
-      {candidateId: string},
+      { candidateId: string },
       {},
       {
         aboveMax: number;
@@ -1049,16 +990,11 @@ export type Resolvers = {
         clean: number;
       }
     >;
-    leaders: ResolverFn<
-      Barangays,
-      { skip: number; candidateId: string },
-      {},
-      TeamLeader[]
-    >;
+    leaders: ResolverFn<Barangays, { skip: number; candidateId: string }, {}, TeamLeader[]>;
     barangayDelistedVoter: ResolverFn<Barangays, {}, {}, number>;
-    teams: ResolverFn<Barangays, {level: number | undefined}, {}, Team[]>
-    teamValidationStat: ResolverFn<Barangays,{},{}, TeamValidationStat>
-    teamComment: ResolverFn<Barangays, {}, {}, VoterRecords[]>
+    teams: ResolverFn<Barangays, { level: number | undefined }, {}, Team[]>;
+    teamValidationStat: ResolverFn<Barangays, {}, {}, TeamValidationStat>;
+    teamComment: ResolverFn<Barangays, {}, {}, VoterRecords[]>;
   };
   Purok: {
     purokDraftedVotersCount: ResolverFn<Purok, {}, {}, number>;
@@ -1091,12 +1027,7 @@ export type Resolvers = {
   Queries: {
     options: ResolverFn<Queries, {}, {}, Option[]>;
     respondentOption: ResolverFn<Queries, { id: string }, {}, DataResponse[]>;
-    barangayList: ResolverFn<
-      {},
-      { zipCode: number; candidateId: string },
-      {},
-      Barangays[]
-    >;
+    barangayList: ResolverFn<{}, { zipCode: number; candidateId: string }, {}, Barangays[]>;
     customOption: ResolverFn<
       Queries,
       { zipCode: number; surveyId: string; barangayId: string },
@@ -1147,12 +1078,7 @@ export type Resolvers = {
   };
   SurveyResponse: {
     barangay: ResolverFn<SurveyResponse, {}, {}, Barangays | null>;
-    respondentResponses: ResolverFn<
-      SurveyResponse,
-      {},
-      {},
-      RespondentResponse[]
-    >;
+    respondentResponses: ResolverFn<SurveyResponse, {}, {}, RespondentResponse[]>;
     users: ResolverFn<SurveyResponse, {}, {}, Users | null>;
   };
   Quota: {
@@ -1190,12 +1116,7 @@ export type Resolvers = {
     queries: ResolverFn<DataResponse, {}, {}, Queries | null>;
   };
   ResponseRespondent: {
-    barangay: ResolverFn<
-      RespondentResponse,
-      { id: string },
-      {},
-      Barangays | null
-    >;
+    barangay: ResolverFn<RespondentResponse, { id: string }, {}, Barangays | null>;
   };
   Team: {
     voters: ResolverFn<Team, {}, {}, Voters[]>;
@@ -1206,9 +1127,9 @@ export type Resolvers = {
     municipal: ResolverFn<Team, {}, {}, Municipals | null>;
     _count: ResolverFn<Team, {}, {}, { voters: number }>;
     votersCount: ResolverFn<Team, {}, {}, number>;
-    AccountHandleTeam: ResolverFn<Team, {},{}, AccountHandleTeam | null>;
-    AccountValidateTeam: ResolverFn<Team, {id: string},{}, AccountValidateTeam | null>;
-    untrackedCount: ResolverFn<Team, {},{}, number>
+    AccountHandleTeam: ResolverFn<Team, {}, {}, AccountHandleTeam | null>;
+    AccountValidateTeam: ResolverFn<Team, { id: string }, {}, AccountValidateTeam | null>;
+    untrackedCount: ResolverFn<Team, {}, {}, number>;
   };
   TeamLeader: {
     voter: ResolverFn<TeamLeader, {}, {}, Voters | null>;
@@ -1237,12 +1158,7 @@ export type Resolvers = {
     municipal: ResolverFn<ValidatedTeams, {}, {}, Municipals | null>;
     barangay: ResolverFn<ValidatedTeams, {}, {}, Barangays | null>;
     purok: ResolverFn<ValidatedTeams, {}, {}, Purok | null>;
-    validatedTeamMembers: ResolverFn<
-      ValidatedTeams,
-      {},
-      {},
-      ValidatedTeamMembers[]
-    >;
+    validatedTeamMembers: ResolverFn<ValidatedTeams, {}, {}, ValidatedTeamMembers[]>;
   };
   ValidatedTeamMembers: {
     voter: ResolverFn<ValidatedTeamMembers, {}, {}, Voters | null>;
@@ -1254,6 +1170,5 @@ export type Resolvers = {
   AccountHandleTeam: {
     team: ResolverFn<AccountHandleTeam, {}, {}, Team | null>;
     account: ResolverFn<AccountHandleTeam, {}, {}, Users | null>;
-
-  }
+  };
 };

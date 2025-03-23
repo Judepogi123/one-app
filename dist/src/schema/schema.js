@@ -325,6 +325,7 @@ type TeamLeader {
   teamLeader: TeamLeader
   teamLeaderFor: [TeamLeader!]!
   teamList: [Team!]
+  teamlLeaderQRcodesId: String
 }
 
 
@@ -350,6 +351,12 @@ type Team {
   untrackedCount: Int
 }
 
+type TeamLeaderQRcodes {
+  id: ID!
+  qrCode: String!
+  teamLeader: TeamLeader
+}
+
 type VoterRecordsCount {
   voters: Int
 }
@@ -362,13 +369,13 @@ type ValdiatedTeams {
 
   type Query {
     users: [Users!]!
-    voters(skip: Int, zipCode: Int): [Voter!]!
+    voters(skip: Int, zipCode: Int, barangayId: String): [Voter!]!
     voter(id: String!): Voter
     searchDraftVoter(query: SearchDraftQueryInput!): [Voter]!
     searchVoter(query: String!,skip: Int!,take: Int, zipCode: Int, barangayId: String): [Voter!]
     votersCount: Int!
     municipals: [Municipal!]!
-    municipal(id: Int!): Municipal
+    municipal(zipCode: Int!): Municipal
     municipalVoterList(id: Int!): [Voter!]!
     barangays: [Barangay]
     barangay(id: ID!): Barangay
@@ -418,15 +425,17 @@ type ValdiatedTeams {
     getSelectedVoters(list: [String!]): [Voter!]
     getRankOption(optionId: String!): String!
     getAllPurokCoor: [PurokCoor!]
-    getAllTeamLeader(skip: Int, zipCode: Int): [TeamLeader!]
+    getAllTeamLeader(skip: Int, zipCode: Int, barangayId: String): [TeamLeader!]
+    getTLQrCode(skip: Int, barangayId: String): [TeamLeaderQRcodes!]
     getVotersList(level: String!, take: Int, skip: Int, zipCode: String, barangayId: String,purokId: String, query: String, pwd: String, illi: String,inc: String,oor: String,dead: String,youth: String,senior: String,gender: String, withoutTeam: String, mode: String): VotersList
+    getVoterQRcode(skip: Int, barangayId: String): [QRcode!]
     getPurokList(id: String!): [Purok!]
     teamList(zipCode: String!, barangayId: String!, purokId: String!, level: String!,query: String!, skip: Int!, candidate: String, withIssues: Boolean, members: String): [Team!]
     candidates(zipCode: String): [Candidates!]
     candidate(id: String!):Candidates
     team(id: String!): Team
     getAllTL: [TeamLeader!]
-    teams(skip: Int, zipCode: Int):[Team!]
+    teams(skip: Int, zipCode: Int,  barangayId: String):[Team!]
     validationList(id: ID!):[Validation!]
     option(id: String!):Option!
     teamRecord(query: String!, barangay: String!, municipal: String!, skip: Int!): [ValidatedTeams!]
@@ -641,11 +650,14 @@ type BarangayCoor {
     updateCandidate(id: String ): String!
     tranCandidate: String!
     transferGroup(id: String, toId: String): String!
+    transferSelectMembers(ids: [String!], toTeam: String!, level: Int, currTL: String, toTL: String): String!
+    changeLevel(teamID: String, level: Int, targetLevel: Int, currentTl: String,targetHeads: String, targetTeam: String): String!
     assignFigure(id: String, toId: String, level: Int): String!
     updateVoter(id: String): String!
     comments(ids: [String!], tag: Int!): String!
     calibrateTeam(id: String, tlID: String, pcID: String, bcID: String, level: Int): String!
     calibrateTeamArea(zipCode: Int): [TeamLeader!]
+    changeMerits(id: [String!], level: Int): String!
   }
 
   type VoterRecords {

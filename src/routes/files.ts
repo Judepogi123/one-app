@@ -8,7 +8,7 @@ import ExcelJS from "exceljs";
 
 //utils
 import { extractYear } from "../utils/date";
-import { handleSpecialChar, handleGender, alphabetic, calculatePercentage } from "../utils/data";
+import { handleSpecialChar, handleGender, alphabetic, calculatePercentage, memberTags, teamMembersCount, handleLevelLabel, handleLevel, formatToLocalPHTime } from "../utils/data";
 
 //database
 import { Barangays, DuplicateteamMembers, prisma, Team, Voters } from "../../prisma/prisma";
@@ -1979,61 +1979,300 @@ export default (io: any) => {
           return res.status(400).json({ message: "Bad request" })
         }
 
-        console.log({
-          delisted,
-          ud,
-          nd,
-          op,
-          or,
-          inc,
-          dead,
-          selected,
-          min,
-          max,
-          barangay,
-          zipCode,
-          selectedId,
-          membersCount,
-          level
-        });
+        // console.log({
+        //   delisted,
+        //   ud,
+        //   nd,
+        //   op,
+        //   or,
+        //   inc,
+        //   dead,
+        //   selected,
+        //   min,
+        //   max,
+        //   barangay,
+        //   zipCode,
+        //   selectedId,
+        //   membersCount,
+        //   level
+        // });
+        // console.log({filter});
+        
+        let teamToInsert: any[] = [];
+        let skip = 0;
+        let haveMore = true;
+        const count = teamMembersCount(membersCount)
+        console.log("Count: ", {
+          count
+        })
+        let levels: any ={}
+         let headerLevel: any
+        if(level !== "all"){
+          headerLevel = handleLevelLabel(level,0)
+           levels.level = headerLevel
+        }
+       
+        
+        while (haveMore) {
+          const teams = await prisma.team.findMany({
+            where: {
+              barangaysId: barangayData.id,
+              municipalsId: municipal.id,
+              voters: {
+                some: filter
+              },
+              ...levels
+            },
+            include: { 
+              _count: {
+                select: {
+                  voters: true
+                }
+              },
+              voters: {
+                select: {
+                  idNumber: true,
+                  firstname: true,
+                  lastname: true,
+                  status: true,
+                  oor: true,
+                  DelistedVoter: true,
+                  VoterRecords: true,
+                  level: true,
+                  inc: true
+                }
+              },
+              TeamLeader: {
+                select: {
+                  voter:{
+                    select: {
+                      idNumber: true,
+                      firstname: true,
+                      lastname: true,
+                      level: true
+                    }
+                  }
+                }
+              }
+            },
+            take: 50,
+            skip,
+          })
+          const fitleredTeams = teams.filter((item)=> {
+            if(typeof count === "string" && count === "all"){
+              return item
+            }
+            if(typeof count === "number" && count === 3){
+              return item._count.voters <=3 && item._count.voters >= 1
+            }
+            if(typeof count === "number" && count === 6){
+              return item._count.voters >=6 && item._count.voters <= 9
+            }
+            if(typeof count === "number" && count === 11){
+              return item._count.voters >= 11
+            }
+            return item._count.voters === count as number
+          })
+          if (teams.length === 0) {
+            haveMore = false;
+            break
+          } else {
+            teamToInsert.push(...fitleredTeams);
+            skip += teams.length;
+          }
+        }
         
 
-        // const teams = await prisma.team.findMany({
-        //   where: {
-        //     barangaysId: barangay.id,
-        //     municipalsId: municipal.id,
-        //     voters: {
-        //       some: filter
-        //     }
-        //   },
-        //   include: { 
-        //     _count: {
-        //       select: {
-        //         voters: true
-        //       }
-        //     },
-        //     voters: {
-        //       select: {
-        //         idNumber: true,
-        //         firstname: true,
-        //         lastname: true,
-        //         status: true,
-        //         oor: true,
-        //         DelistedVoter: true,
-        //         VoterRecords: true
-        //       }
-        //     }
-        //   },
-        //   take: 50
-        // })
+        if(teamToInsert.length > 0){
+          const worksheet = workbook.addWorksheet(`${barangayData.name}-(${teamToInsert.length})`, {
+            pageSetup: {
+              paperSize: undefined,
+              orientation: "portrait",
+              fitToPage: false,
+              showGridLines: true,
+              margins: {
+                left: 0.6,
+                right: 0.6,
+                top: 0.5,
+                bottom: 0.5,
+                header: 0.3,
+                footer: 0.3,
+              },
+            },
+            headerFooter: {
+              firstHeader: "",
+              firstFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+              oddHeader: `&L&B${municipal.name}-${barangayData.name} ${handleLevel(headerLevel)} Team Members -(${teamToInsert.length})`,
+              oddFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+            },
+          });
 
-        // console.log(JSON.stringify(teams, null,2));
-        
-        
+          worksheet.columns = [
+            { header: "Teams", key: "tl", width: 45 },
+            // { header: "Members", key: "members", width: 40 },
+            { header: "Tags", key: "members", width: 15 },
+          ];
+          worksheet.getRow(1).eachCell((cell) => {
+            cell.font = { bold: true };
+            cell.alignment = { horizontal: "center", vertical: "middle" };
+            cell.border = {
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" },
+            };
+          });
 
+          const dataRows: any[] = [];
+
+          teamToInsert.forEach((team) => {
+            const teamLeader = team.TeamLeader?.voter
+              ? `${handleLevel(team.TeamLeader.voter.level)} = ${team.TeamLeader.voter.idNumber} - ${team.TeamLeader.voter.lastname}, ${team.TeamLeader.voter.firstname} (${team.voters.length})`
+              : "No Leader";
+              
+            const members = team.voters.map((voter: { lastname: any; firstname: any; idNumber: any,
+              status: number,
+              oor: any,
+              DelistedVoter: any,
+              VoterRecords: {
+                type: any
+              } 
+            }) => `     ${voter.idNumber} - ${voter.lastname}, ${voter.firstname}`);
+            const membersTags= team.voters.map((voter: { lastname: any; firstname: any; idNumber: any,
+              status: number,
+              oor: any,
+              inc: string,
+              DelistedVoter: any,
+              VoterRecords: {
+                type: any
+              } 
+            }) => `[${voter.status === 0 ? "D,": ""} ${voter.oor === "YES" ? "OR,": ""} ${voter.inc === "YES" ? "INC,": ""} ${memberTags(voter.VoterRecords.type)}]`);
+            
+            // First row with Team Leader ${voter.DelistedVoter ? "DL," : ""}
+            dataRows.push([teamLeader]);
+            dataRows.push([`Members - ${handleLevel(headerLevel - 1)}`]);
+            dataRows.push([members[0], membersTags[0]]);
+            // Remaining members in separate rows
+            for (let i = 1; i < members.length; i++) {
+              dataRows.push([members[i], membersTags[i]]);
+            }
+            dataRows.push([""]);
+          });
+      
+          worksheet.addRows(dataRows);
+        }
+        
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader("Content-Disposition", 'attachment; filename="team_breakdown.xlsx"');
+    
+        await workbook.xlsx.write(res);
+        res.end();
       } catch (error) {
         console.log(error);
         
+        res.status(500).send("Internal Server Error")
+      }
+    }),
+    router.post("/barangay-attendance", async( req: Request, res: Response)=>{
+      const { day, barangayId } = req.body
+     
+      
+      try {
+        if(!day){
+          return res.status(400).send("Bad Request")
+        }
+         console.log({day, barangayId});
+         let barangay: Barangays | null = null
+         if(barangay){
+          barangay = await prisma.barangays.findUnique({
+            where: {
+              id: barangayId
+            }
+          })
+         }
+        const targetDate = new Date(day as string).toISOString()
+        console.log({targetDate});
+        
+        const doc = new PDFDocument({ size: "Letter", margin: 40, compress: false });
+        doc.pipe(res);
+        const startDate = new Date(day as string);
+          startDate.setUTCHours(0, 0, 0, 0);
+
+          const endDate = new Date(startDate);
+          endDate.setUTCDate(endDate.getUTCDate() + 1);
+          let fitler: any = {}
+          if(barangayId){
+            fitler.teamLeader = {
+              barangaysId: barangay?.id
+            }
+          }
+          const data = await prisma.teamLeaderAttendance.findMany({
+            where: {
+              date: {
+                gte: startDate,
+                lt: endDate,
+              },
+              ...fitler
+            },
+            include: {
+              teamLeader: {
+                select:{
+                  voter: {
+                    select: {
+                      idNumber: true,
+                      lastname: true,
+                      firstname: true,
+                      level: true
+                    },
+                  },
+                  level: true,
+                  barangay: {
+                    select: {
+                      name: true,
+                      id: true,
+                    }
+                  }
+                },
+                
+              }
+            },
+            orderBy: {
+              date: "desc"
+            }
+          });
+        console.log({data});
+        barangayId ?  doc.fontSize(16).text(`${barangay?.name}-(${formatToLocalPHTime(day)})`,{
+          align: "left",
+        }):  doc.fontSize(16).text(`${formatToLocalPHTime(day)}`,{
+          align: "left",
+        })
+       
+        doc.moveDown(2)
+        doc.fontSize(14).text(`Total Attendee/s: ${data.length}`,{
+          align: "left",
+        })
+        doc.moveDown(1)
+        doc.fontSize(14).text(`BC Attendee/s: ${data.filter((item)=> item.teamLeader.level === 3).length || 0}`,{
+          align: "left",
+        })
+        doc.moveDown(1)
+        doc.fontSize(14).text(`PC Attendee/s: ${data.filter((item)=> item.teamLeader.level === 2).length || 0}`,{
+          align: "left",
+        })
+        doc.moveDown(1)
+        doc.fontSize(14).text(`TL Attendee/s: ${data.filter((item)=> item.teamLeader.level === 1).length || 0}`,{
+          align: "left",
+        })
+        doc.moveDown(2)
+        if(data.length > 0){
+          data.map((item, i)=>{
+            doc.fontSize(12).text(`${i + 1}. ${item.teamLeader.barangay.name} ${handleLevel(item.teamLeader?.voter?.level as number)} - ${item.teamLeader.voter?.lastname}, ${item.teamLeader.voter?.firstname}      ${formatToLocalPHTime(item.date)}`, { indent :20, align: "left" })
+            doc.moveDown(1)
+          })              
+        }
+
+        doc.end();
+      } catch (error) {
         res.status(500).send("Internal Server Error")
       }
     }),

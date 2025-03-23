@@ -35,7 +35,10 @@ router.post("/user", (req, res) => __awaiter(void 0, void 0, void 0, function* (
         }
         const userData = yield prisma_1.prisma.users.findFirst({
             where: {
-                username: user
+                username: {
+                    contains: user,
+                    mode: "insensitive",
+                },
             },
         });
         if (!userData) {
@@ -56,7 +59,6 @@ router.post("/user", (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 error: 3,
                 message: "Account Suspended",
             });
-            return;
         }
         const isPasswordValid = yield argon2_1.default.verify(userData.password, password);
         if (!isPasswordValid) {

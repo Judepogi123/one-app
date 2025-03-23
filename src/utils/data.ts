@@ -45,7 +45,7 @@ export const handleLevelLabel = (level: string, type: number) =>{
   if(type === 1){
     return  levelList.find((l: {name: string}) => l.name === level).name
   }
-  return levelList.find((l: {name: string}) => l.name === level).value
+  return levelList.find((l: {name: string}) => l.name === level).value ?? 1
 }
 
   export const handleDataType = (type: string, value: string)=>{
@@ -76,3 +76,46 @@ export const handleLevelLabel = (level: string, type: number) =>{
     return data.toFixed(2)
   };
   
+
+  export const teamMembersCount = (value: string) => {
+    const count = [
+      { value: "all", count: "all" },
+      { value: "noMembers", count: 0 },
+      { value: "threeAndBelow", count: 3 },
+      { value: "four", count: 4 },
+      { value: "five", count: 5 },
+      { value: "sixToNine", count: 6 },
+      { value: "equalToMax", count: 10 },
+      { value: "aboveMax", count: 11 },
+    ];
+    return count.find((item)=> item.value === value)?.count ?? 0
+  };
+
+  
+  export const memberTags = (value: any) => {
+    // const count = [
+    //   { value: "delisted", desc: "DL" },
+    //   { value: "dead", desc: "D" },
+    //   { value: 1, desc: "UD" },
+    //   { value: 2, desc: "ND" },
+    //   { value: 3, desc: "OP" },
+    //   { value: "inc", desc: "INC" },
+    //   { value: "or", desc: "OR" },
+    // ];
+    switch (value) {
+      case 1:
+        return "UD"
+      case 2:
+        return "ND"
+      case 3:
+        return "OP"
+      default:
+        return ""
+    }
+  };
+
+  export const formatToLocalPHTime = (utcString: string | Date) => {
+    return new Date(utcString).toLocaleString("en-PH", {
+      timeZone: "Asia/Manila",
+    });
+  };

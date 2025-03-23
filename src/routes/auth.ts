@@ -54,7 +54,6 @@ router.post("/user", async (req: Request, res: Response) => {
         error: 3,
         message: "Account Suspended",
       });
-      return
     }
 
     const isPasswordValid = await argon2.verify(userData.password, password);

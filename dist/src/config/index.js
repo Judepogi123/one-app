@@ -33,45 +33,46 @@ const purok_1 = __importDefault(require("../routes/purok"));
 const pdfFile_1 = __importDefault(require("../../routes/pdfFile"));
 const image_1 = __importDefault(require("../../src/routes/image"));
 const auth_1 = __importDefault(require("../routes/auth"));
+const data_1 = __importDefault(require("../routes/data"));
 //utils
-const data_1 = require("../utils/data");
+const data_2 = require("../utils/data");
 const graphql_1 = require("graphql");
 const app = (0, express_1.default)();
 const ioserver = (0, node_http_1.createServer)(app);
 const io = new socket_io_1.Server(ioserver, {
     cors: {
         origin: [
-            "http://localhost:5173",
-            "https://jml-client-test.netlify.app",
-            "https://jml-portal.netlify.app",
-            "http://3.80.143.15:5173/",
-            "https://one-app-u7hu.onrender.com/",
-            "https://one-app-u7hu.onrender.com/graphql",
+            'http://localhost:5173',
+            'https://jml-client-test.netlify.app',
+            'https://jml-portal.netlify.app',
+            'http://3.80.143.15:5173/',
+            'https://one-app-u7hu.onrender.com/',
+            'https://one-app-u7hu.onrender.com/graphql',
         ],
-        methods: ["GET", "POST"],
+        methods: ['GET', 'POST'],
     },
 });
 //routes
 const fileRoutes = (0, files_1.default)(io);
-app.use(express_1.default.json({ limit: "10mb" }));
-app.use(express_1.default.urlencoded({ limit: "10mb", extended: true }));
+app.use(express_1.default.json({ limit: '10mb' }));
+app.use(express_1.default.urlencoded({ limit: '10mb', extended: true }));
 app.use(body_parser_1.default.urlencoded({ extended: false }));
 app.use(body_parser_1.default.json());
 app.use((0, cors_1.default)({
     origin: [
-        "http://localhost:5173",
-        "https://jml-client-test.netlify.app",
-        "https://jml-portal.netlify.app",
-        "http://3.80.143.15:5173/",
-        "https://one-app-u7hu.onrender.com/graphql",
-        "https://one-app-u7hu.onrender.com",
+        'http://localhost:5173',
+        'https://jml-client-test.netlify.app',
+        'https://jml-portal.netlify.app',
+        'http://3.80.143.15:5173/',
+        'https://one-app-u7hu.onrender.com/graphql',
+        'https://one-app-u7hu.onrender.com',
     ],
 }));
-app.use(express_1.default.static(path_1.default.join(__dirname, "react-app/build")));
+app.use(express_1.default.static(path_1.default.join(__dirname, 'react-app/build')));
 app.use((req, res, next) => {
-    res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     next();
 });
 const resolvers = {
@@ -79,12 +80,16 @@ const resolvers = {
         users: () => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.users.findMany();
         }),
-        voters: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip, zipCode }) {
+        voters: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip, zipCode, barangayId }) {
+            const filter = {};
+            if (zipCode) {
+                filter.municipalsId = zipCode;
+            }
+            if (barangayId) {
+                filter.barangaysId = barangayId;
+            }
             return yield prisma_1.prisma.voters.findMany({
-                where: {
-                    saveStatus: "listed",
-                    municipalsId: zipCode,
-                },
+                where: Object.assign({ saveStatus: 'listed' }, filter),
                 skip: skip !== null && skip !== void 0 ? skip : 0,
                 take: 50,
             });
@@ -95,7 +100,7 @@ const resolvers = {
         votersCount: () => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.voters.count({
                 where: {
-                    saveStatus: "listed",
+                    saveStatus: 'listed',
                 },
             });
         }),
@@ -106,13 +111,13 @@ const resolvers = {
                         {
                             lastname: {
                                 contains: query.params,
-                                mode: "insensitive",
+                                mode: 'insensitive',
                             },
                         },
                         {
                             firstname: {
                                 contains: query.params,
-                                mode: "insensitive",
+                                mode: 'insensitive',
                             },
                         },
                     ],
@@ -133,11 +138,12 @@ const resolvers = {
             console.log(zipCode);
             return yield prisma_1.prisma.barangays.findMany({
                 where: { municipalId: zipCode },
-                orderBy: { name: "asc" },
+                orderBy: { name: 'asc' },
             });
         }),
         municipals: () => __awaiter(void 0, void 0, void 0, function* () { return yield prisma_1.prisma.municipals.findMany(); }),
         municipal: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode }) {
+            console.log('Id ', zipCode);
             return yield prisma_1.prisma.municipals.findUnique({ where: { id: zipCode } });
         }),
         municipalVoterList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
@@ -178,7 +184,7 @@ const resolvers = {
                     municipalsId: voter.municipalId,
                     barangaysId: voter.barangayId,
                     newBatchDraftId: voter.draftID,
-                    saveStatus: "drafted",
+                    saveStatus: 'drafted',
                 },
             });
         }),
@@ -193,25 +199,25 @@ const resolvers = {
         }),
         getSurvey: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { tagID }) {
             const target = yield prisma_1.prisma.survey.findFirst({
-                where: { tagID: tagID, status: "Ongoing" },
+                where: { tagID: tagID, status: 'Ongoing' },
             });
             if (!target) {
-                throw new graphql_1.GraphQLError("No active survey found with tag ID", {
-                    extensions: { code: "SURVEY_NOT_FOUND" },
+                throw new graphql_1.GraphQLError('No active survey found with tag ID', {
+                    extensions: { code: 'SURVEY_NOT_FOUND' },
                 });
             }
             return target;
         }),
         surveyList: () => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.survey.findMany({
-                orderBy: { timestamp: "asc" },
+                orderBy: { timestamp: 'asc' },
             });
         }),
         queries: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
             return yield prisma_1.prisma.queries.findUnique({ where: { id } });
         }),
         ageList: () => __awaiter(void 0, void 0, void 0, function* () {
-            return yield prisma_1.prisma.ageBracket.findMany({ orderBy: { order: "asc" } });
+            return yield prisma_1.prisma.ageBracket.findMany({ orderBy: { order: 'asc' } });
         }),
         genderList: () => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.gender.findMany();
@@ -228,7 +234,7 @@ const resolvers = {
         allSurveyResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { survey }) {
             return yield prisma_1.prisma.surveyResponse.findMany({
                 where: { municipalsId: survey.municipalsId, surveyId: survey.surveyId },
-                orderBy: { timestamp: "asc" },
+                orderBy: { timestamp: 'asc' },
             });
         }),
         surveyResponseInfo: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
@@ -295,12 +301,12 @@ const resolvers = {
             return yield prisma_1.prisma.queries.findMany({ where: { surveyId: id } });
         }),
         optionCountAge: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { optionId, ageBracketId }) {
-            if (optionId === "all") {
+            if (optionId === 'all') {
                 return 0;
             }
             return yield prisma_1.prisma.response.count({ where: { optionId, ageBracketId } });
         }),
-        optionRank: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { surveyId, ageBracketId, zipCode, barangayId, genderId, optionId, queryId, }) {
+        optionRank: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { surveyId, ageBracketId, zipCode, barangayId, genderId, optionId, queryId }) {
             let filters = {
                 surveyId: surveyId,
                 ageBracketId: ageBracketId,
@@ -308,17 +314,17 @@ const resolvers = {
                 queryId: queryId,
                 municipalsId: zipCode,
             };
-            if (barangayId !== "all") {
+            if (barangayId !== 'all') {
                 filters.barangaysId = barangayId;
             }
-            if (genderId !== "all") {
+            if (genderId !== 'all') {
                 filters.genderId = genderId;
             }
             return yield prisma_1.prisma.response.count({
                 where: filters,
             });
         }),
-        optionGenderRank: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { surveyId, ageBracketId, zipCode, barangayId, genderId, optionId, queryId, }) {
+        optionGenderRank: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { surveyId, ageBracketId, zipCode, barangayId, genderId, optionId, queryId }) {
             let filters = {
                 surveyId: surveyId,
                 ageBracketId: ageBracketId,
@@ -326,10 +332,10 @@ const resolvers = {
                 queryId: queryId,
                 municipalsId: zipCode,
             };
-            if (barangayId !== "all") {
+            if (barangayId !== 'all') {
                 filters.barangaysId = barangayId;
             }
-            if (genderId !== "all") {
+            if (genderId !== 'all') {
                 filters.genderId = genderId;
             }
             return yield prisma_1.prisma.response.count({
@@ -346,7 +352,7 @@ const resolvers = {
                     name: true,
                 },
                 orderBy: {
-                    name: "asc",
+                    name: 'asc',
                 },
             });
             // Step 2: Fetch all options for the given queryId
@@ -362,7 +368,7 @@ const resolvers = {
             });
             // Step 3: Fetch response counts in bulk for all barangays and options
             const responseCounts = yield prisma_1.prisma.response.groupBy({
-                by: ["barangaysId", "optionId"],
+                by: ['barangaysId', 'optionId'],
                 where: {
                     surveyId: surveyId,
                     queryId: queryId,
@@ -393,18 +399,18 @@ const resolvers = {
             return results;
         }),
         getAllVoters: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { offset, limit, barangayId, zipCode }) {
-            let filter = { saveStatus: "listed" }; // use Prisma's typing if possible
-            if (zipCode !== "all") {
+            let filter = { saveStatus: 'listed' }; // use Prisma's typing if possible
+            if (zipCode !== 'all') {
                 filter.municipalsId = parseInt(zipCode, 10);
             }
-            if (barangayId !== "all") {
+            if (barangayId !== 'all') {
                 filter.barangaysId = barangayId;
             }
             return yield prisma_1.prisma.voters.findMany({
                 take: limit,
                 skip: offset,
                 orderBy: {
-                    lastname: "asc",
+                    lastname: 'asc',
                 },
                 where: filter,
             });
@@ -416,19 +422,19 @@ const resolvers = {
                     {
                         lastname: {
                             contains: query,
-                            mode: "insensitive",
+                            mode: 'insensitive',
                         },
                     },
                     {
                         firstname: {
                             contains: query,
-                            mode: "insensitive",
+                            mode: 'insensitive',
                         },
                     },
                     {
                         idNumber: {
                             contains: query,
-                            mode: "insensitive",
+                            mode: 'insensitive',
                         },
                     },
                 ],
@@ -442,7 +448,7 @@ const resolvers = {
             return yield prisma_1.prisma.voters.findMany({
                 skip,
                 take,
-                where: filter
+                where: Object.assign({ saveStatus: 'listed' }, filter),
             });
         }),
         getSelectedVoters: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { list }) {
@@ -456,7 +462,7 @@ const resolvers = {
         getRankOption: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { optionId }) {
             // Step 1: Group the responses by `barangaysId`
             const topBarangays = yield prisma_1.prisma.response.groupBy({
-                by: ["barangaysId"],
+                by: ['barangaysId'],
                 where: {
                     optionId,
                 },
@@ -465,7 +471,7 @@ const resolvers = {
                 },
                 orderBy: {
                     _count: {
-                        id: "desc",
+                        id: 'desc',
                     },
                 },
                 take: 15,
@@ -483,73 +489,80 @@ const resolvers = {
         getAllPurokCoor: () => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.purokCoor.findMany();
         }),
-        getAllTeamLeader: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip, zipCode }) {
+        getAllTeamLeader: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip, zipCode, barangayId }) {
+            console.log({ skip, zipCode, barangayId });
+            const filter = {};
+            if (zipCode) {
+                filter.municipalsId = zipCode;
+            }
+            if (barangayId) {
+                filter.barangaysId = barangayId;
+            }
+            console.log({ filter });
             const data = yield prisma_1.prisma.teamLeader.findMany({
                 skip: skip !== null && skip !== void 0 ? skip : 0,
                 take: 20,
-                where: {
-                    municipalsId: zipCode,
-                },
+                where: filter,
             });
             return data;
         }),
-        getVotersList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { level, take, skip, query, zipCode, barangayId, purokId, pwd, illi, inc, oor, dead, youth, senior, gender, mode, withoutTeam }) {
+        getVotersList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { level, take, skip, query, zipCode, barangayId, purokId, pwd, illi, inc, oor, dead, youth, senior, gender, mode, withoutTeam, }) {
             console.log({ skip });
-            const filter = { saveStatus: "listed" };
+            const filter = { saveStatus: 'listed' };
             // if(withoutTeam === "YES"){
             //   filter.teamId= null
             //   filter.candidatesId= null
             // }
-            if (zipCode !== "all") {
+            if (zipCode !== 'all') {
                 filter.municipalsId = parseInt(zipCode, 10);
             }
-            if (barangayId !== "all") {
+            if (barangayId !== 'all') {
                 filter.barangaysId = barangayId;
             }
-            if (purokId !== "all") {
+            if (purokId !== 'all') {
                 filter.purokId = purokId;
             }
-            if (pwd === "YES") {
-                filter.pwd = "YES";
+            if (pwd === 'YES') {
+                filter.pwd = 'YES';
             }
-            if (oor === "YES") {
-                filter.oor = "YES";
+            if (oor === 'YES') {
+                filter.oor = 'YES';
             }
-            if (inc === "YES") {
-                filter.inc = "YES";
+            if (inc === 'YES') {
+                filter.inc = 'YES';
             }
-            if (illi === "YES") {
-                filter.illi = "YES";
+            if (illi === 'YES') {
+                filter.illi = 'YES';
             }
-            if (dead === "YES") {
+            if (dead === 'YES') {
                 filter.status = 0;
             }
-            if (senior === "YES") {
+            if (senior === 'YES') {
                 filter.senior = true;
             }
-            if (youth === "YES") {
+            if (youth === 'YES') {
                 filter.youth = true;
             }
-            if (gender !== "all") {
+            if (gender !== 'all') {
                 filter.gender = gender;
             }
-            if (level !== "all") {
+            if (level !== 'all') {
                 filter.level = parseInt(level, 10);
             }
             if (query) {
-                const searchTerms = query.split(" ").filter(term => term.trim() !== "");
+                const searchTerms = query.split(' ').filter((term) => term.trim() !== '');
                 filter.OR = [
-                    ...searchTerms.flatMap(term => [
-                        { lastname: { contains: term, mode: "insensitive" } },
-                        { firstname: { contains: term, mode: "insensitive" } },
-                        { idNumber: { contains: term, mode: "insensitive" } },
+                    ...searchTerms.flatMap((term) => [
+                        { lastname: { contains: term, mode: 'insensitive' } },
+                        { firstname: { contains: term, mode: 'insensitive' } },
+                        { idNumber: { contains: term, mode: 'insensitive' } },
                     ]),
                     {
-                        AND: searchTerms.map(term => ({
+                        AND: searchTerms.map((term) => ({
                             OR: [
-                                { firstname: { contains: term, mode: "insensitive" } },
-                                { lastname: { contains: term, mode: "insensitive" } },
-                                { idNumber: { contains: term, mode: "insensitive" } },
+                                { firstname: { contains: term, mode: 'insensitive' } },
+                                { lastname: { contains: term, mode: 'insensitive' } },
+                                { idNumber: { contains: term, mode: 'insensitive' } },
                             ],
                         })),
                     },
@@ -560,12 +573,12 @@ const resolvers = {
                 skip: skip !== null && skip !== void 0 ? skip : 0,
                 take,
                 orderBy: {
-                    idNumber: "asc",
+                    idNumber: 'asc',
                 },
             });
             const count = yield prisma_1.prisma.voters.count({ where: filter });
-            console.log("Filter: ", filter);
-            console.log("Result: ", result);
+            console.log('Filter: ', filter);
+            console.log('Result: ', result);
             return { voters: result, results: count };
         }),
         getPurokList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
@@ -578,32 +591,32 @@ const resolvers = {
         teamList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode, barangayId, purokId, level, query, skip, candidate, withIssues, members }) {
             const filter = {};
             const levelList = [
-                { name: "TL", value: 1 },
-                { name: "PC", value: 2 },
-                { name: "BC", value: 3 },
+                { name: 'TL', value: 1 },
+                { name: 'PC', value: 2 },
+                { name: 'BC', value: 3 },
             ];
             if (query) {
                 filter.TeamLeader = {
                     voter: {
                         OR: [
-                            { lastname: { contains: query, mode: "insensitive" } },
-                            { firstname: { contains: query, mode: "insensitive" } },
-                            { idNumber: { contains: query, mode: "insensitive" } },
+                            { lastname: { contains: query, mode: 'insensitive' } },
+                            { firstname: { contains: query, mode: 'insensitive' } },
+                            { idNumber: { contains: query, mode: 'insensitive' } },
                         ],
                     },
                 };
             }
             const teamLevel = levelList.find((x) => x.name === level);
-            if (zipCode !== "all") {
+            if (zipCode !== 'all') {
                 filter.municipalsId = parseInt(zipCode, 10);
             }
-            if (barangayId !== "all") {
+            if (barangayId !== 'all') {
                 filter.barangaysId = barangayId;
             }
-            if (purokId !== "all") {
+            if (purokId !== 'all') {
                 filter.purokId = purokId;
             }
-            if (level !== "all") {
+            if (level !== 'all') {
                 filter.level = teamLevel.value;
             }
             const teams = yield prisma_1.prisma.team.findMany({
@@ -635,16 +648,16 @@ const resolvers = {
                 orderBy: {
                     TeamLeader: {
                         voter: {
-                            lastname: "asc"
-                        }
-                    }
+                            lastname: 'asc',
+                        },
+                    },
                 },
             });
             return teams;
         }),
         candidates: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode }) {
             const filter = {};
-            if (zipCode === "4903") {
+            if (zipCode === '4903') {
                 filter.municipalsId = parseInt(zipCode, 10);
             }
             // const newBatch = await prisma.ccaandidates.update({
@@ -657,7 +670,7 @@ const resolvers = {
             // })
             // console.log(newBatch);
             return yield prisma_1.prisma.candidates.findMany({
-                where: filter
+                where: filter,
             });
         }),
         team: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
@@ -677,12 +690,17 @@ const resolvers = {
                 },
             });
         }),
-        teams: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip, zipCode }) {
+        teams: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip, zipCode, barangayId }) {
             console.log({ skip, zipCode });
+            const filter = {};
+            if (zipCode) {
+                filter.municipalsId = zipCode;
+            }
+            if (barangayId) {
+                filter.barangaysId = barangayId;
+            }
             const data = yield prisma_1.prisma.team.findMany({
-                where: {
-                    municipalsId: zipCode
-                },
+                where: filter,
                 take: 50,
                 skip: skip !== null && skip !== void 0 ? skip : 0,
             });
@@ -691,18 +709,18 @@ const resolvers = {
         }),
         teamRecord: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { query, skip, municipal, barangay }) {
             let filter = {};
-            if (municipal !== "all") {
+            if (municipal !== 'all') {
                 filter.municipalsId = parseInt(municipal, 10);
             }
-            if (barangay !== "all") {
+            if (barangay !== 'all') {
                 filter.barangaysId = barangay;
             }
             if (query) {
                 filter.teamLeader = {
                     voter: {
                         OR: [
-                            { lastname: { contains: query, mode: "insensitive" } },
-                            { firstname: { contains: query, mode: "insensitive" } },
+                            { lastname: { contains: query, mode: 'insensitive' } },
+                            { firstname: { contains: query, mode: 'insensitive' } },
                         ],
                     },
                 };
@@ -711,7 +729,7 @@ const resolvers = {
                 where: filter,
                 skip: skip !== null && skip !== void 0 ? skip : 0,
                 orderBy: {
-                    timestamp: "desc",
+                    timestamp: 'desc',
                 },
             });
         }),
@@ -721,13 +739,13 @@ const resolvers = {
             });
         }),
         userList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode }) {
-            console.log("user zc", zipCode);
+            console.log('user zc', zipCode);
             const filter = {};
             if (zipCode !== 4905) {
                 filter.forMunicipal = zipCode;
             }
             return yield prisma_1.prisma.users.findMany({
-                where: filter
+                where: filter,
             });
         }),
         userQRCodeList: () => __awaiter(void 0, void 0, void 0, function* () {
@@ -763,7 +781,7 @@ const resolvers = {
             });
         }),
         duplicateteamMembers: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip, zipCode }) {
-            console.log("Duplicated: ", { skip }, zipCode);
+            console.log('Duplicated: ', { skip }, zipCode);
             return yield prisma_1.prisma.duplicateteamMembers.findMany({
                 skip: skip !== null && skip !== void 0 ? skip : 0,
                 take: 50,
@@ -773,7 +791,7 @@ const resolvers = {
             });
         }),
         delistedVotes: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { skip, zipCode }) {
-            console.log("Delisted ", { skip }, zipCode);
+            console.log('Delisted ', { skip }, zipCode);
             const response = yield prisma_1.prisma.delistedVoter.findMany({
                 skip: skip !== null && skip !== void 0 ? skip : 0,
                 take: 50,
@@ -803,7 +821,7 @@ const resolvers = {
             });
         }),
         getAssignedTeams: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { userId, zipCode, barangaysId, from, take, max, min }) {
-            console.log("Params ,", { userId, zipCode, barangaysId, from, take, max, min });
+            console.log('Params ,', { userId, zipCode, barangaysId, from, take, max, min });
             const barangay = yield prisma_1.prisma.barangays.findFirst({
                 where: {
                     municipalId: zipCode,
@@ -816,8 +834,8 @@ const resolvers = {
                     municipalsId: zipCode,
                     level: 1,
                     AccountHandleTeam: {
-                        none: {}
-                    }
+                        none: {},
+                    },
                 },
                 include: {
                     _count: {
@@ -830,7 +848,7 @@ const resolvers = {
                 take,
             });
             const filteredTeams = teams.filter((team) => team._count.voters >= min && team._count.voters <= max);
-            console.log("Checked: ", filteredTeams.length);
+            console.log('Checked: ', filteredTeams.length);
             yield prisma_1.prisma.accountHandleTeam.createMany({
                 data: filteredTeams.map((item) => {
                     return {
@@ -840,12 +858,12 @@ const resolvers = {
                         barangaysId: item.barangaysId,
                     };
                 }),
-                skipDuplicates: true
+                skipDuplicates: true,
             });
             const handleTeams = yield prisma_1.prisma.accountHandleTeam.findMany({
                 where: {
                     usersUid: userId,
-                }
+                },
             });
             return handleTeams;
         }),
@@ -855,12 +873,12 @@ const resolvers = {
         teamLeaderTeamHandle: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { level, zipCode, barangay, skip }) {
             console.log({ level, zipCode, barangay, skip });
             const filter = {
-                level: level
+                level: level,
             };
-            if (zipCode !== "all") {
+            if (zipCode !== 'all') {
                 filter.municipalsId = parseInt(zipCode, 10);
             }
-            if (barangay !== "all") {
+            if (barangay !== 'all') {
                 filter.barangaysId = barangay;
             }
             return yield prisma_1.prisma.teamLeader.findMany({
@@ -868,28 +886,31 @@ const resolvers = {
                 include: {
                     team: {
                         where: {
-                            level: level - 1
-                        }
-                    }
+                            level: level - 1,
+                        },
+                    },
                 },
                 skip: skip !== null && skip !== void 0 ? skip : 0,
-                take: 10
+                take: 10,
             });
         }),
         figureHeads: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { level, barangayId }) {
-            console.log({ level, barangayId });
+            console.log('con: ', { level, barangayId });
             return yield prisma_1.prisma.teamLeader.findMany({
                 where: {
                     level,
                     barangaysId: barangayId,
-                }, include: {
-                    voter: true
+                },
+                include: {
+                    voter: true,
+                    barangayCoor: true,
+                    purokCoors: true,
                 },
                 orderBy: {
                     voter: {
-                        lastname: "asc"
-                    }
-                }
+                        lastname: 'asc',
+                    },
+                },
             });
         }),
         butaws: () => __awaiter(void 0, void 0, void 0, function* () {
@@ -897,53 +918,53 @@ const resolvers = {
                 prisma_1.prisma.voters.findMany({
                     where: {
                         municipalsId: 4905,
-                        candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0",
+                        candidatesId: '842e7060-e38a-48a1-8f29-ec9c766b0fa0',
                         teamId: { not: null },
-                    }
+                    },
                 }),
                 prisma_1.prisma.team.findMany({
                     where: {
                         municipalsId: 4905,
-                        candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0",
-                    }
+                        candidatesId: '842e7060-e38a-48a1-8f29-ec9c766b0fa0',
+                    },
                 }),
                 prisma_1.prisma.teamLeader.findMany({
                     where: {
                         municipalsId: 4905,
-                        candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0",
+                        candidatesId: '842e7060-e38a-48a1-8f29-ec9c766b0fa0',
                         teamId: { not: null },
-                    }
-                })
+                    },
+                }),
             ]);
             if (voters.length === 0 || team.length === 0 || tl.length === 0) {
-                throw new graphql_1.GraphQLError("Could not find participants");
+                throw new graphql_1.GraphQLError('Could not find participants');
             }
             console.log(voters.length, team.length, tl.length);
             yield prisma_1.prisma.$transaction([
                 prisma_1.prisma.voters.updateMany({
                     where: {
-                        id: { in: voters.map((item) => item.id) }
+                        id: { in: voters.map((item) => item.id) },
                     },
                     data: {
-                        candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
-                    }
+                        candidatesId: 'eb2e1921-c9c1-459c-b1ea-8d4543b9772b',
+                    },
                 }),
                 prisma_1.prisma.team.updateMany({
                     where: {
-                        id: { in: team.map((item) => item.id) }
+                        id: { in: team.map((item) => item.id) },
                     },
                     data: {
-                        candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
-                    }
+                        candidatesId: 'eb2e1921-c9c1-459c-b1ea-8d4543b9772b',
+                    },
                 }),
                 prisma_1.prisma.teamLeader.updateMany({
                     where: {
-                        id: { in: tl.map((item) => item.id) }
+                        id: { in: tl.map((item) => item.id) },
                     },
                     data: {
-                        candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
-                    }
-                })
+                        candidatesId: 'eb2e1921-c9c1-459c-b1ea-8d4543b9772b',
+                    },
+                }),
             ]);
             const data = yield prisma_1.prisma.voters.findMany({
                 where: {
@@ -951,10 +972,32 @@ const resolvers = {
                     candidatesId: null,
                     teamId: { not: null },
                     level: 0,
-                }
+                },
+                take: 1,
             });
             return data;
-        })
+        }),
+        getTLQrCode: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { barangayId, skip }) {
+            const filter = {};
+            return yield prisma_1.prisma.teamlLeaderQRcodes.findMany({
+                where: {
+                    TeamLeader: {
+                        barangaysId: barangayId,
+                    },
+                },
+                skip: skip !== null && skip !== void 0 ? skip : 0,
+            });
+        }),
+        getVoterQRcode: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { barangayId, skip }) {
+            return yield prisma_1.prisma.qRcode.findMany({
+                where: {
+                    voter: {
+                        barangaysId: barangayId,
+                    },
+                },
+                skip: skip !== null && skip !== void 0 ? skip : 0,
+            });
+        }),
     },
     Mutation: {
         signUp: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { user }) {
@@ -963,7 +1006,7 @@ const resolvers = {
                 where: { phoneNumber: user.phoneNumber },
             });
             if (check) {
-                throw new Error("Phone number already exit.");
+                throw new Error('Phone number already exit.');
             }
             return yield prisma_1.prisma.adminUser.create({
                 data: {
@@ -982,7 +1025,7 @@ const resolvers = {
             const { username, password, privilege, purpose, role, encryptPassword, forMunicipal } = user;
             const checked = yield prisma_1.prisma.users.findFirst({ where: { username } });
             if (checked) {
-                throw new graphql_1.GraphQLError("Username already exists");
+                throw new graphql_1.GraphQLError('Username already exists');
             }
             const hashedPassword = encryptPassword ? yield argon2_1.default.hash(password) : password;
             yield prisma_1.prisma.$transaction((prisma) => __awaiter(void 0, void 0, void 0, function* () {
@@ -1011,7 +1054,7 @@ const resolvers = {
                 });
                 console.log({ createdUser });
             }));
-            return "OK";
+            return 'OK';
         }),
         createMunicipal: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { municipal }) {
             return yield prisma_1.prisma.municipals.create({
@@ -1026,13 +1069,13 @@ const resolvers = {
                 where: {
                     name: {
                         equals: barangay.name,
-                        mode: "insensitive",
+                        mode: 'insensitive',
                     },
                     municipalId: barangay.municipalId,
                 },
             });
             if (existed) {
-                throw new Error("Barangay name already exists");
+                throw new Error('Barangay name already exists');
             }
             return yield prisma_1.prisma.barangays.create({
                 data: {
@@ -1051,7 +1094,7 @@ const resolvers = {
         }),
         removeDraft: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
             yield prisma_1.prisma.voters.deleteMany({
-                where: { newBatchDraftId: id, saveStatus: "drafted" },
+                where: { newBatchDraftId: id, saveStatus: 'drafted' },
             });
             return yield prisma_1.prisma.newBatchDraft.delete({ where: { id } });
         }),
@@ -1102,7 +1145,7 @@ const resolvers = {
         createSurvey: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { survey }) {
             console.log({ survey });
             const checkTagID = () => __awaiter(void 0, void 0, void 0, function* () {
-                let genID = (0, data_1.handleGenTagID)();
+                let genID = (0, data_2.handleGenTagID)();
                 const tagID = yield prisma_1.prisma.survey.findFirst({
                     where: { tagID: genID.toString() },
                 });
@@ -1116,15 +1159,15 @@ const resolvers = {
             const tagID = yield checkTagID();
             const data = yield prisma_1.prisma.survey.create({
                 data: {
-                    type: "random",
-                    adminUserUid: "35962b1b-6108-4e1e-a2ae-6940d1986edd",
+                    type: 'random',
+                    adminUserUid: '35962b1b-6108-4e1e-a2ae-6940d1986edd',
                     tagID: tagID,
                 },
             });
             return data;
         }),
         createQuery: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { query }) {
-            console.log("New Query: ", query);
+            console.log('New Query: ', query);
             return yield prisma_1.prisma.queries.create({
                 data: {
                     queries: query.queries,
@@ -1246,7 +1289,7 @@ const resolvers = {
         surveyConclude: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
             return yield prisma_1.prisma.survey.update({
                 where: { id: id },
-                data: { status: "Concluded" },
+                data: { status: 'Concluded' },
             });
         }),
         deleteSurvey: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
@@ -1428,15 +1471,15 @@ const resolvers = {
             //     skipDuplicates: true,
             //   });
             // }
-            return "OK";
+            return 'OK';
         }),
         submitResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { respondentResponse, response, surveyResponse }) {
             return yield prisma_1.prisma.$transaction((prisma) => __awaiter(void 0, void 0, void 0, function* () {
                 const checkSurvey = yield prisma.survey.findUnique({
                     where: { id: surveyResponse.surveyId },
                 });
-                if ((checkSurvey === null || checkSurvey === void 0 ? void 0 : checkSurvey.status) !== "Ongoing") {
-                    throw new graphql_1.GraphQLError("The survey is currently closed or paused.");
+                if ((checkSurvey === null || checkSurvey === void 0 ? void 0 : checkSurvey.status) !== 'Ongoing') {
+                    throw new graphql_1.GraphQLError('The survey is currently closed or paused.');
                 }
                 const surveyResponsed = yield prisma.surveyResponse.create({
                     data: {
@@ -1526,23 +1569,25 @@ const resolvers = {
         adminLogin: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { user }) {
             const secretToken = process.env.JWT_SECRECT_TOKEN;
             if (!secretToken) {
-                throw new Error("JWT secret token is not defined");
+                throw new Error('JWT secret token is not defined');
             }
             const adminUser = yield prisma_1.prisma.adminUser.findFirst({
                 where: { phoneNumber: user.phoneNumber },
             });
             if (!adminUser) {
-                throw new graphql_1.GraphQLError("Phone number not found!", {
-                    extensions: { code: "NOT_FOUND" },
+                throw new graphql_1.GraphQLError('Phone number not found!', {
+                    extensions: { code: 'NOT_FOUND' },
                 });
             }
             const isPasswordValid = yield argon2_1.default.verify(adminUser.password, user.password);
             if (!isPasswordValid) {
-                throw new graphql_1.GraphQLError("Incorrect password", {
-                    extensions: { code: "UNAUTHORIZED" },
+                throw new graphql_1.GraphQLError('Incorrect password', {
+                    extensions: { code: 'UNAUTHORIZED' },
                 });
             }
-            const accessToken = jsonwebtoken_1.default.sign({ user: adminUser.phoneNumber }, secretToken, { expiresIn: "8h" });
+            const accessToken = jsonwebtoken_1.default.sign({ user: adminUser.phoneNumber }, secretToken, {
+                expiresIn: '8h',
+            });
             const { phoneNumber, lastname, firstname, uid } = adminUser;
             yield prisma_1.prisma.$disconnect();
             return { phoneNumber, lastname, firstname, uid, accessToken };
@@ -1550,27 +1595,28 @@ const resolvers = {
         userLogin: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { user }) {
             const secretToken = process.env.JWT_SECRECT_TOKEN;
             if (!secretToken) {
-                throw new graphql_1.GraphQLError("JWT secret token is not defined");
+                throw new graphql_1.GraphQLError('JWT secret token is not defined');
             }
             const userData = yield prisma_1.prisma.users.findFirst({
                 where: {
                     username: {
-                        contains: user.username, mode: "insensitive"
-                    }
+                        contains: user.username,
+                        mode: 'insensitive',
+                    },
                 },
             });
             if (!userData) {
-                throw new graphql_1.GraphQLError("Username not found!", {
-                    extensions: { code: "UNAUTHORIZED" },
+                throw new graphql_1.GraphQLError('Username not found!', {
+                    extensions: { code: 'UNAUTHORIZED' },
                 });
             }
             const isPasswordValid = yield argon2_1.default.verify(userData.password, user.password);
             if (!isPasswordValid) {
-                throw new graphql_1.GraphQLError("Incorrect password", {
-                    extensions: { code: "UNAUTHORIZED" },
+                throw new graphql_1.GraphQLError('Incorrect password', {
+                    extensions: { code: 'UNAUTHORIZED' },
                 });
             }
-            const accessToken = jsonwebtoken_1.default.sign({ user: userData.username }, secretToken, { expiresIn: "8h" });
+            const accessToken = jsonwebtoken_1.default.sign({ user: userData.username }, secretToken, { expiresIn: '8h' });
             const { username, role, uid } = userData;
             yield prisma_1.prisma.$disconnect();
             return { username, role, uid, accessToken };
@@ -1599,8 +1645,8 @@ const resolvers = {
                 },
             });
             if (checked) {
-                throw new graphql_1.GraphQLError("Gender already existed in this quota", {
-                    extensions: { code: "EXISTED" },
+                throw new graphql_1.GraphQLError('Gender already existed in this quota', {
+                    extensions: { code: 'EXISTED' },
                 });
             }
             return yield prisma_1.prisma.genderSize.create({
@@ -1664,7 +1710,7 @@ const resolvers = {
                     id,
                 },
                 data: {
-                    access: (query === null || query === void 0 ? void 0 : query.access) === "regular" ? "admin" : "regular",
+                    access: (query === null || query === void 0 ? void 0 : query.access) === 'regular' ? 'admin' : 'regular',
                 },
             });
         }),
@@ -1680,7 +1726,7 @@ const resolvers = {
                     newBatchDraftId: id,
                 },
             });
-            return "OK";
+            return 'OK';
         }),
         saveDraftedVoter: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { batchId }) {
             const updatedBatch = yield prisma_1.prisma.newBatchDraft.update({
@@ -1696,7 +1742,7 @@ const resolvers = {
                     newBatchDraftId: batchId,
                 },
                 data: {
-                    saveStatus: "listed",
+                    saveStatus: 'listed',
                 },
             });
             return updatedBatch;
@@ -1707,7 +1753,7 @@ const resolvers = {
                     id,
                 },
             });
-            return "OK";
+            return 'OK';
         }),
         removeMultiVoter: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { list }) {
             for (let item of list) {
@@ -1723,7 +1769,7 @@ const resolvers = {
                     continue;
                 }
             }
-            return "OK";
+            return 'OK';
         }),
         setVoterLevel: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id, level, code }) {
             console.log(id, level, code);
@@ -1736,14 +1782,14 @@ const resolvers = {
                 where: {
                     code: {
                         equals: code.trim(),
-                        mode: "insensitive",
+                        mode: 'insensitive',
                     },
                 },
             });
             if (!candidate) {
-                throw new graphql_1.GraphQLError("Code not found", {
+                throw new graphql_1.GraphQLError('Code not found', {
                     extensions: {
-                        code: "UNFOUND",
+                        code: 'UNFOUND',
                     },
                 });
             }
@@ -1753,13 +1799,13 @@ const resolvers = {
                 });
             }
             if (voter.level === 3) {
-                throw new graphql_1.GraphQLError("Already enlisted as Barangay Coor.", {
+                throw new graphql_1.GraphQLError('Already enlisted as Barangay Coor.', {
                     extensions: { code: 500 },
                 });
             }
             const leadr = yield prisma_1.prisma.teamLeader.create({
                 data: {
-                    hubId: "none",
+                    hubId: 'none',
                     votersId: id,
                     municipalsId: voter.municipalsId,
                     barangaysId: voter.barangaysId,
@@ -1794,53 +1840,49 @@ const resolvers = {
                     teamId: team.id,
                 },
             });
-            return "OK";
+            return 'OK';
         }),
         addTeam: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { headId, teamIdList, level }) {
             const rejectList = [];
-            const headerData = yield prisma_1.prisma.voters.findUnique({
-                where: {
-                    id: headId,
-                },
-            });
-            if (!headerData) {
-                throw new graphql_1.GraphQLError("Head person unfound.", {
-                    extensions: { code: "REQUEST_ERROR" },
+            const [headerData, votersData, figureHead] = yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.voters.findUnique({
+                    where: {
+                        id: headId,
+                    },
+                }),
+                prisma_1.prisma.voters.findMany({
+                    where: {
+                        id: { in: teamIdList.map((member) => member.id) },
+                    },
+                }),
+                prisma_1.prisma.teamLeader.findFirst({
+                    where: {
+                        votersId: headId,
+                    },
+                }),
+            ]);
+            if (!headerData || !figureHead) {
+                throw new graphql_1.GraphQLError('Head person unfound.', {
+                    extensions: { code: 'REQUEST_ERROR' },
                 });
             }
             if (headerData.level !== level + 1) {
-                throw new graphql_1.GraphQLError("Head person unqualified.", {
-                    extensions: { code: "REQUEST_ERROR" },
+                throw new graphql_1.GraphQLError('Head person unqualified.', {
+                    extensions: { code: 'REQUEST_ERROR' },
                 });
             }
-            const votersData = yield prisma_1.prisma.voters.findMany({
-                where: {
-                    id: { in: teamIdList.map((member) => member.id) },
-                },
-            });
-            const teamVoterCount = yield prisma_1.prisma.team.findFirst({
-                where: { teamLeaderId: headId },
-                select: {
-                    _count: { select: { voters: true } },
-                    id: true,
-                },
-            });
-            if (level === 0 && (teamVoterCount === null || teamVoterCount === void 0 ? void 0 : teamVoterCount._count.voters) >= 10) {
-                throw new graphql_1.GraphQLError("Limit reached", {
-                    extensions: { code: "REQUEST_ERROR" },
-                });
+            let data = {};
+            if (level === 2) {
+                data = {
+                    barangayCoorId: figureHead.id,
+                    purokCoorsId: null,
+                };
             }
-            const purokCoorTeam = yield prisma_1.prisma.purokCoor.findFirst({
-                where: { votersId: headId },
-                select: {
-                    _count: { select: { TeamLeader: true } },
-                    id: true,
-                },
-            });
-            if (level === 1 && (purokCoorTeam === null || purokCoorTeam === void 0 ? void 0 : purokCoorTeam._count.TeamLeader) >= 10) {
-                throw new graphql_1.GraphQLError("Limit reached", {
-                    extensions: { code: "REQUEST_ERROR" },
-                });
+            else if (level === 1) {
+                data = {
+                    barangayCoorId: figureHead.id,
+                    purokCoorsId: figureHead.id,
+                };
             }
             yield Promise.all(teamIdList.map((member) => __awaiter(void 0, void 0, void 0, function* () {
                 const voter = votersData.find((v) => v.id === member.id);
@@ -1851,7 +1893,7 @@ const resolvers = {
                         lastname: member.lastname,
                         municipal: member.municipalsId,
                         barangay: member.barangaysId,
-                        reason: "Not found in master list",
+                        reason: 'Not found in master list',
                         teamId: member.teamId,
                         code: 0,
                     });
@@ -1864,7 +1906,7 @@ const resolvers = {
                         lastname: member.lastname,
                         municipal: member.municipalsId,
                         barangay: member.barangaysId,
-                        reason: "Makaibang Baranggay sa Leader",
+                        reason: 'Makaibang Baranggay sa Leader',
                         teamId: member.teamId,
                         code: 0,
                     });
@@ -1878,20 +1920,20 @@ const resolvers = {
                         lastname: member.lastname,
                         municipal: member.municipalsId,
                         barangay: member.barangaysId,
-                        reason: "Sumaka-bilang buhay na.",
+                        reason: 'Sumaka-bilang buhay na.',
                         teamId: member.teamId,
                         code: 11,
                     });
                     return;
                 }
-                if (voter.oor === "YES") {
+                if (voter.oor === 'YES') {
                     rejectList.push({
                         id: member.id,
                         firstname: member.firstname,
                         lastname: member.lastname,
                         municipal: member.municipalsId,
                         barangay: member.barangaysId,
-                        reason: "Wala sa nasabing ankop na lugar.",
+                        reason: 'Wala sa nasabing ankop na lugar.',
                         teamId: member.teamId,
                         code: 11,
                     });
@@ -1904,7 +1946,7 @@ const resolvers = {
                         lastname: member.lastname,
                         municipal: member.municipalsId,
                         barangay: member.barangaysId,
-                        reason: "Nakalista na, bilang isang Barangay Coor.",
+                        reason: 'Nakalista na, bilang isang Barangay Coor.',
                         teamId: member.teamId,
                         code: 3,
                     });
@@ -1917,7 +1959,7 @@ const resolvers = {
                         lastname: member.lastname,
                         municipal: member.municipalsId,
                         barangay: member.barangaysId,
-                        reason: "Nakalista na, bilang isang Purok Coor.",
+                        reason: 'Nakalista na, bilang isang Purok Coor.',
                         teamId: member.teamId,
                         code: 2,
                     });
@@ -1930,7 +1972,7 @@ const resolvers = {
                         lastname: member.lastname,
                         municipal: member.municipalsId,
                         barangay: member.barangaysId,
-                        reason: "Nakalista na, bilang isang Team Leader.",
+                        reason: 'Nakalista na, bilang isang Team Leader.',
                         teamId: member.teamId,
                         code: 1,
                     });
@@ -1942,7 +1984,7 @@ const resolvers = {
                     lastname: member.lastname,
                     municipal: member.municipalsId,
                     barangay: member.barangaysId,
-                    reason: "OK",
+                    reason: 'OK',
                     teamId: member.teamId,
                     code: 100,
                 });
@@ -1955,7 +1997,7 @@ const resolvers = {
                             lastname: voter.lastname,
                             municipal: voter.municipalsId,
                             barangay: voter.barangaysId,
-                            reason: "Meron ng team (Dala na ng ibang team leader)",
+                            reason: 'Meron ng team (Dala na ng ibang team leader)',
                             teamId: voter.teamId,
                             code: 13,
                         });
@@ -1967,7 +2009,7 @@ const resolvers = {
                         },
                     });
                     if (!teamLeader) {
-                        throw new graphql_1.GraphQLError("Team Leader not found");
+                        throw new graphql_1.GraphQLError('Figure Head not found');
                     }
                     const team = yield prisma_1.prisma.team.findFirst({
                         where: {
@@ -1975,7 +2017,7 @@ const resolvers = {
                         },
                     });
                     if (!team) {
-                        throw new graphql_1.GraphQLError("No team found with selected leader");
+                        throw new graphql_1.GraphQLError('No team found with selected leader');
                     }
                     yield prisma_1.prisma.voters.update({
                         where: { id: member.id },
@@ -1990,16 +2032,7 @@ const resolvers = {
                 //Team Leader
                 if (level === 1) {
                     const teamLeader = yield prisma_1.prisma.teamLeader.create({
-                        data: {
-                            votersId: member.id,
-                            municipalsId: voter.municipalsId,
-                            barangaysId: voter.barangaysId,
-                            purokId: voter.purokId,
-                            handle: 10,
-                            hubId: "Unknown",
-                            level: 1,
-                            candidatesId: headerData.candidatesId,
-                        },
+                        data: Object.assign({ votersId: member.id, municipalsId: voter.municipalsId, barangaysId: voter.barangaysId, purokId: voter.purokId, handle: 10, hubId: 'Unknown', level: 1, candidatesId: figureHead.candidatesId }, data),
                     });
                     const team = yield prisma_1.prisma.team.create({
                         data: {
@@ -2013,7 +2046,7 @@ const resolvers = {
                     });
                     yield prisma_1.prisma.teamLeader.update({
                         where: { id: teamLeader.id },
-                        data: { teamId: team.id },
+                        data: { teamId: team.id, purokCoorsId: figureHead.id },
                     });
                     yield prisma_1.prisma.voters.update({
                         where: { id: voter.id },
@@ -2027,21 +2060,9 @@ const resolvers = {
                 }
                 // If adding as Purok Coordinator
                 if (level === 2) {
-                    console.log("Member: ", member);
                     const teamLeader = yield prisma_1.prisma.teamLeader.create({
-                        data: {
-                            votersId: member.id,
-                            municipalsId: voter.municipalsId,
-                            barangaysId: voter.barangaysId,
-                            purokId: voter.purokId,
-                            handle: 10,
-                            hubId: "Unknown",
-                            level,
-                        },
+                        data: Object.assign({ votersId: member.id, municipalsId: voter.municipalsId, barangaysId: voter.barangaysId, purokId: voter.purokId, handle: 10, hubId: 'Unknown', level }, data),
                     });
-                    if (!teamLeader)
-                        return;
-                    console.log("Team leader creared: ", teamLeader);
                     const team = yield prisma_1.prisma.team.create({
                         data: {
                             teamLeaderId: teamLeader.id,
@@ -2052,10 +2073,13 @@ const resolvers = {
                             level,
                         },
                     });
-                    console.log("Team Created: ", team);
+                    console.log('Team Created: ', team);
                     yield prisma_1.prisma.teamLeader.update({
                         where: { id: teamLeader.id },
-                        data: { teamId: team.id },
+                        data: {
+                            teamId: team.id,
+                            barangayCoorId: figureHead.id,
+                        },
                     });
                     yield prisma_1.prisma.voters.update({
                         where: { id: voter.id },
@@ -2072,20 +2096,30 @@ const resolvers = {
         }),
         addMember: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { headId, teamIdList, level, teamId }) {
             const rejectList = [];
-            const headerData = yield prisma_1.prisma.voters.findUnique({
-                where: {
-                    id: headId,
-                },
-            });
-            console.log({ headerData });
-            if (!headerData) {
-                throw new graphql_1.GraphQLError("Head person unfound.", {
-                    extensions: { code: "REQUEST_ERROR" },
+            const [headerData, figureHead] = yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.voters.findUnique({
+                    where: {
+                        id: headId,
+                    },
+                }),
+                prisma_1.prisma.teamLeader.findFirst({
+                    where: {
+                        votersId: headId,
+                    },
+                    include: {
+                        voter: true,
+                    },
+                }),
+            ]);
+            console.log({ headerData, figureHead });
+            if (!headerData || !figureHead) {
+                throw new graphql_1.GraphQLError('Head person unfound.', {
+                    extensions: { code: 'REQUEST_ERROR' },
                 });
             }
             if (headerData.level !== level + 1) {
-                throw new graphql_1.GraphQLError("Head person unqualified.", {
-                    extensions: { code: "REQUEST_ERROR" },
+                throw new graphql_1.GraphQLError('Head person unqualified.', {
+                    extensions: { code: 'REQUEST_ERROR' },
                 });
             }
             const [votersData] = yield prisma_1.prisma.$transaction([
@@ -2094,10 +2128,29 @@ const resolvers = {
                         id: { in: teamIdList.map((member) => member.id) },
                     },
                     include: {
-                        WhiteList: true
-                    }
-                })
+                        WhiteList: true,
+                    },
+                }),
             ]);
+            let data = {};
+            if (level === 1) {
+                data = {
+                    barangayCoorId: figureHead.barangayCoorId,
+                    purokCoorsId: figureHead.purokCoorsId,
+                };
+            }
+            else if (level === 2) {
+                data = {
+                    barangayCoorId: figureHead.id,
+                    purokCoorsId: null,
+                };
+            }
+            else {
+                data = {
+                    barangayCoorId: null,
+                    purokCoorsId: null,
+                };
+            }
             console.log(votersData);
             yield Promise.all(teamIdList.map((member) => __awaiter(void 0, void 0, void 0, function* () {
                 const voter = votersData.find((v) => v.id === member.id);
@@ -2108,7 +2161,7 @@ const resolvers = {
                         lastname: member.lastname,
                         municipal: member.municipalsId,
                         barangay: member.barangaysId,
-                        reason: "Not found in master list",
+                        reason: 'Not found in master list',
                         teamId: member.teamId,
                         code: 0,
                     });
@@ -2121,7 +2174,7 @@ const resolvers = {
                         lastname: member.lastname,
                         municipal: member.municipalsId,
                         barangay: member.barangaysId,
-                        reason: "Makaibang Baranggay sa Leader",
+                        reason: 'Makaibang Baranggay sa Leader',
                         teamId: member.teamId,
                         code: 0,
                     });
@@ -2135,7 +2188,7 @@ const resolvers = {
                         lastname: member.lastname,
                         municipal: member.municipalsId,
                         barangay: member.barangaysId,
-                        reason: "Sumaka-bilang buhay na.",
+                        reason: 'Sumaka-bilang buhay na.',
                         teamId: member.teamId,
                         code: 11,
                     });
@@ -2161,7 +2214,7 @@ const resolvers = {
                         lastname: member.lastname,
                         municipal: member.municipalsId,
                         barangay: member.barangaysId,
-                        reason: "Already a Barangay Coor.",
+                        reason: 'Already a Barangay Coor.',
                         teamId: member.teamId,
                         code: 3,
                     });
@@ -2174,7 +2227,7 @@ const resolvers = {
                         lastname: member.lastname,
                         municipal: member.municipalsId,
                         barangay: member.barangaysId,
-                        reason: "Already a Purok Coor.",
+                        reason: 'Already a Purok Coor.',
                         teamId: member.teamId,
                         code: 2,
                     });
@@ -2187,7 +2240,7 @@ const resolvers = {
                         lastname: member.lastname,
                         municipal: member.municipalsId,
                         barangay: member.barangaysId,
-                        reason: "Already a Team Leader.",
+                        reason: 'Already a Team Leader.',
                         teamId: member.teamId,
                         code: 1,
                     });
@@ -2200,7 +2253,7 @@ const resolvers = {
                         lastname: member.lastname,
                         municipal: member.municipalsId,
                         barangay: member.barangaysId,
-                        reason: "Already a BlackListed.",
+                        reason: 'Already a BlackListed.',
                         teamId: member.teamId,
                         code: 1,
                     });
@@ -2211,7 +2264,7 @@ const resolvers = {
                     lastname: member.lastname,
                     municipal: member.municipalsId,
                     barangay: member.barangaysId,
-                    reason: "OK",
+                    reason: 'OK',
                     teamId: member.teamId,
                     code: 100,
                 });
@@ -2224,7 +2277,7 @@ const resolvers = {
                             lastname: voter.lastname,
                             municipal: voter.municipalsId,
                             barangay: voter.barangaysId,
-                            reason: "Meron ng team (Dala na ng ibang team leader)",
+                            reason: 'Meron ng team (Dala na ng ibang team leader)',
                             teamId: voter.teamId,
                             code: 13,
                         });
@@ -2236,7 +2289,7 @@ const resolvers = {
                         },
                     });
                     if (!team) {
-                        throw new graphql_1.GraphQLError("No team found with selected leader");
+                        throw new graphql_1.GraphQLError('No team found with selected leader');
                     }
                     yield prisma_1.prisma.voters.update({
                         where: { id: member.id },
@@ -2251,16 +2304,7 @@ const resolvers = {
                 //Team Leader
                 if (level === 1) {
                     const teamLeader = yield prisma_1.prisma.teamLeader.create({
-                        data: {
-                            votersId: member.id,
-                            municipalsId: voter.municipalsId,
-                            barangaysId: voter.barangaysId,
-                            purokId: voter.purokId,
-                            handle: 10,
-                            hubId: "Unknown",
-                            level: 1,
-                            candidatesId: headerData.candidatesId,
-                        },
+                        data: Object.assign({ votersId: member.id, municipalsId: voter.municipalsId, barangaysId: voter.barangaysId, purokId: voter.purokId, handle: 10, hubId: 'Unknown', level: 1, candidatesId: headerData.candidatesId }, data),
                     });
                     const team = yield prisma_1.prisma.team.create({
                         data: {
@@ -2280,7 +2324,7 @@ const resolvers = {
                         where: { id: voter.id },
                         data: {
                             level: 1,
-                            teamId: teamId,
+                            teamId: figureHead.teamId,
                             candidatesId: headerData.candidatesId,
                         },
                     });
@@ -2288,21 +2332,9 @@ const resolvers = {
                 }
                 // If adding as Purok Coordinator
                 if (level === 2) {
-                    console.log("Member: ", member);
                     const teamLeader = yield prisma_1.prisma.teamLeader.create({
-                        data: {
-                            votersId: member.id,
-                            municipalsId: voter.municipalsId,
-                            barangaysId: voter.barangaysId,
-                            purokId: voter.purokId,
-                            handle: 10,
-                            hubId: "Unknown",
-                            level,
-                            teamId,
-                        },
+                        data: Object.assign({ votersId: member.id, municipalsId: voter.municipalsId, barangaysId: voter.barangaysId, purokId: voter.purokId, handle: 10, hubId: 'Unknown', level }, data),
                     });
-                    if (!teamLeader)
-                        return;
                     const team = yield prisma_1.prisma.team.create({
                         data: {
                             teamLeaderId: teamLeader.id,
@@ -2313,39 +2345,41 @@ const resolvers = {
                             level: 2,
                         },
                     });
-                    yield prisma_1.prisma.teamLeader.update({
-                        where: { id: teamLeader.id },
-                        data: { teamId: team.id },
-                    });
-                    yield prisma_1.prisma.voters.update({
-                        where: { id: voter.id },
-                        data: {
-                            level,
-                            teamId: teamId,
-                            candidatesId: headerData.candidatesId,
-                        },
-                    });
+                    yield prisma_1.prisma.$transaction([
+                        prisma_1.prisma.teamLeader.update({
+                            where: { id: teamLeader.id },
+                            data: { teamId: team.id },
+                        }),
+                        prisma_1.prisma.voters.update({
+                            where: { id: voter.id },
+                            data: {
+                                level: 2,
+                                teamId: figureHead.teamId,
+                                candidatesId: headerData.candidatesId,
+                            },
+                        }),
+                    ]);
                     return;
                 }
             })));
             return JSON.stringify(rejectList);
         }),
         removeVotersArea: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode, barangayId, purokId }) {
-            if (purokId && purokId !== "all") {
+            if (purokId && purokId !== 'all') {
                 yield prisma_1.prisma.voters.deleteMany({
                     where: {
                         purokId,
                     },
                 });
             }
-            else if (barangayId && barangayId !== "all") {
+            else if (barangayId && barangayId !== 'all') {
                 yield prisma_1.prisma.voters.deleteMany({
                     where: {
                         barangaysId: barangayId,
                     },
                 });
             }
-            else if (zipCode && zipCode !== "all") {
+            else if (zipCode && zipCode !== 'all') {
                 yield prisma_1.prisma.voters.deleteMany({
                     where: {
                         municipalsId: parseInt(zipCode, 10),
@@ -2355,21 +2389,21 @@ const resolvers = {
             else {
                 yield prisma_1.prisma.voters.deleteMany();
             }
-            return "OK";
+            return 'OK';
         }),
         genderBundleQrCode: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { idList }) {
             const rejectList = [];
             for (let item of idList) {
                 try {
                     const voter = yield prisma_1.prisma.voters.findUnique({ where: { id: item } });
-                    if ((voter === null || voter === void 0 ? void 0 : voter.qrCode) !== "None") {
+                    if ((voter === null || voter === void 0 ? void 0 : voter.qrCode) !== 'None') {
                         rejectList.push({
                             id: item,
-                            firstname: "Not Found",
-                            lastname: "Not Found",
+                            firstname: 'Not Found',
+                            lastname: 'Not Found',
                             municipal: 0,
-                            barangay: "Not Found",
-                            reason: "QR code already generated.",
+                            barangay: 'Not Found',
+                            reason: 'QR code already generated.',
                             teamId: null,
                             code: 1,
                         });
@@ -2378,11 +2412,11 @@ const resolvers = {
                     if (!voter) {
                         rejectList.push({
                             id: item,
-                            firstname: "Not Found",
-                            lastname: "Not Found",
+                            firstname: 'Not Found',
+                            lastname: 'Not Found',
                             municipal: 0,
-                            barangay: "Not Found",
-                            reason: "Voter not found",
+                            barangay: 'Not Found',
+                            reason: 'Voter not found',
                             teamId: null,
                             code: 1,
                         });
@@ -2426,7 +2460,7 @@ const resolvers = {
                 },
             });
             if (teamMembers.length === 0) {
-                throw new graphql_1.GraphQLError("NO team members were found");
+                throw new graphql_1.GraphQLError('NO team members were found');
             }
             for (const voter of teamMembers) {
                 try {
@@ -2465,7 +2499,7 @@ const resolvers = {
                     continue;
                 }
             }
-            return "OK";
+            return 'OK';
         }),
         removeQRcode: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
             yield prisma_1.prisma.voters.updateMany({
@@ -2473,7 +2507,7 @@ const resolvers = {
                     id: { in: id.map((item) => item) },
                 },
                 data: {
-                    qrCode: "None",
+                    qrCode: 'None',
                     qrCodeNumber: 0,
                 },
             });
@@ -2482,7 +2516,7 @@ const resolvers = {
                     votersId: { in: id.map((item) => item) },
                 },
             });
-            return "OK";
+            return 'OK';
         }),
         createPostion: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { title }) {
             const position = yield prisma_1.prisma.position.findFirst({
@@ -2491,14 +2525,14 @@ const resolvers = {
                 },
             });
             if (position && position.title.toLowerCase() === title.toLowerCase()) {
-                throw new graphql_1.GraphQLError("Position already exist.");
+                throw new graphql_1.GraphQLError('Position already exist.');
             }
             yield prisma_1.prisma.position.create({
                 data: {
                     title,
                 },
             });
-            return "OK";
+            return 'OK';
         }),
         addNewCandidate: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { firstname, lastname, code, colorCode }) {
             const candidate = yield prisma_1.prisma.candidates.findFirst({
@@ -2509,17 +2543,17 @@ const resolvers = {
             });
             if (candidate) {
                 if (candidate.code === code) {
-                    throw new graphql_1.GraphQLError("Candidate code already used", {
-                        extensions: { code: "CODE_EXIST" },
+                    throw new graphql_1.GraphQLError('Candidate code already used', {
+                        extensions: { code: 'CODE_EXIST' },
                     });
                 }
                 if (candidate.colorCode === colorCode) {
-                    throw new graphql_1.GraphQLError("Candidate color code already used", {
-                        extensions: { code: "COLOR_CODE_EXIST" },
+                    throw new graphql_1.GraphQLError('Candidate color code already used', {
+                        extensions: { code: 'COLOR_CODE_EXIST' },
                     });
                 }
-                throw new graphql_1.GraphQLError("Candidate already exists", {
-                    extensions: { code: "EXISTED_NAME" },
+                throw new graphql_1.GraphQLError('Candidate already exists', {
+                    extensions: { code: 'EXISTED_NAME' },
                 });
             }
             yield prisma_1.prisma.candidates.create({
@@ -2527,11 +2561,11 @@ const resolvers = {
                     firstname,
                     lastname,
                     code,
-                    candidateBatchId: "none",
+                    candidateBatchId: 'none',
                     colorCode,
                 },
             });
-            return "OK";
+            return 'OK';
         }),
         updateLeader: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { teamId, id, level, method }) {
             if (method === 0) {
@@ -2552,7 +2586,7 @@ const resolvers = {
             }
             if (method === 1) {
             }
-            return "OK";
+            return 'OK';
         }),
         changeLeader: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id, teamId, level, currentTl }) {
             console.log({ id, teamId, level, currentTl });
@@ -2568,52 +2602,49 @@ const resolvers = {
                 prisma_1.prisma.teamLeader.findUnique({
                     where: {
                         id: currentTl,
-                    }
-                })
-            ]);
-            if (!data || !team || !tl) {
-                throw new graphql_1.GraphQLError("Voter or Team or Team Leader not found", {
-                    extensions: { code: "VOTER_NOT_FOUND" },
-                });
-            }
-            const teamLeader = yield prisma_1.prisma.teamLeader.create({
-                data: {
-                    votersId: data.id,
-                    municipalsId: data.municipalsId,
-                    barangaysId: data.barangaysId,
-                    purokId: data.purokId,
-                    handle: 10,
-                    hubId: "Unknown",
-                    level: 1,
-                    candidatesId: team.candidatesId,
-                    barangayCoorId: tl.barangayCoorId,
-                    purokCoorsId: tl.purokCoorsId
-                },
-            });
-            const [newteam] = yield prisma_1.prisma.$transaction([
-                prisma_1.prisma.team.update({
-                    where: { id: teamId },
-                    data: {
-                        teamLeaderId: teamLeader.id,
                     },
                 }),
             ]);
-            yield prisma_1.prisma.voters.update({
-                where: {
-                    id,
-                },
-                data: {
-                    teamId: teamId,
-                    candidatesId: team.candidatesId,
-                    level: 1
-                },
-            });
-            return "OK";
+            if (!data || !team || !tl) {
+                throw new graphql_1.GraphQLError('Voter or Team or Team Leader not found', {
+                    extensions: { code: 'VOTER_NOT_FOUND' },
+                });
+            }
+            console.log({ data, team, tl });
+            yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.teamLeader.update({
+                    where: { id: tl.id },
+                    data: {
+                        votersId: data.id,
+                    },
+                }),
+                prisma_1.prisma.voters.update({
+                    where: {
+                        id: tl.votersId,
+                    },
+                    data: {
+                        teamId: null,
+                        candidatesId: null,
+                        level: 0,
+                    },
+                }),
+                prisma_1.prisma.voters.update({
+                    where: {
+                        id: data.id,
+                    },
+                    data: {
+                        teamId: team.id,
+                        level: 1,
+                        candidatesId: team.candidatesId,
+                    },
+                }),
+            ]);
+            return 'OK';
         }),
         deleteTeams: () => __awaiter(void 0, void 0, void 0, function* () {
             yield prisma_1.prisma.qRcode.deleteMany();
             yield prisma_1.prisma.team.deleteMany();
-            return "OK";
+            return 'OK';
         }),
         assignBarangayIDnumber: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode }) {
             const barangays = yield prisma_1.prisma.barangays.findMany({
@@ -2621,7 +2652,7 @@ const resolvers = {
                     municipalId: zipCode,
                 },
                 orderBy: {
-                    name: "asc",
+                    name: 'asc',
                 },
             });
             const updates = barangays.map((barangay, index) => {
@@ -2635,27 +2666,22 @@ const resolvers = {
                 });
             });
             yield Promise.all(updates);
-            return "OK";
+            return 'OK';
         }),
         assignTeam: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { team }) {
             const resultList = [];
-            const members = [
-                ...team.members,
-                team.barangayCoorId,
-                team.purokCoorId,
-                team.teamLeaderId,
-            ];
+            const members = [...team.members, team.barangayCoorId, team.purokCoorId, team.teamLeaderId];
             const barangay = yield prisma_1.prisma.barangays.findFirst({
                 where: {
                     number: parseInt(team.barangayId, 10),
                 },
             });
             if (!barangay) {
-                throw new graphql_1.GraphQLError("Barangay not found");
+                throw new graphql_1.GraphQLError('Barangay not found');
             }
             const supporting = yield prisma_1.prisma.candidates.findFirst({
                 where: {
-                    code: { contains: "jml", mode: "insensitive" },
+                    code: { contains: 'jml', mode: 'insensitive' },
                 },
             });
             const handleLeaderData = (idNumber, level) => {
@@ -2701,13 +2727,13 @@ const resolvers = {
                             barangaysId: barangay.id,
                             purokId: purokId ? purokId : barangayCoor === null || barangayCoor === void 0 ? void 0 : barangayCoor.purokId,
                             handle: 0,
-                            hubId: "Unknown",
+                            hubId: 'Unknown',
                             level,
                             candidatesId: supporting === null || supporting === void 0 ? void 0 : supporting.id,
                             teamId: teamData.id,
                         },
                     });
-                    console.log("Created Leader: ", leaderMetaData);
+                    console.log('Created Leader: ', leaderMetaData);
                     yield prisma_1.prisma.team.update({
                         where: {
                             id: teamData.id,
@@ -2716,7 +2742,7 @@ const resolvers = {
                             teamLeaderId: leaderMetaData.id,
                         },
                     });
-                    console.log("Created Team: ", teamData);
+                    console.log('Created Team: ', teamData);
                     const updatedVoter = yield prisma_1.prisma.voters.update({
                         where: {
                             id: voterId,
@@ -2727,18 +2753,18 @@ const resolvers = {
                             candidatesId: supporting === null || supporting === void 0 ? void 0 : supporting.id,
                         },
                     });
-                    console.log("Updated Voter: ", updatedVoter);
+                    console.log('Updated Voter: ', updatedVoter);
                 }
                 return leader;
             });
             if (!teamLeader) {
                 resultList.push({
-                    id: "Unknown",
-                    firstname: "Unknown",
-                    lastname: "Unknown",
+                    id: 'Unknown',
+                    firstname: 'Unknown',
+                    lastname: 'Unknown',
                     municipalsId: 1111,
-                    barangaysId: "Unknown",
-                    reason: "Wala sa Master list",
+                    barangaysId: 'Unknown',
+                    reason: 'Wala sa Master list',
                     level: 1,
                     idNumber: team.teamLeaderId,
                     code: 1,
@@ -2746,12 +2772,12 @@ const resolvers = {
             }
             if (!purokCoor) {
                 resultList.push({
-                    id: "Unknown",
-                    firstname: "Unknown",
-                    lastname: "Unknown",
+                    id: 'Unknown',
+                    firstname: 'Unknown',
+                    lastname: 'Unknown',
                     municipalsId: 1111,
-                    barangaysId: "Unknown",
-                    reason: "Wala sa Master list",
+                    barangaysId: 'Unknown',
+                    reason: 'Wala sa Master list',
                     level: 2,
                     idNumber: team.purokCoorId,
                     code: 1,
@@ -2759,12 +2785,12 @@ const resolvers = {
             }
             if (!barangayCoor) {
                 resultList.push({
-                    id: "Unknown",
-                    firstname: "Unknown",
-                    lastname: "Unknown",
+                    id: 'Unknown',
+                    firstname: 'Unknown',
+                    lastname: 'Unknown',
                     municipalsId: team.zipCode,
                     barangaysId: team.barangayId,
-                    reason: "Wala sa Master list",
+                    reason: 'Wala sa Master list',
                     level: 3,
                     idNumber: team.barangayCoorId,
                     code: 1,
@@ -2790,7 +2816,7 @@ const resolvers = {
                             lastname: member.lastname,
                             municipalsId: member.municipalsId,
                             barangaysId: member.barangaysId,
-                            reason: "Wala sa angkop na lugar.",
+                            reason: 'Wala sa angkop na lugar.',
                             level: member.level,
                             idNumber: member.idNumber,
                             code: 1,
@@ -2804,7 +2830,7 @@ const resolvers = {
                             lastname: member.lastname,
                             municipalsId: member.municipalsId,
                             barangaysId: member.barangaysId,
-                            reason: `May katayuan na (${(0, data_1.handleLevel)(member.level)})`,
+                            reason: `May katayuan na (${(0, data_2.handleLevel)(member.level)})`,
                             level: member.level,
                             idNumber: member.idNumber,
                             code: 1,
@@ -2818,21 +2844,21 @@ const resolvers = {
                             lastname: member.lastname,
                             municipalsId: member.municipalsId,
                             barangaysId: member.barangaysId,
-                            reason: "May team na",
+                            reason: 'May team na',
                             level: member.level,
                             idNumber: member.idNumber,
                             code: 1,
                         });
                         continue;
                     }
-                    if (member.oor === "YES") {
+                    if (member.oor === 'YES') {
                         resultList.push({
                             id: member.id,
                             firstname: member.firstname,
                             lastname: member.lastname,
                             municipalsId: member.municipalsId,
                             barangaysId: member.barangaysId,
-                            reason: "Wala sa ankop na lugar.",
+                            reason: 'Wala sa ankop na lugar.',
                             level: member.level,
                             idNumber: member.idNumber,
                             code: 1,
@@ -2846,7 +2872,7 @@ const resolvers = {
                             lastname: member.lastname,
                             municipalsId: member.municipalsId,
                             barangaysId: member.barangaysId,
-                            reason: "Sumakabilang buhay na.",
+                            reason: 'Sumakabilang buhay na.',
                             level: member.level,
                             idNumber: member.idNumber,
                             code: 1,
@@ -2859,7 +2885,7 @@ const resolvers = {
                         lastname: member.lastname,
                         municipalsId: member.municipalsId,
                         barangaysId: member.barangaysId,
-                        reason: "OK",
+                        reason: 'OK',
                         level: member.level,
                         idNumber: member.idNumber,
                         code: 0,
@@ -2900,11 +2926,7 @@ const resolvers = {
         composeTeam: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { team, code }) {
             let successCount = 0;
             const resultList = [];
-            const members = [
-                team.barangayCoorId,
-                team.purokCoorId,
-                team.teamLeaderId,
-            ];
+            const members = [team.barangayCoorId, team.purokCoorId, team.teamLeaderId];
             const barangay = yield prisma_1.prisma.barangays.findFirst({
                 where: {
                     number: parseInt(team.barangayId, 10),
@@ -2916,7 +2938,7 @@ const resolvers = {
             }
             const supporting = yield prisma_1.prisma.candidates.findFirst({
                 where: {
-                    code: { contains: "jp", mode: "insensitive" },
+                    code: { contains: 'jml', mode: 'insensitive' },
                 },
             });
             const membersData = yield prisma_1.prisma.voters.findMany({
@@ -2956,7 +2978,7 @@ const resolvers = {
                             teamId: null,
                             candidatesId: supporting === null || supporting === void 0 ? void 0 : supporting.id,
                             level,
-                            hubId: "unknown",
+                            hubId: 'unknown',
                             handle: 0,
                             purokId: purokId,
                             barangayCoorId: level === 2 || level === 1 ? headIdOne : null,
@@ -2992,7 +3014,7 @@ const resolvers = {
                     return Object.assign(Object.assign({}, newLeader), { teamId: newTeam.id });
                 }
                 catch (error) {
-                    console.error("Something went wrong:", error);
+                    console.error('Something went wrong:', error);
                     return null;
                 }
             });
@@ -3005,8 +3027,8 @@ const resolvers = {
             const teamLeaderData = yield handleGetLeaderData(team.teamLeaderId, 1, teamLeader === null || teamLeader === void 0 ? void 0 : teamLeader.id, teamLeader === null || teamLeader === void 0 ? void 0 : teamLeader.purokId, purokCoorData === null || purokCoorData === void 0 ? void 0 : purokCoorData.teamId, barangayCoorData === null || barangayCoorData === void 0 ? void 0 : barangayCoorData.id, purokCoorData === null || purokCoorData === void 0 ? void 0 : purokCoorData.id);
             const tlTeam = yield prisma_1.prisma.team.findUnique({
                 where: {
-                    id: teamLeaderData === null || teamLeaderData === void 0 ? void 0 : teamLeaderData.teamId
-                }
+                    id: teamLeaderData === null || teamLeaderData === void 0 ? void 0 : teamLeaderData.teamId,
+                },
             });
             const temp = yield prisma_1.prisma.validatedTeams.create({
                 data: {
@@ -3029,16 +3051,16 @@ const resolvers = {
                             },
                         },
                     });
-                    const inAlreadList = new Set(alreadyInTeam.map(item => item.votersId));
+                    const inAlreadList = new Set(alreadyInTeam.map((item) => item.votersId));
                     if (!voter) {
                         if (!processedVoters.has(member)) {
                             resultList.push({
                                 id: undefined,
-                                firstname: "Unknown",
-                                lastname: "Unknown",
+                                firstname: 'Unknown',
+                                lastname: 'Unknown',
                                 municipalsId: team.zipCode,
                                 barangaysId: barangay.id,
-                                reason: "Wala sa master list",
+                                reason: 'Wala sa master list',
                                 level: 0,
                                 idNumber: member,
                                 code: 1,
@@ -3055,7 +3077,7 @@ const resolvers = {
                                 lastname: voter.lastname,
                                 municipalsId: voter.municipalsId,
                                 barangaysId: voter.barangaysId,
-                                reason: "Wala sa angkop na lugar.",
+                                reason: 'Wala sa angkop na lugar.',
                                 level: voter.level,
                                 idNumber: voter.idNumber,
                                 code: 1,
@@ -3071,7 +3093,7 @@ const resolvers = {
                                 lastname: voter.lastname,
                                 municipalsId: voter.municipalsId,
                                 barangaysId: voter.barangaysId,
-                                reason: `May katayuan na (${(0, data_1.handleLevel)(voter.level)})`,
+                                reason: `May katayuan na (${(0, data_2.handleLevel)(voter.level)})`,
                                 level: voter.level,
                                 idNumber: voter.idNumber,
                                 code: 1,
@@ -3103,12 +3125,12 @@ const resolvers = {
                                 teamId: voter.teamId, // Voter's current team
                                 municipalsId: voter.municipalsId,
                                 barangaysId: voter.barangaysId,
-                                foundTeamId: tlTeam === null || tlTeam === void 0 ? void 0 : tlTeam.id
+                                foundTeamId: tlTeam === null || tlTeam === void 0 ? void 0 : tlTeam.id,
                             });
                             continue;
                         }
                     }
-                    if (voter.oor === "YES") {
+                    if (voter.oor === 'YES') {
                         if (!processedVoters.has(voter.id)) {
                             resultList.push({
                                 id: voter.id,
@@ -3116,7 +3138,7 @@ const resolvers = {
                                 lastname: voter.lastname,
                                 municipalsId: voter.municipalsId,
                                 barangaysId: voter.barangaysId,
-                                reason: "Wala sa ankop na lugar (OR).",
+                                reason: 'Wala sa ankop na lugar (OR).',
                                 level: voter.level,
                                 idNumber: voter.idNumber,
                                 code: 1,
@@ -3132,7 +3154,7 @@ const resolvers = {
                                 lastname: voter.lastname,
                                 municipalsId: voter.municipalsId,
                                 barangaysId: voter.barangaysId,
-                                reason: "Sumakabilang buhay na.",
+                                reason: 'Sumakabilang buhay na.',
                                 level: voter.level,
                                 idNumber: voter.idNumber,
                                 code: 1,
@@ -3147,7 +3169,7 @@ const resolvers = {
                             lastname: voter.lastname,
                             municipalsId: voter.municipalsId,
                             barangaysId: voter.barangaysId,
-                            reason: "OK",
+                            reason: 'OK',
                             level: voter.level,
                             idNumber: voter.idNumber,
                             code: 0,
@@ -3183,7 +3205,7 @@ const resolvers = {
                 };
             });
             const records = resultList
-                .filter((item) => item.reason !== "OK")
+                .filter((item) => item.reason !== 'OK')
                 .map((item) => {
                 return {
                     desc: item.reason,
@@ -3193,7 +3215,7 @@ const resolvers = {
                 };
             });
             const totalIssues = resultList.reduce((base, item) => {
-                if (item.reason !== "OK") {
+                if (item.reason !== 'OK') {
                     return base + 1;
                 }
                 return base;
@@ -3229,7 +3251,7 @@ const resolvers = {
         }),
         clearTeamRecords: () => __awaiter(void 0, void 0, void 0, function* () {
             yield prisma_1.prisma.validatedTeams.deleteMany();
-            return "OK";
+            return 'OK';
         }),
         multiSelectVoter: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { teamId, members, method }) {
             const team = yield prisma_1.prisma.team.findUnique({
@@ -3237,13 +3259,13 @@ const resolvers = {
                     id: teamId,
                 },
             });
-            console.log("team: ", team && team.level);
+            console.log('team: ', team && team.level);
             if (method) {
                 yield prisma_1.prisma.voters.updateMany({
                     where: { id: { in: members } },
                     data: { teamId: teamId, candidatesId: team === null || team === void 0 ? void 0 : team.candidatesId, level: 0 },
                 });
-                return "OK";
+                return 'OK';
             }
             yield prisma_1.prisma.voters.updateMany({
                 where: { id: { in: members } },
@@ -3255,7 +3277,7 @@ const resolvers = {
                     votersId: { in: members },
                 },
             });
-            console.log("Deleted Leaders: ", deletedLeaders);
+            console.log('Deleted Leaders: ', deletedLeaders);
             // Delete team records
             const deletedTeams = yield prisma_1.prisma.team.deleteMany({
                 where: {
@@ -3266,44 +3288,70 @@ const resolvers = {
                     },
                 },
             });
-            console.log("Deleted Teams: ", deletedTeams);
-            return "OK";
+            console.log('Deleted Teams: ', deletedTeams);
+            return 'OK';
         }),
         removeTeam: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
-            yield prisma_1.prisma.voters.updateMany({
+            const [tl] = yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.teamLeader.findFirst({
+                    where: {
+                        teamId: id,
+                    },
+                }),
+            ]);
+            console.log({ tl });
+            const tlVoter = yield prisma_1.prisma.voters.findFirst({
                 where: {
-                    teamId: id,
-                },
-                data: {
-                    teamId: null,
-                    candidatesId: null,
-                    level: 0,
+                    id: tl === null || tl === void 0 ? void 0 : tl.votersId,
                 },
             });
-            yield prisma_1.prisma.teamLeader.deleteMany({
-                where: {
-                    teamId: id,
-                },
-            });
-            yield prisma_1.prisma.team.delete({
-                where: {
-                    id,
-                },
-            });
-            return "OK";
+            console.log({ tlVoter });
+            yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.voters.updateMany({
+                    where: {
+                        teamId: id,
+                    },
+                    data: {
+                        teamId: null,
+                        candidatesId: null,
+                        level: 0,
+                    },
+                }),
+                prisma_1.prisma.teamLeader.deleteMany({
+                    where: {
+                        teamId: id,
+                    },
+                }),
+                prisma_1.prisma.team.delete({
+                    where: {
+                        id,
+                    },
+                }),
+                prisma_1.prisma.voters.updateMany({
+                    where: {
+                        id: tlVoter === null || tlVoter === void 0 ? void 0 : tlVoter.id,
+                    },
+                    data: {
+                        teamId: null,
+                        candidatesId: null,
+                        level: 0,
+                    },
+                }),
+            ]);
+            return 'OK';
         }),
         removeAllTeams: () => __awaiter(void 0, void 0, void 0, function* () {
             yield prisma_1.prisma.team.deleteMany();
-            return "OK";
+            return 'OK';
         }),
         createCustomOption: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
             yield prisma_1.prisma.customOption.create({
                 data: {
-                    value: "0",
+                    value: '0',
                     queriesId: id,
                 },
             });
-            return "OK";
+            return 'OK';
         }),
         resetTeamList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode, barangayId }) {
             console.log({ zipCode, barangayId });
@@ -3337,10 +3385,10 @@ const resolvers = {
                     },
                 }),
                 prisma_1.prisma.duplicateteamMembers.deleteMany({
-                    where: filter
-                })
+                    where: filter,
+                }),
             ]);
-            return "OK";
+            return 'OK';
         }),
         teamMerger: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { firstId, secondId }) {
             console.log({ firstId, secondId });
@@ -3372,7 +3420,7 @@ const resolvers = {
                 }),
             ]);
             if (!first || !second || !teamSecond) {
-                throw new graphql_1.GraphQLError("Could not find any team leader or associated team");
+                throw new graphql_1.GraphQLError('Could not find any team leader or associated team');
             }
             console.log({ first, second, teamSecond });
             // Update voters and reassign them to the first team
@@ -3402,10 +3450,11 @@ const resolvers = {
                     },
                 }),
             ]);
-            return "OK";
+            return 'OK';
         }),
         validationUpdate: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { validateDuplicate, votersToTransfer, validatedDelisted, votersToUpdate, newVoterRecord, appoinments, untrackedList, recordToDelete, validatedPerson, validatedTeams, teamExcluded, teamToMerge, toSplit, accountTeamHoldings, }) {
-            console.log({ validateDuplicate,
+            console.log({
+                validateDuplicate,
                 votersToTransfer,
                 validatedDelisted,
                 votersToUpdate,
@@ -3418,7 +3467,8 @@ const resolvers = {
                 teamExcluded,
                 teamToMerge,
                 toSplit,
-                accountTeamHoldings, });
+                accountTeamHoldings,
+            });
             if (votersToTransfer.length > 0) {
                 try {
                     const voterIds = votersToTransfer.map((item) => item.votersId);
@@ -3432,10 +3482,10 @@ const resolvers = {
                             include: {
                                 TeamLeader: {
                                     include: {
-                                        voter: true
-                                    }
-                                }
-                            }
+                                        voter: true,
+                                    },
+                                },
+                            },
                         }),
                         prisma_1.prisma.duplicateteamMembers.findMany({
                             where: { votersId: { in: voterIds } }, // Fetch all duplicate records first
@@ -3444,52 +3494,54 @@ const resolvers = {
                     console.log({ teams });
                     if (voters.length > 0) {
                         console.log({ voters });
-                        const updatePromises = voters.map((voter) => {
-                            console.log("Team OK 0");
+                        const updatePromises = voters
+                            .map((voter) => {
+                            console.log('Team OK 0');
                             const votersTeam = votersToTransfer.find((item) => item.votersId === voter.id);
                             if (!votersTeam)
                                 return null;
-                            console.log("Team OK 1");
+                            console.log('Team OK 1');
                             const toTeam = teams.find((item) => item.id === votersTeam.toTeamId);
-                            console.log("Team TO: ", toTeam);
+                            console.log('Team TO: ', toTeam);
                             if (!toTeam || voter.teamId === toTeam.id)
                                 return null; // Skip if already in the correct team
-                            console.log("Team OK 2");
+                            console.log('Team OK 2');
                             return prisma_1.prisma.voters.update({
                                 data: { teamId: toTeam.id },
                                 where: { id: voter.id },
                             });
-                        }).filter(Boolean); // Remove null values
-                        // const deletePromises = duplicateRecords.map((record) => 
+                        })
+                            .filter(Boolean); // Remove null values
+                        // const deletePromises = duplicateRecords.map((record) =>
                         //   prisma.duplicateteamMembers.delete({
                         //     where: { id: record.id },
                         //   })
                         // );
-                        yield Promise.all([...updatePromises,]); // Batch process updates and deletes
-                        console.log("OK");
+                        yield Promise.all([...updatePromises]); // Batch process updates and deletes
+                        console.log('OK');
                     }
                 }
                 catch (error) {
-                    console.error("Error transferring voters:", error);
+                    console.error('Error transferring voters:', error);
                 }
             }
             if (validateDuplicate.length > 0) {
-                const duplicatedIds = validateDuplicate.map(item => item.duplicateteamMemberId);
+                const duplicatedIds = validateDuplicate.map((item) => item.duplicateteamMemberId);
                 const duplicates = yield prisma_1.prisma.duplicateteamMembers.findMany({
                     where: {
-                        id: { in: duplicatedIds }
-                    }
+                        id: { in: duplicatedIds },
+                    },
                 });
                 console.log({ duplicates });
                 if (duplicates.length > 0) {
                     yield prisma_1.prisma.duplicateteamMembers.deleteMany({
                         where: {
-                            id: { in: duplicates.map(item => item.id) }
-                        }
+                            id: { in: duplicates.map((item) => item.id) },
+                        },
                     });
                 }
                 else {
-                    console.log("No Duplicates to remove");
+                    console.log('No Duplicates to remove');
                 }
             }
             //voter's to exclude
@@ -3526,10 +3578,10 @@ const resolvers = {
                                     teamUpdateArchiveId: teamRec.id,
                                 })),
                             });
-                            console.log("✅ Team update successfully recorded");
+                            console.log('✅ Team update successfully recorded');
                         }
                         catch (error) {
-                            console.error("❌ Error processing team:", error);
+                            console.error('❌ Error processing team:', error);
                         }
                     }
                     yield prisma_1.prisma.$transaction([
@@ -3542,14 +3594,14 @@ const resolvers = {
                         }),
                         prisma_1.prisma.voters.updateMany({
                             where: {
-                                id: { in: votersToExclude.map((item) => item.votersId) }
+                                id: { in: votersToExclude.map((item) => item.votersId) },
                             },
                             data: {
                                 teamId: null,
                                 candidatesId: null,
-                                level: 0
-                            }
-                        })
+                                level: 0,
+                            },
+                        }),
                     ]);
                 }
             }
@@ -3557,17 +3609,17 @@ const resolvers = {
                 // Fetch voters using votersId instead of item.id
                 const voters = yield prisma_1.prisma.voters.findMany({
                     where: {
-                        id: { in: votersToUpdate.map((item) => item.votersId) }
-                    }
+                        id: { in: votersToUpdate.map((item) => item.votersId) },
+                    },
                 });
-                const votersMap = new Map(voters.map(voter => [voter.id, voter]));
+                const votersMap = new Map(voters.map((voter) => [voter.id, voter]));
                 // Group updates by votersId
                 const groupedVotersToUpdate = {};
                 votersToUpdate.forEach((item) => {
                     if (!groupedVotersToUpdate[item.votersId]) {
                         groupedVotersToUpdate[item.votersId] = {
                             votersId: item.votersId,
-                            props: []
+                            props: [],
                         };
                     }
                     groupedVotersToUpdate[item.votersId].props.push({
@@ -3576,7 +3628,7 @@ const resolvers = {
                         type: item.type,
                         value: item.value,
                         action: item.action,
-                        teamId: item.teamId
+                        teamId: item.teamId,
                     });
                 });
                 for (const item of Object.values(groupedVotersToUpdate)) {
@@ -3585,7 +3637,7 @@ const resolvers = {
                         continue; // Ensure voter exists
                     // Only keep properties that need updating
                     const propsToUpdate = item.props.filter((prop) => {
-                        const valueForUpdate = (0, data_1.handleDataType)(prop.type, prop.value);
+                        const valueForUpdate = (0, data_2.handleDataType)(prop.type, prop.value);
                         const voterPropsTyped = voter;
                         // Ensure both are strings for comparison safety
                         return String(voterPropsTyped[prop.props]) !== String(valueForUpdate);
@@ -3593,13 +3645,13 @@ const resolvers = {
                     if (propsToUpdate.length > 0) {
                         const updateData = {};
                         propsToUpdate.forEach((prop) => {
-                            updateData[prop.props] = (0, data_1.handleDataType)(prop.type, prop.value);
+                            updateData[prop.props] = (0, data_2.handleDataType)(prop.type, prop.value);
                         });
                         yield prisma_1.prisma.voters.update({
                             where: { id: item.votersId },
-                            data: updateData
+                            data: updateData,
                         });
-                        console.log("----------->Voter update successfully");
+                        console.log('----------->Voter update successfully');
                     }
                     else {
                         console.log(`No changes for voter ${item.votersId}`);
@@ -3607,7 +3659,7 @@ const resolvers = {
                 }
             }
             else {
-                console.log("No voters to update.");
+                console.log('No voters to update.');
             }
             //save validated Teams
             if (validatedTeams.length > 0) {
@@ -3628,75 +3680,73 @@ const resolvers = {
                             id: item.id,
                             usersUid: item.accountId,
                             teamId: item.teamId,
-                            municipalsId: item.municipalsId
-                                ? parseInt(item.municipalsId, 10)
-                                : null,
+                            municipalsId: item.municipalsId ? parseInt(item.municipalsId, 10) : null,
                             barangaysId: item.barangaysId,
                             timstamp: new Date(item.timestamp).toISOString(),
                         })),
-                        skipDuplicates: true
+                        skipDuplicates: true,
                     });
-                    console.log("Added New Valdiated Teams");
+                    console.log('Added New Valdiated Teams');
                 }
                 else {
-                    console.log("No valid teams found for insertion.");
+                    console.log('No valid teams found for insertion.');
                 }
             }
             if (validatedPerson.length > 0) {
                 const voterIds = validatedPerson.map((item) => item.votersId);
                 const voters = yield prisma_1.prisma.voters.findMany({
                     where: {
-                        id: { in: voterIds }
-                    }
+                        id: { in: voterIds },
+                    },
                 });
                 if (voters.length > 0) {
                     const existingMembers = yield prisma_1.prisma.valdilatedMembers.findMany({
                         where: {
-                            votersId: { in: voterIds }
+                            votersId: { in: voterIds },
                         },
                         select: {
-                            votersId: true
-                        }
+                            votersId: true,
+                        },
                     });
-                    const existingVoterIds = existingMembers.map(member => member.votersId);
-                    const newVoters = voters.filter(voter => !existingVoterIds.includes(voter.id));
+                    const existingVoterIds = existingMembers.map((member) => member.votersId);
+                    const newVoters = voters.filter((voter) => !existingVoterIds.includes(voter.id));
                     if (newVoters.length > 0) {
                         yield prisma_1.prisma.valdilatedMembers.createMany({
                             data: newVoters.map((item) => ({
                                 votersId: item.id,
                                 teamId: item.teamId,
-                                timestamp: new Date(item.timestamp).toISOString()
-                            }))
+                                timestamp: new Date(item.timestamp).toISOString(),
+                            })),
                         });
-                        console.log("----------->Validated members successfully");
-                        console.log("Validated Members added.");
+                        console.log('----------->Validated members successfully');
+                        console.log('Validated Members added.');
                     }
                     else {
-                        console.log("No new validated members to add.");
+                        console.log('No new validated members to add.');
                     }
                 }
                 else {
-                    console.log("No Validated Voters to record");
+                    console.log('No Validated Voters to record');
                 }
             }
             if (untrackedList.length > 0) {
-                console.log("Original untracked list:", untrackedList);
+                console.log('Original untracked list:', untrackedList);
                 const voterIds = untrackedList.map((item) => item.votersId);
                 // Fetch existing voters
                 const voters = yield prisma_1.prisma.voters.findMany({
                     where: {
-                        id: { in: voterIds }
+                        id: { in: voterIds },
                     },
-                    select: { id: true }
+                    select: { id: true },
                 });
                 const untrackedVoterList = yield prisma_1.prisma.untrackedVoter.findMany({
                     where: {
-                        votersId: { in: voters.map(item => item.id) }
-                    }
+                        votersId: { in: voters.map((item) => item.id) },
+                    },
                 });
                 const untrackedListIds = new Set(untrackedVoterList.map((item) => item.votersId));
                 const newUntrackedList = untrackedList.filter((item) => !untrackedListIds.has(item.votersId));
-                console.log("New untracked voters:", newUntrackedList);
+                console.log('New untracked voters:', newUntrackedList);
                 if (newUntrackedList.length > 0) {
                     const list = yield prisma_1.prisma.untrackedVoter.createMany({
                         data: newUntrackedList.map((item) => ({
@@ -3706,23 +3756,23 @@ const resolvers = {
                             teamId: item.team_Id,
                             municipalsId: item.municipalsId ? parseInt(item.municipalsId, 10) : null,
                             barangaysId: item.barangaysId,
-                            usersUid: item.account_id
+                            usersUid: item.account_id,
                         })),
-                        skipDuplicates: true
+                        skipDuplicates: true,
                     });
                     console.log({ list });
-                    console.log("Added new untracked voters.");
+                    console.log('Added new untracked voters.');
                 }
                 else {
-                    console.log("No new untracked voters to add.");
+                    console.log('No new untracked voters to add.');
                 }
             }
             if (newVoterRecord.length) {
                 console.log({ newVoterRecord });
                 const records = yield prisma_1.prisma.voterRecords.findMany({
                     where: {
-                        id: { in: newVoterRecord.map((item) => item.id) }
-                    }
+                        id: { in: newVoterRecord.map((item) => item.id) },
+                    },
                 });
                 const existingRecordIds = records.map((item) => item.id);
                 const newRecords = newVoterRecord.filter((item) => !existingRecordIds.includes(item.id));
@@ -3736,45 +3786,46 @@ const resolvers = {
                                 type: item.type,
                                 votersId: item.voter_id,
                                 questionable: item.questionable === 1 ? true : false,
-                                desc: (_a = item.desc) !== null && _a !== void 0 ? _a : "Questionable",
-                                usersUid: item.account_id
+                                desc: (_a = item.desc) !== null && _a !== void 0 ? _a : 'Questionable',
+                                usersUid: item.account_id,
                             };
                         }),
-                        skipDuplicates: true
+                        skipDuplicates: true,
                     });
-                    console.log("Multi Inserted");
+                    console.log('Multi Inserted');
                 }
                 else {
-                    console.log("No new records found!");
+                    console.log('No new records found!');
                 }
             }
             if (toSplit.length > 0) {
                 const [teams, voters] = yield prisma_1.prisma.$transaction([
                     prisma_1.prisma.team.findMany({
                         where: {
-                            id: { in: toSplit.map((item) => item.teamId) }
+                            id: { in: toSplit.map((item) => item.teamId) },
                         },
                         include: {
                             _count: {
                                 select: {
-                                    voters: true
-                                }
-                            }, TeamLeader: {
+                                    voters: true,
+                                },
+                            },
+                            TeamLeader: {
                                 include: {
                                     purokCoors: {
                                         select: {
-                                            teamId: true
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                                            teamId: true,
+                                        },
+                                    },
+                                },
+                            },
+                        },
                     }),
                     prisma_1.prisma.voters.findMany({
                         where: {
-                            id: { in: toSplit.map((item) => item.votersId) }
-                        }
-                    })
+                            id: { in: toSplit.map((item) => item.votersId) },
+                        },
+                    }),
                 ]);
                 const teamToSplitIds = new Set(teams.map((item) => item.id));
                 const validTeamsToSplit = toSplit.filter((item) => teamToSplitIds.has(item.teamId));
@@ -3788,15 +3839,15 @@ const resolvers = {
                     }
                 }
             }
-            return "OK";
+            return 'OK';
         }),
         resetAccountTeamhandle: () => __awaiter(void 0, void 0, void 0, function* () {
             yield prisma_1.prisma.accountHandleTeam.deleteMany();
             yield prisma_1.prisma.accountValidateTeam.deleteMany();
-            return "OK";
+            return 'OK';
         }),
         assignedTeamsOnAccount: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { userId, zipCode, barangaysId, from, take, max, min }) {
-            console.log("Params ,", { userId, zipCode, barangaysId, from, take, max, min });
+            console.log('Params ,', { userId, zipCode, barangaysId, from, take, max, min });
             const barangay = yield prisma_1.prisma.barangays.findFirst({
                 where: {
                     municipalId: zipCode,
@@ -3804,15 +3855,15 @@ const resolvers = {
                 },
             });
             if (!barangay) {
-                throw new graphql_1.GraphQLError("Barangay not found.");
+                throw new graphql_1.GraphQLError('Barangay not found.');
             }
             const teams = yield prisma_1.prisma.team.findMany({
                 where: {
                     barangaysId: barangay.id,
                     municipalsId: zipCode,
                     AccountHandleTeam: {
-                        none: {}
-                    }
+                        none: {},
+                    },
                 },
                 include: {
                     _count: {
@@ -3823,14 +3874,16 @@ const resolvers = {
                 },
                 skip: from - 1,
                 take,
-                orderBy: { TeamLeader: {
+                orderBy: {
+                    TeamLeader: {
                         voter: {
-                            lastname: "asc"
-                        }
-                    } }
+                            lastname: 'asc',
+                        },
+                    },
+                },
             });
             const filteredTeams = teams.filter((team) => team._count.voters >= min && team._count.voters <= max);
-            console.log("Checked: ", filteredTeams.length);
+            console.log('Checked: ', filteredTeams.length);
             yield prisma_1.prisma.accountHandleTeam.createMany({
                 data: filteredTeams.map((item) => {
                     return {
@@ -3840,12 +3893,12 @@ const resolvers = {
                         barangaysId: item.barangaysId,
                     };
                 }),
-                skipDuplicates: true
+                skipDuplicates: true,
             });
-            return "OK";
+            return 'OK';
         }),
         deleteAssignTeam: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
-            console.log("Deleting ID:", id);
+            console.log('Deleting ID:', id);
             const existingRecord = yield prisma_1.prisma.accountHandleTeam.findUnique({
                 where: { id },
             });
@@ -3855,7 +3908,7 @@ const resolvers = {
             yield prisma_1.prisma.accountHandleTeam.delete({
                 where: { id },
             });
-            return "OK";
+            return 'OK';
         }),
         selectedTeamAssign: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { ids, userId }) {
             console.log(ids, userId);
@@ -3863,9 +3916,9 @@ const resolvers = {
                 where: {
                     id: { in: ids },
                     AccountHandleTeam: {
-                        none: {}
-                    }
-                }
+                        none: {},
+                    },
+                },
             });
             yield prisma_1.prisma.accountHandleTeam.createMany({
                 data: teams.map((item) => {
@@ -3875,30 +3928,30 @@ const resolvers = {
                         municipalsId: item.municipalsId,
                         barangaysId: item.barangaysId,
                     };
-                })
+                }),
             });
             console.log(JSON.stringify(teams, null, 2));
-            return "OK";
+            return 'OK';
         }),
         creatCandidateBatch: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, {}) {
             yield prisma_1.prisma.candidates.findMany({
-                where: {}
+                where: {},
             });
-            return "OK";
+            return 'OK';
         }),
         markTeamVerified: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { teamId, accountID }) {
             const [team, validatedTeam] = yield prisma_1.prisma.$transaction([
                 prisma_1.prisma.team.findUnique({
                     where: {
-                        id: teamId
-                    }
+                        id: teamId,
+                    },
                 }),
                 prisma_1.prisma.accountValidateTeam.findFirst({
                     where: {
                         teamId: teamId,
-                        usersUid: accountID
-                    }
-                })
+                        usersUid: accountID,
+                    },
+                }),
             ]);
             if (!team) {
                 throw new graphql_1.GraphQLError(`Team not found!`);
@@ -3909,32 +3962,32 @@ const resolvers = {
                         teamId: team.id,
                         municipalsId: team.municipalsId,
                         barangaysId: team.barangaysId,
-                        usersUid: accountID
-                    }
+                        usersUid: accountID,
+                    },
                 });
                 console.log(data);
-                return "OK";
+                return 'OK';
             }
             yield prisma_1.prisma.accountValidateTeam.delete({
                 where: {
-                    id: validatedTeam === null || validatedTeam === void 0 ? void 0 : validatedTeam.id
-                }
+                    id: validatedTeam === null || validatedTeam === void 0 ? void 0 : validatedTeam.id,
+                },
             });
-            return "OK";
+            return 'OK';
         }),
         markMemberVerified: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { memberId, accountID }) {
             console.log({ memberId });
             const [members, validatedTeam] = yield prisma_1.prisma.$transaction([
                 prisma_1.prisma.voters.findMany({
                     where: {
-                        id: { in: memberId }
-                    }
+                        id: { in: memberId },
+                    },
                 }),
                 prisma_1.prisma.valdilatedMembers.findMany({
                     where: {
-                        votersId: { in: memberId }
-                    }
-                })
+                        votersId: { in: memberId },
+                    },
+                }),
             ]);
             if (!members) {
                 throw new graphql_1.GraphQLError(`Member not found!`);
@@ -3944,122 +3997,125 @@ const resolvers = {
                     data: members.map((item) => {
                         return {
                             votersId: item.id,
-                            teamId: item.teamId
+                            teamId: item.teamId,
                         };
-                    })
+                    }),
                 });
-                return "OK";
+                return 'OK';
             }
-            console.log("Not");
+            console.log('Not');
             yield prisma_1.prisma.valdilatedMembers.deleteMany({
                 where: {
-                    id: { in: validatedTeam.map(item => item.id) }
-                }
+                    id: { in: validatedTeam.map((item) => item.id) },
+                },
             });
-            return "OK";
+            return 'OK';
         }),
         updateTeamMemberProps: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { memberId, props }) {
             const voters = yield prisma_1.prisma.voters.findMany({
                 where: {
-                    id: { in: memberId }
-                }
+                    id: { in: memberId },
+                },
             });
             if (voters.length > 0) {
                 for (let item of voters) {
                     if (!item) {
                         continue;
                     }
-                    if (props === "status") {
+                    if (props === 'status') {
                         yield prisma_1.prisma.voters.updateMany({
                             where: {
-                                id: { in: memberId }
-                            }, data: {
-                                status: item.status === 1 ? 0 : 1
-                            }
+                                id: { in: memberId },
+                            },
+                            data: {
+                                status: item.status === 1 ? 0 : 1,
+                            },
                         });
                         continue;
                     }
                     const voterProps = item;
-                    const value = voterProps[props] === "YES" ? "NO" : "YES";
+                    const value = voterProps[props] === 'YES' ? 'NO' : 'YES';
                     yield prisma_1.prisma.voters.updateMany({
                         where: {
-                            id: { in: voters.map((item) => item.id) }
-                        }, data: {
-                            [props]: value
-                        }
+                            id: { in: voters.map((item) => item.id) },
+                        },
+                        data: {
+                            [props]: value,
+                        },
                     });
                 }
             }
-            return "OK";
+            return 'OK';
         }),
         memberExclude: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { membersId }) {
             const [voters, votersRecord, blackList] = yield prisma_1.prisma.$transaction([
                 prisma_1.prisma.voters.findMany({
                     where: {
-                        id: { in: membersId }
-                    }
+                        id: { in: membersId },
+                    },
                 }),
                 prisma_1.prisma.voterRecords.findMany({
                     where: {
-                        votersId: { in: membersId }
-                    }
+                        votersId: { in: membersId },
+                    },
                 }),
                 prisma_1.prisma.blackList.findMany({
                     where: {
-                        votersId: { in: membersId }
-                    }
-                })
+                        votersId: { in: membersId },
+                    },
+                }),
             ]);
             const blackListIDs = new Set(blackList.map((item) => item.votersId));
-            const newToBlackList = voters.filter(voter => !blackListIDs.has(voter.id));
+            const newToBlackList = voters.filter((voter) => !blackListIDs.has(voter.id));
             const teamId = voters[0].teamId;
             if (voters.length > 0) {
                 const [, , teamUpdate] = yield prisma_1.prisma.$transaction([
                     prisma_1.prisma.voters.updateMany({
                         where: {
-                            id: { in: voters.map((item) => item.id) }
-                        }, data: {
+                            id: { in: voters.map((item) => item.id) },
+                        },
+                        data: {
                             teamId: null,
-                            candidatesId: null
-                        }
+                            candidatesId: null,
+                        },
                     }),
                     prisma_1.prisma.voterRecords.deleteMany({
                         where: {
-                            id: { in: votersRecord.map((item) => item.id) }
-                        }
+                            id: { in: votersRecord.map((item) => item.id) },
+                        },
                     }),
                     prisma_1.prisma.teamUpdateArchive.create({
                         data: {
                             teamId: teamId,
                             result: voters.length,
                             method: 0,
-                            level: 0
-                        }
+                            level: 0,
+                        },
                     }),
                     prisma_1.prisma.blackList.createMany({
                         data: newToBlackList.map((item) => {
                             return {
                                 votersId: item.id,
                                 municipalsId: item.municipalsId,
-                                barangaysId: item.barangaysId
+                                barangaysId: item.barangaysId,
                             };
-                        })
-                    })
+                        }),
+                    }),
                 ]);
                 yield prisma_1.prisma.teamMembersTransac.createMany({
                     data: voters.map((item) => {
                         return {
                             votersId: item.id,
-                            teamUpdateArchiveId: teamUpdate.id
+                            teamUpdateArchiveId: teamUpdate.id,
                         };
-                    })
+                    }),
                 });
             }
-            return "OK";
+            return 'OK';
         }),
         swapVoters: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { voterOneId, voterTwoId }) {
             if (!voterOneId || !voterTwoId) {
-                throw new graphql_1.GraphQLError("Bad Request");
+                throw new graphql_1.GraphQLError('Bad Request');
             }
             // Fetch voters
             const [voterOne, voterTwo] = yield prisma_1.prisma.$transaction([
@@ -4072,7 +4128,7 @@ const resolvers = {
             ]);
             console.log({ voterOne, voterTwo });
             if (!voterOne || !voterTwo) {
-                throw new graphql_1.GraphQLError("Voters not found!");
+                throw new graphql_1.GraphQLError('Voters not found!');
             }
             // Fetch team leaders (if they exist)
             const [firstTl, secondTl] = yield prisma_1.prisma.$transaction([
@@ -4109,7 +4165,7 @@ const resolvers = {
                         }),
                     ]);
                 }
-                return "OK";
+                return 'OK';
             }
             // Handle cases where one or both voters do not have a direct level
             if (secondTl) {
@@ -4121,29 +4177,29 @@ const resolvers = {
                     prisma_1.prisma.voters.update({
                         where: { id: secondTl.votersId },
                         data: { teamId: voterOne.teamId || undefined, level: voterOne.level },
-                    })
+                    }),
                 ]);
                 yield prisma_1.prisma.voters.update({
                     where: { id: voterOne.id },
                     data: { teamId: voterTwo.teamId, level: secondTl.level },
                 });
             }
-            return "OK";
+            return 'OK';
         }),
         markUntracked: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { memberId }) {
             const voters = yield prisma_1.prisma.voters.findMany({
                 where: {
-                    id: { in: memberId }
-                }
+                    id: { in: memberId },
+                },
             });
             const untrackedList = yield prisma_1.prisma.untrackedVoter.findMany({
                 where: {
-                    votersId: { in: voters.map((item) => item.id) }
-                }
+                    votersId: { in: voters.map((item) => item.id) },
+                },
             });
             const untrackedIDs = new Set(untrackedList.map((item) => item.votersId));
-            const newToUntracked = voters.filter(voter => !untrackedIDs.has(voter.id));
-            const toRemoveOnUntracked = voters.filter(voter => untrackedIDs.has(voter.id));
+            const newToUntracked = voters.filter((voter) => !untrackedIDs.has(voter.id));
+            const toRemoveOnUntracked = voters.filter((voter) => untrackedIDs.has(voter.id));
             if (newToUntracked.length > 0) {
                 yield prisma_1.prisma.untrackedVoter.createMany({
                     data: newToUntracked.map((item) => {
@@ -4151,26 +4207,26 @@ const resolvers = {
                             votersId: item.id,
                             municipalsId: item.municipalsId,
                             barangaysId: item.barangaysId,
-                            teamId: item.teamId
+                            teamId: item.teamId,
                         };
-                    })
+                    }),
                 });
             }
             if (toRemoveOnUntracked.length > 0) {
                 yield prisma_1.prisma.untrackedVoter.deleteMany({
                     where: {
-                        votersId: { in: toRemoveOnUntracked.map((item) => item.id) }
-                    }
+                        votersId: { in: toRemoveOnUntracked.map((item) => item.id) },
+                    },
                 });
             }
-            return "OK";
+            return 'OK';
         }),
         transferVotersArea: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { memberId, zipCode, barangay }) {
             const [voters] = yield prisma_1.prisma.$transaction([
                 prisma_1.prisma.voters.findMany({
                     where: {
-                        municipalsId: 4904
-                    }
+                        municipalsId: 4904,
+                    },
                 }),
             ]);
             if (voters.length > 0) {
@@ -4181,35 +4237,35 @@ const resolvers = {
                         },
                         data: {
                             municipalsId: 4905,
-                            barangaysId: "acccf8e6-a6f2-4a62-bbff-9292f98a5bca",
+                            barangaysId: 'acccf8e6-a6f2-4a62-bbff-9292f98a5bca',
                             candidatesId: null,
-                            teamId: null
+                            teamId: null,
                         },
-                    })
+                    }),
                 ]);
             }
-            return "OK";
+            return 'OK';
         }),
         resetPassword: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id, newPassword }) {
             const user = yield prisma_1.prisma.users.findUnique({
                 where: {
-                    uid: id
-                }
+                    uid: id,
+                },
             });
             if (!user) {
-                throw new graphql_1.GraphQLError("User not found");
+                throw new graphql_1.GraphQLError('User not found');
             }
-            const sanitize = (0, data_1.removeAllSpaces)(newPassword);
+            const sanitize = (0, data_2.removeAllSpaces)(newPassword);
             const hashedPassword = yield argon2_1.default.hash(sanitize);
             yield prisma_1.prisma.users.update({
                 where: {
-                    uid: user.uid
+                    uid: user.uid,
                 },
                 data: {
-                    password: hashedPassword
-                }
+                    password: hashedPassword,
+                },
             });
-            return "OK";
+            return 'OK';
         }),
         updateCandidate: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
             const candidate = yield prisma_1.prisma.candidates.findUnique({
@@ -4218,103 +4274,196 @@ const resolvers = {
                 },
             });
             if (!candidate) {
-                throw new graphql_1.GraphQLError("Could not find candidate");
+                throw new graphql_1.GraphQLError('Could not find candidate');
             }
             yield prisma_1.prisma.candidates.update({
                 where: {
-                    id: candidate.id
+                    id: candidate.id,
                 },
                 data: {
-                    municipalsId: 4903
-                }
+                    municipalsId: 4903,
+                },
             });
-            return "OK";
+            return 'OK';
         }),
         tranCandidate: () => __awaiter(void 0, void 0, void 0, function* () {
             const jpCan = yield prisma_1.prisma.candidates.findFirst({
                 where: {
-                    firstname: "Joey"
-                }
+                    firstname: 'Joey',
+                },
             });
             if (!jpCan) {
-                throw new graphql_1.GraphQLError("Could not find Joey");
+                throw new graphql_1.GraphQLError('Could not find Joey');
             }
             console.log(jpCan);
             yield prisma_1.prisma.$transaction([
                 prisma_1.prisma.voters.updateMany({
                     where: {
                         municipalsId: 4903,
-                        teamId: { not: null }
+                        teamId: { not: null },
                     },
                     data: {
-                        candidatesId: jpCan.id
-                    }
+                        candidatesId: jpCan.id,
+                    },
                 }),
                 prisma_1.prisma.teamLeader.updateMany({
                     where: {
                         municipalsId: 4903,
-                        teamId: { not: null }
+                        teamId: { not: null },
                     },
                     data: {
-                        candidatesId: jpCan.id
-                    }
+                        candidatesId: jpCan.id,
+                    },
                 }),
                 prisma_1.prisma.team.updateMany({
                     where: {
                         municipalsId: 4903,
                     },
                     data: {
-                        candidatesId: jpCan.id
-                    }
-                })
+                        candidatesId: jpCan.id,
+                    },
+                }),
             ]);
-            return "OK";
+            return 'OK';
         }),
         transferGroup: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id, toId }) {
-            const [team, toTeam, voters] = yield prisma_1.prisma.$transaction([
+            const [team, toTeam, headers] = yield prisma_1.prisma.$transaction([
                 prisma_1.prisma.team.findUnique({
                     where: {
-                        id
-                    }
+                        id,
+                    },
                 }),
                 prisma_1.prisma.team.findUnique({
                     where: {
-                        id: toId
-                    }
+                        id: toId,
+                    },
                 }),
-                prisma_1.prisma.voters.findMany({
+                prisma_1.prisma.teamLeader.findFirst({
                     where: {
-                        teamId: id
-                    }
-                })
+                        teamId: toId,
+                    },
+                }),
             ]);
-            if (!team || !toTeam || voters.length === 0) {
-                throw new graphql_1.GraphQLError("Current Team or target team not found");
+            const voters = yield prisma_1.prisma.voters.findMany({
+                where: {
+                    teamId: id,
+                },
+            });
+            const asMember = yield prisma_1.prisma.teamLeader.findMany({
+                where: {
+                    votersId: { in: voters.map((item) => item.id) },
+                    level: {
+                        lte: 2,
+                        gte: 1,
+                    },
+                },
+            });
+            if (!team || !toTeam || voters.length === 0 || asMember.length === 0 || !headers) {
+                throw new graphql_1.GraphQLError('Current Team or target team not found');
+            }
+            let data = {};
+            if (team.level === 1) {
+                data = {
+                    purokCoorsId: headers.purokCoorsId,
+                    barangayCoorId: headers.barangayCoorId,
+                };
+            }
+            else if (team.level === 2) {
+                data = {
+                    barangayCoorId: headers.barangayCoorId,
+                };
             }
             yield prisma_1.prisma.$transaction([
                 prisma_1.prisma.teamLeader.update({
                     where: {
-                        id: team.teamLeaderId
-                    }, data: {
-                        teamId: toTeam.id
-                    }
+                        id: team.teamLeaderId,
+                    },
+                    data: {
+                        teamId: toTeam.id,
+                    },
                 }),
                 prisma_1.prisma.voters.updateMany({
                     where: {
-                        id: { in: voters.map((item) => item.id) }
+                        id: { in: voters.map((item) => item.id) },
                     },
                     data: {
-                        teamId: toTeam.id
-                    }
-                })
+                        teamId: toTeam.id,
+                    },
+                }),
+                prisma_1.prisma.teamLeader.updateMany({
+                    where: {
+                        id: { in: asMember.map((item) => item.id) },
+                    },
+                    data: data,
+                }),
             ]);
-            return "Ok";
+            return 'Ok';
+        }),
+        transferSelectMembers: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { ids, toTeam, level, currTL, toTL }) {
+            let data = {};
+            const [voters, toTeams, toTeamLeader] = yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.voters.findMany({
+                    where: {
+                        id: { in: ids },
+                        level: level - 1,
+                    },
+                }),
+                prisma_1.prisma.team.findUnique({
+                    where: {
+                        id: toTeam,
+                    },
+                }),
+                prisma_1.prisma.teamLeader.findUnique({
+                    where: {
+                        id: toTL,
+                    },
+                }),
+            ]);
+            let tls = [];
+            if (level === 1 || level === 2) {
+                tls = yield prisma_1.prisma.teamLeader.findMany({
+                    where: {
+                        votersId: { in: voters.map((item) => item.id) },
+                    },
+                });
+            }
+            if (voters.length === 0 || !toTeams || !toTeamLeader) {
+                throw new graphql_1.GraphQLError('Required not found');
+            }
+            if (level === 1) {
+                data = {
+                    barangayCoorId: toTeamLeader.barangayCoorId,
+                    purokCoorsId: toTeamLeader.purokCoorsId,
+                };
+            }
+            else if (level === 2) {
+                data = {
+                    barangayCoorId: toTeamLeader.barangayCoorId,
+                };
+            }
+            yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.voters.updateMany({
+                    where: {
+                        id: { in: voters.map((item) => item.id) },
+                    },
+                    data: {
+                        teamId: toTeams.id,
+                    },
+                }),
+                prisma_1.prisma.teamLeader.updateMany({
+                    where: {
+                        id: { in: tls.map((item) => item.id) },
+                    },
+                    data: data,
+                }),
+            ]);
+            return 'OK';
         }),
         assignFigure: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id, toId, level }) {
             console.log({ id, toId, level });
             // Validate level
             if (![2, 3].includes(level)) {
-                throw new graphql_1.GraphQLError("Invalid level. Only level 2 or 3 is allowed.");
+                throw new graphql_1.GraphQLError('Invalid level. Only level 2 or 3 is allowed.');
             }
             // Fetch team leaders
             const [toTeam, tl] = yield prisma_1.prisma.$transaction([
@@ -4327,17 +4476,7 @@ const resolvers = {
             ]);
             // Ensure both teams exist
             if (!toTeam || !tl) {
-                throw new graphql_1.GraphQLError("Current Team or Target Team not found");
-            }
-            // Determine what to update
-            const coor = {};
-            if (level === 3) {
-                coor.barangayCoorId = toTeam.id;
-                console.log("🔄 Updating team leader BC with:", coor);
-            }
-            if (level === 2) {
-                coor.barangayCoorId = toTeam.barangayCoorId;
-                coor.purokCoorsId = toTeam.id;
+                throw new graphql_1.GraphQLError('Current Team or Target Team not found');
             }
             // Update database
             yield prisma_1.prisma.$transaction([
@@ -4347,10 +4486,13 @@ const resolvers = {
                 }),
                 prisma_1.prisma.teamLeader.update({
                     where: { id: tl.id },
-                    data: coor,
+                    data: {
+                        barangayCoorId: toTeam.barangayCoorId,
+                        purokCoorsId: toTeam.id,
+                    },
                 }),
             ]);
-            return "OK";
+            return 'OK';
         }),
         updateVoter: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
             // console.log("Voter: ", id);
@@ -4413,43 +4555,46 @@ const resolvers = {
             //     queryId: true // (Optional) Count responses per queryId
             //   }
             // });
-            // console.log(responseTwo);      
+            // console.log(responseTwo);
             // console.log(JSON.stringify({ target, account, butaw, queryTwo, optionTwo, responseTwo }, null, 2));
-            const [target, account] = yield prisma_1.prisma.$transaction([
-                prisma_1.prisma.users.findFirst({
-                    where: {
-                        username: "ceejay"
-                    }
-                }),
-                prisma_1.prisma.users.findFirst({
-                    where: {
-                        username: "jopen"
-                    }
-                })
-            ]);
-            if (!target || !account) {
-                throw new graphql_1.GraphQLError("User not found");
-            }
-            console.log(target, account);
+            // const [target] = await prisma.$transaction([
+            //   prisma.users.findFirst({
+            //     where: {
+            //       username: {
+            //         contains: "peduarte",
+            //         mode: "insensitive"
+            //       }
+            //     }
+            //   }),
+            // prisma.users.findFirst({
+            //   where: {
+            //     username: "jopen"
+            //   }
+            // })
+            //])
+            // if(!target ){
+            //   throw new GraphQLError("User not found")
+            // }
+            // console.log(target);
             yield prisma_1.prisma.$transaction([
-                prisma_1.prisma.users.update({
-                    where: {
-                        uid: target.uid,
-                    },
-                    data: {
-                        status: 1,
-                        role: 1
-                    }
-                }),
-                prisma_1.prisma.users.update({
-                    where: {
-                        uid: account.uid,
-                    },
-                    data: {
-                        status: 1,
-                        role: 1
-                    }
-                }),
+                // prisma.users.update({
+                //   where: {
+                //     uid: target.uid,
+                //   },
+                //   data: {
+                //     status: 0,
+                //     role: 2
+                //   }
+                // }),
+                // prisma.users.update({
+                //   where: {
+                //     uid: account.uid,
+                //   },
+                //   data: {
+                //     status: 1,
+                //     role: 1
+                //   }
+                // }),
                 // prisma.teamLeader.update({
                 //     where: {
                 //       id: tl?.id
@@ -4466,15 +4611,16 @@ const resolvers = {
                 //     level:1
                 //   }
                 // }),
-                // prisma.voters.update({
-                //   where: {
-                //     id: voter?.id
-                //   }, 
-                //   data: {
-                //     level: 0,
-                //     teamId: null
-                //   }
-                // })
+                prisma_1.prisma.voters.update({
+                    where: {
+                        id: id,
+                    },
+                    data: {
+                        level: 0,
+                        teamId: null,
+                        candidatesId: null,
+                    },
+                }),
                 // prisma.voters.updateMany({
                 //   where:{
                 //     municipalsId: 4905,
@@ -4513,44 +4659,45 @@ const resolvers = {
             //     teamId: "57cbbae7-0645-4db9-bf7a-67786ff9c5df"
             //   }
             // })
-            return "OK";
+            return 'OK';
         }),
         comments: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { ids, tag }) {
             const voters = yield prisma_1.prisma.voters.findMany({
                 where: {
                     id: { in: ids },
-                }
+                },
             });
             const voterRecords = yield prisma_1.prisma.voterRecords.findMany({
                 where: {
                     votersId: { in: ids },
-                    type: tag
-                }
+                    type: tag,
+                },
             });
-            const newVoterRecordTagId = new Set(voterRecords.map(v => v.votersId));
-            const newComments = voters.filter(item => !newVoterRecordTagId.has(item.id));
-            const oldComment = voterRecords.filter(item => newVoterRecordTagId.has(item.votersId));
+            const newVoterRecordTagId = new Set(voterRecords.map((v) => v.votersId));
+            const newComments = voters.filter((item) => !newVoterRecordTagId.has(item.id));
+            const oldComment = voterRecords.filter((item) => newVoterRecordTagId.has(item.votersId));
             if (newComments.length > 0) {
                 yield prisma_1.prisma.$transaction([
                     prisma_1.prisma.voterRecords.createMany({
                         data: newComments.map((voter) => ({
                             votersId: voter.id,
                             type: tag,
-                            desc: "Questionable",
+                            desc: 'Questionable',
                         })),
-                    })
+                    }),
                 ]);
             }
             if (oldComment.length > 0) {
                 yield prisma_1.prisma.voterRecords.deleteMany({
                     where: {
-                        id: { in: oldComment.map(item => item.id) }
-                    }
+                        id: { in: oldComment.map((item) => item.id) },
+                    },
                 });
             }
-            return "OK";
+            return 'OK';
         }),
         calibrateTeam: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id, bcID, pcID, tlID }) {
+            console.log({ id, bcID, pcID, tlID });
             const [team, bc, pc, tl] = yield prisma_1.prisma.$transaction([
                 prisma_1.prisma.team.findUnique({
                     where: {
@@ -4574,24 +4721,25 @@ const resolvers = {
                 }),
             ]);
             if (!tl || !bc || !pc || !team) {
-                throw new graphql_1.GraphQLError("Bad Request");
+                throw new graphql_1.GraphQLError('Bad Request');
             }
             const tlVoter = yield prisma_1.prisma.voters.findMany({
                 where: {
-                    id: tl.votersId
-                }
+                    id: tl.votersId,
+                },
             });
             if (!tlVoter) {
-                throw new graphql_1.GraphQLError("TL voters not found");
+                throw new graphql_1.GraphQLError('TL voters not found');
             }
             yield prisma_1.prisma.$transaction([
                 prisma_1.prisma.teamLeader.update({
                     where: {
-                        id: tl.id,
+                        id: tlID,
                     },
                     data: {
                         purokCoorsId: pc.id,
-                        barangayCoorId: bc.id
+                        barangayCoorId: bc.id,
+                        teamId: id,
                     },
                 }),
                 prisma_1.prisma.voters.update({
@@ -4600,7 +4748,7 @@ const resolvers = {
                     },
                     data: {
                         teamId: pc.teamId,
-                        level: 1
+                        level: 1,
                     },
                 }),
                 // prisma.teamLeader.update({
@@ -4612,21 +4760,217 @@ const resolvers = {
                 //   },
                 // }),
             ]);
-            return "OK";
+            return 'OK';
         }),
         calibrateTeamArea: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode }) {
             const calibratedTeams = [];
             const tls = yield prisma_1.prisma.teamLeader.findMany({
                 where: {
                     municipalsId: zipCode,
-                    OR: [
-                        { barangayCoorId: null },
-                        { purokCoorsId: null }
-                    ]
-                }
+                    OR: [{ barangayCoorId: null }, { purokCoorsId: null }],
+                },
             });
             return tls;
-        })
+        }),
+        changeMerits: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id, level }) {
+            if (id.length === 0) {
+                throw new graphql_1.GraphQLError('Bad Request');
+            }
+            const headers = yield prisma_1.prisma.teamLeader.findMany({
+                where: {
+                    id: { in: id },
+                },
+            });
+            if (headers.length > 0) {
+                const teams = yield prisma_1.prisma.team.findMany({
+                    where: {
+                        id: { in: headers.map((item) => item.teamId) },
+                    },
+                });
+                yield prisma_1.prisma.$transaction([
+                    prisma_1.prisma.teamLeader.updateMany({
+                        where: {
+                            id: { in: headers.map((item) => item.id) },
+                        },
+                        data: {
+                            level: level,
+                        },
+                    }),
+                    prisma_1.prisma.voters.updateMany({
+                        where: {
+                            id: { in: headers.map((item) => item.votersId) },
+                        },
+                        data: {
+                            level: level,
+                        },
+                    }),
+                    prisma_1.prisma.voters.updateMany({
+                        where: {
+                            teamId: { in: teams.map((item) => item.id) },
+                        },
+                        data: {
+                            level,
+                        },
+                    }),
+                    prisma_1.prisma.team.updateMany({
+                        where: {
+                            id: { in: teams.map((item) => item.id) },
+                        },
+                        data: {
+                            level,
+                        },
+                    }),
+                ]);
+            }
+            return 'OK';
+        }),
+        changeLevel: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { targetHeads, targetLevel, targetTeam, teamID, currentTl }) {
+            let data = {};
+            const [targetLeader, currentTlData, team, members, targetTeams] = yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.teamLeader.findUnique({
+                    where: {
+                        id: targetHeads,
+                    },
+                }),
+                prisma_1.prisma.teamLeader.findUnique({
+                    where: {
+                        id: currentTl,
+                    },
+                }),
+                prisma_1.prisma.team.findUnique({
+                    where: {
+                        id: teamID,
+                    },
+                }),
+                prisma_1.prisma.voters.findMany({
+                    where: {
+                        teamId: teamID,
+                    },
+                }),
+                prisma_1.prisma.team.findUnique({
+                    where: {
+                        id: targetTeam,
+                    },
+                }),
+            ]);
+            if (!targetLeader || !team || !targetTeams || members.length === 0 || !currentTlData) {
+                throw new graphql_1.GraphQLError('Bad Request', {
+                    extensions: {
+                        code: 'BAD_REQUEST',
+                        messaga: 'Bad Request',
+                    },
+                });
+            }
+            const tls = yield prisma_1.prisma.teamLeader.findMany({
+                where: {
+                    votersId: { in: members.map((item) => item.id) },
+                },
+            });
+            console.log({
+                targetHeads,
+                team,
+                targetTeams,
+                members,
+                currentTlData,
+                tls,
+                targetLevel,
+                targetLeader,
+            });
+            if (targetLevel === 1) {
+                data = {
+                    barangayCoorId: targetLeader.barangayCoorId,
+                    purokCoorsId: targetLeader.purokCoorsId,
+                };
+            }
+            else if (targetLevel === 2) {
+                data = {
+                    barangayCoorId: targetLeader.barangayCoorId,
+                    purokCoorsId: null,
+                };
+            }
+            else {
+                data = {
+                    barangayCoorId: null,
+                    purokCoorsId: null,
+                };
+            }
+            if (targetLevel <= 0 && team.level >= 1) {
+                yield prisma_1.prisma.$transaction([
+                    prisma_1.prisma.team.deleteMany({
+                        where: {
+                            id: { in: members.map((item) => item.teamId) },
+                        },
+                    }),
+                    prisma_1.prisma.teamLeader.deleteMany({
+                        where: {
+                            id: { in: tls.map((item) => item.id) },
+                        },
+                    }),
+                    prisma_1.prisma.voters.updateMany({
+                        where: {
+                            id: { in: members.map((item) => item.id) },
+                        },
+                        data: {
+                            level: 0,
+                            teamId: targetTeams.id,
+                        },
+                    }),
+                ]);
+            }
+            else if (targetLevel >= 1 && team.level - 1 === 0) {
+                const currentTeamlevel = team.level - 1;
+                for (let item of members) {
+                    const teamLeader = yield prisma_1.prisma.teamLeader.create({
+                        data: Object.assign({ votersId: item.id, level: targetLevel, municipalsId: targetTeams.municipalsId, barangaysId: targetTeams.barangaysId, purokId: targetTeams.purokId, hubId: '' }, data),
+                    });
+                    const createdTeam = yield prisma_1.prisma.team.create({
+                        data: {
+                            level: currentTeamlevel,
+                            teamLeaderId: teamLeader.id,
+                            municipalsId: targetTeams.municipalsId,
+                            barangaysId: targetTeams.barangaysId,
+                            purokId: targetTeams.purokId,
+                            hubId: '',
+                        },
+                    });
+                    yield prisma_1.prisma.teamLeader.update({
+                        where: {
+                            id: targetLeader.id,
+                        },
+                        data: {
+                            teamId: createdTeam.id,
+                        },
+                    });
+                }
+            }
+            else {
+                yield prisma_1.prisma.$transaction([
+                    prisma_1.prisma.voters.updateMany({
+                        where: {
+                            id: { in: members.map((item) => item.id) },
+                        },
+                        data: {
+                            level: targetLevel - 1,
+                            teamId: targetTeams.id,
+                        },
+                    }),
+                    prisma_1.prisma.teamLeader.updateMany({
+                        where: {
+                            id: { in: tls.map((item) => item.id) },
+                        },
+                        data: Object.assign({ level: targetLevel - 1 }, data),
+                    }),
+                    prisma_1.prisma.teamLeader.update({
+                        where: {
+                            id: currentTlData.id,
+                        },
+                        data: Object.assign({ level: targetLevel }, data),
+                    }),
+                ]);
+            }
+            data = {};
+            return 'OK';
+        }),
     },
     Voter: {
         votersCount: () => __awaiter(void 0, void 0, void 0, function* () {
@@ -4676,7 +5020,7 @@ const resolvers = {
             return yield prisma_1.prisma.valdilatedMembers.findFirst({
                 where: {
                     votersId: parent.id,
-                }
+                },
             });
         }),
         UntrackedVoter: (parent) => __awaiter(void 0, void 0, void 0, function* () {
@@ -4692,10 +5036,10 @@ const resolvers = {
         WhiteList: (parent) => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.blackList.findMany({
                 where: {
-                    votersId: parent.id
-                }
+                    votersId: parent.id,
+                },
             });
-        })
+        }),
     },
     Municipal: {
         barangays: (parent) => __awaiter(void 0, void 0, void 0, function* () {
@@ -4720,7 +5064,7 @@ const resolvers = {
                 where: {
                     municipalsId: parent.municipalId,
                     barangaysId: parent.id,
-                    saveStatus: "listed",
+                    saveStatus: 'listed',
                 },
             });
         }),
@@ -4785,7 +5129,7 @@ const resolvers = {
                     barangaysId: parent.id,
                 },
                 orderBy: {
-                    timestamp: "desc",
+                    timestamp: 'desc',
                 },
             });
         }),
@@ -4825,7 +5169,7 @@ const resolvers = {
             const team = yield prisma_1.prisma.team.findMany({
                 where: {
                     barangaysId: parent.id,
-                    candidatesId: candidateId
+                    candidatesId: candidateId,
                 },
                 include: {
                     voters: {
@@ -4838,15 +5182,15 @@ const resolvers = {
                             status: true,
                             oor: true,
                             DelistedVoter: true,
-                        }
+                        },
                     },
                 },
             });
             const cleanList = team.filter((item) => item.voters.length > 0 && // Ensure the team has voters
-                item.voters.every((voter) => voter.VoterRecords.every(rec => rec.type === 0) && // ALL VoterRecords must have type === 0
+                item.voters.every((voter) => voter.VoterRecords.every((rec) => rec.type === 0) && // ALL VoterRecords must have type === 0
                     voter.status === 1 &&
                     voter.DelistedVoter.length === 0 &&
-                    voter.oor === "NO"));
+                    voter.oor === 'NO'));
             return {
                 aboveMax: team.filter((item) => item.voters.length > 10).length,
                 belowMax: team.filter((item) => item.voters.length < 10 && item.voters.length > 5).length,
@@ -4886,45 +5230,45 @@ const resolvers = {
                 orderBy: {
                     TeamLeader: {
                         voter: {
-                            lastname: "asc"
-                        }
-                    }
-                }
+                            lastname: 'asc',
+                        },
+                    },
+                },
             });
         }),
         teamValidationStat: (parent) => __awaiter(void 0, void 0, void 0, function* () {
-            const [validateTLS, validatedmember, untrackedMember, tls, teamMembers, orMembers, dead, exclude] = yield prisma_1.prisma.$transaction([
+            const [validateTLS, validatedmember, untrackedMember, tls, teamMembers, orMembers, dead, exclude,] = yield prisma_1.prisma.$transaction([
                 prisma_1.prisma.accountValidateTeam.count({
                     where: {
                         barangaysId: parent.id,
-                    }
+                    },
                 }),
                 prisma_1.prisma.valdilatedMembers.count({
                     where: {
                         voterId: {
                             barangaysId: parent.id,
-                        }
-                    }
+                        },
+                    },
                 }),
                 prisma_1.prisma.untrackedVoter.count({
                     where: {
                         voter: {
                             barangaysId: parent.id,
                         },
-                    }
+                    },
                 }),
                 prisma_1.prisma.teamLeader.count({
                     where: {
                         level: 1,
                         barangaysId: parent.id,
-                    }
+                    },
                 }),
                 prisma_1.prisma.voters.count({
                     where: {
                         teamId: { not: null },
                         level: 0,
                         barangaysId: parent.id,
-                    }
+                    },
                 }),
                 prisma_1.prisma.voters.count({
                     where: {
@@ -4932,8 +5276,8 @@ const resolvers = {
                         level: 0,
                         barangaysId: parent.id,
                         candidatesId: { not: null },
-                        oor: "YES"
-                    }
+                        oor: 'YES',
+                    },
                 }),
                 prisma_1.prisma.voters.count({
                     where: {
@@ -4942,16 +5286,16 @@ const resolvers = {
                         barangaysId: parent.id,
                         candidatesId: { not: null },
                         status: 0,
-                    }
+                    },
                 }),
                 prisma_1.prisma.teamUpdateArchive.count({
                     where: {
                         method: 0,
                         team: {
                             barangaysId: parent.id,
-                        }
-                    }
-                })
+                        },
+                    },
+                }),
             ]);
             return {
                 untrackedMembers: untrackedMember,
@@ -4961,7 +5305,7 @@ const resolvers = {
                 members: teamMembers,
                 orMembers: orMembers,
                 dead: dead,
-                exclude: exclude
+                exclude: exclude,
             };
         }),
         teamComment: (parent) => __awaiter(void 0, void 0, void 0, function* () {
@@ -4970,10 +5314,10 @@ const resolvers = {
                     voter: {
                         barangaysId: parent.id,
                     },
-                }
+                },
             });
             return ud;
-        })
+        }),
     },
     Purok: {
         purokDraftedVotersCount: (parent) => __awaiter(void 0, void 0, void 0, function* () {
@@ -4983,7 +5327,7 @@ const resolvers = {
                     barangaysId: parent.barangaysId,
                     newBatchDraftId: parent.draftID,
                     purokId: parent.id,
-                    saveStatus: "drafted",
+                    saveStatus: 'drafted',
                 },
             });
         }),
@@ -4996,7 +5340,7 @@ const resolvers = {
         }),
         municipal: (parent) => __awaiter(void 0, void 0, void 0, function* () {
             if (parent.municipalId === null) {
-                throw new Error("Municipal ID cannot be null");
+                throw new Error('Municipal ID cannot be null');
             }
             return yield prisma_1.prisma.municipals.findUnique({
                 where: { id: parent.municipalId },
@@ -5043,10 +5387,10 @@ const resolvers = {
                 },
             });
             let surveyResults = {
-                tagID: "",
-                id: "",
+                tagID: '',
+                id: '',
                 zipCode: 0,
-                barangay: "",
+                barangay: '',
                 queries: [],
             };
             // const newResult = result.map((query) => {
@@ -5159,15 +5503,15 @@ const resolvers = {
             //   }
             // });
             // console.log(newResult);
-            console.log("Resuts: ", JSON.stringify(result, null, 2));
-            return "OK";
+            console.log('Resuts: ', JSON.stringify(result, null, 2));
+            return 'OK';
         }),
     },
     Queries: {
         options: (parent) => __awaiter(void 0, void 0, void 0, function* () {
             return yield prisma_1.prisma.option.findMany({
                 where: { queryId: parent.id },
-                orderBy: { order: "asc" },
+                orderBy: { order: 'asc' },
             });
         }),
         respondentOption: (parent_1, _a) => __awaiter(void 0, [parent_1, _a], void 0, function* (parent, { id }) {
@@ -5182,13 +5526,13 @@ const resolvers = {
             console.log(zipCode);
             return yield prisma_1.prisma.barangays.findMany({
                 where: { municipalId: zipCode },
-                orderBy: { name: "asc" },
+                orderBy: { name: 'asc' },
             });
         }),
         customOption: (parent_1, _a) => __awaiter(void 0, [parent_1, _a], void 0, function* (parent, { zipCode, barangayId, surveyId }) {
             console.log({ zipCode, barangayId, surveyId });
             const filter = {};
-            if (barangayId !== "all") {
+            if (barangayId !== 'all') {
                 filter.barangaysId = barangayId;
             }
             return yield prisma_1.prisma.customOption.findMany({
@@ -5214,18 +5558,18 @@ const resolvers = {
                 surveyId: id,
                 municipalsId: zipCode,
             };
-            if (barangayId !== "all") {
+            if (barangayId !== 'all') {
                 filters.barangaysId = barangayId;
             }
-            if (genderId !== "all") {
+            if (genderId !== 'all') {
                 filters.genderId = genderId;
             }
             const responses = yield prisma_1.prisma.response.findMany({
                 where: filters,
                 select: {
-                    id: true
+                    id: true,
                 },
-                distinct: ["respondentResponseId", "optionId"]
+                distinct: ['respondentResponseId', 'optionId'],
             });
             return responses.length;
         }),
@@ -5235,10 +5579,10 @@ const resolvers = {
                 ageBracketId: ageBracketId,
                 optionId: parent.id,
             };
-            if (barangayId !== "all") {
+            if (barangayId !== 'all') {
                 filters.barangaysId = barangayId;
             }
-            if (genderId !== "all") {
+            if (genderId !== 'all') {
                 filters.genderId = genderId;
             }
             return yield prisma_1.prisma.response.count({
@@ -5251,18 +5595,18 @@ const resolvers = {
                 ageBracketId: ageBracketId,
                 optionId: parent.id,
             };
-            if (barangayId !== "all") {
+            if (barangayId !== 'all') {
                 filters.barangaysId = barangayId;
             }
-            if (genderId !== "all") {
+            if (genderId !== 'all') {
                 filters.genderId = genderId;
             }
             const data = yield prisma_1.prisma.response.findMany({
                 where: filters,
                 select: {
-                    id: true
+                    id: true,
                 },
-                distinct: ["respondentResponseId", "optionId"]
+                distinct: ['respondentResponseId', 'optionId'],
             });
             return data.length;
         }),
@@ -5347,10 +5691,10 @@ const resolvers = {
                 surveyId: id,
                 municipalsId: zipCode,
             };
-            if (barangayId !== "all") {
+            if (barangayId !== 'all') {
                 filters.barangaysId = barangayId;
             }
-            if (genderId !== "all") {
+            if (genderId !== 'all') {
                 filters.genderId = genderId;
             }
             // Perform the count query with the constructed filters
@@ -5381,10 +5725,10 @@ const resolvers = {
                 optionId: optionId,
                 municipalsId: 4905,
             };
-            if (barangayId !== "all") {
+            if (barangayId !== 'all') {
                 filters.barangayId = barangayId;
             }
-            if (genderId !== "all") {
+            if (genderId !== 'all') {
                 filters.genderId = genderId;
             }
             return yield prisma_1.prisma.response.count({
@@ -5491,17 +5835,17 @@ const resolvers = {
                 where: {
                     teamId: parent.id,
                     usersUid: id,
-                }
+                },
             });
         }),
         untrackedCount: (parent) => __awaiter(void 0, void 0, void 0, function* () {
             const untracked = yield prisma_1.prisma.untrackedVoter.count({
                 where: {
                     teamId: parent.id,
-                }
+                },
             });
             return untracked;
-        })
+        }),
     },
     TeamLeader: {
         voter: (parent) => __awaiter(void 0, void 0, void 0, function* () {
@@ -5659,8 +6003,8 @@ const resolvers = {
             }
             return yield prisma_1.prisma.team.findFirst({
                 where: {
-                    id: parent.teamId
-                }
+                    id: parent.teamId,
+                },
             });
         }),
         account: (parent) => __awaiter(void 0, void 0, void 0, function* () {
@@ -5668,40 +6012,41 @@ const resolvers = {
                 return null;
             return yield prisma_1.prisma.users.findUnique({
                 where: {
-                    uid: parent.usersUid
-                }
+                    uid: parent.usersUid,
+                },
             });
-        })
+        }),
     },
 };
 const server = new server_1.ApolloServer({ typeDefs: schema_1.typeDefs, resolvers });
 const main = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
         yield server.start();
-        app.use("/graphql", (0, cors_1.default)(), express_1.default.json(), (0, express4_1.expressMiddleware)(server));
-        app.use("/upload", fileRoutes);
-        app.use("/upload", image_1.default);
-        app.use("/precint", precint_1.default);
-        app.use("/voters", voter_1.default);
-        app.use("/purok", purok_1.default);
-        app.use("/export", pdfFile_1.default);
-        app.use("/auth", auth_1.default);
+        app.use('/graphql', (0, cors_1.default)(), express_1.default.json(), (0, express4_1.expressMiddleware)(server));
+        app.use('/upload', fileRoutes);
+        app.use('/upload', image_1.default);
+        app.use('/precint', precint_1.default);
+        app.use('/voters', voter_1.default);
+        app.use('/purok', purok_1.default);
+        app.use('/export', pdfFile_1.default);
+        app.use('/auth', auth_1.default);
+        app.use('/submit', data_1.default);
         //test
-        app.get("/test", (req, res) => {
-            res.status(200).json({ message: "Hello Wolrd" });
+        app.get('/test', (req, res) => {
+            res.status(200).json({ message: 'Hello Wolrd' });
         });
-        io.on("connection", (socket) => {
+        io.on('connection', (socket) => {
             // Listener for draftedCounter event
-            socket.on("draftedCounter", (data) => {
-                console.log("Drafted Counter Data:", data);
+            socket.on('draftedCounter', (data) => {
+                console.log('Drafted Counter Data:', data);
             });
             // Listener for updateVoterCounter event
-            socket.on("updateVoterCounter", (data) => {
-                console.log("Update Voter Counter Data:", data);
+            socket.on('updateVoterCounter', (data) => {
+                console.log('Update Voter Counter Data:', data);
             });
             // Listener for disconnect event
-            socket.on("disconnect", () => {
-                console.log("Client disconnected");
+            socket.on('disconnect', () => {
+                console.log('Client disconnected');
             });
         });
         const port = 3000;
@@ -5710,7 +6055,7 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
         }));
     }
     catch (error) {
-        console.error("Error:", error);
+        console.error('Error:', error);
         yield prisma_1.prisma.$disconnect();
     }
 });
