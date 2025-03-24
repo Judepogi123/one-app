@@ -54,6 +54,8 @@ const io = new Server(ioserver, {
       'http://localhost:5173',
       'https://jml-client-test.netlify.app',
       'https://jml-portal.netlify.app',
+      'https://jml-client-test.netlify.app/',
+      'https://jml-portal.netlify.app/',
       'http://3.80.143.15:5173/',
       'https://one-app-u7hu.onrender.com/',
       'https://one-app-u7hu.onrender.com/graphql',
@@ -2340,7 +2342,7 @@ const resolvers: Resolvers = {
       } else if (level === 2) {
         data = {
           barangayCoorId: figureHead.id,
-          purokCoorsId: null,
+          purokCoorsId: figureHead.purokCoorsId,
         };
       } else {
         data = {
@@ -4933,7 +4935,7 @@ const resolvers: Resolvers = {
     },
     assignFigure: async (_, { id, toId, level }) => {
       console.log({ id, toId, level });
-
+      let data: any = {};
       // Validate level
       if (![2, 3].includes(level)) {
         throw new GraphQLError('Invalid level. Only level 2 or 3 is allowed.');
@@ -4953,6 +4955,21 @@ const resolvers: Resolvers = {
       if (!toTeam || !tl) {
         throw new GraphQLError('Current Team or Target Team not found');
       }
+      if (level === 2) {
+        data = {
+          barangayCoorId: toTeam.barangayCoorId,
+          purokCoorsId: toTeam.id,
+        };
+      } else if (level === 3) {
+        data = {
+          barangayCoorId: toTeam.id,
+        };
+      } else {
+        data = {
+          barangayCoorId: toTeam.barangayCoorId,
+          purokCoorsId: toTeam.purokCoorsId,
+        };
+      }
       // Update database
       await prisma.$transaction([
         prisma.voters.update({
@@ -4962,8 +4979,7 @@ const resolvers: Resolvers = {
         prisma.teamLeader.update({
           where: { id: tl.id },
           data: {
-            barangayCoorId: toTeam.barangayCoorId as string,
-            purokCoorsId: toTeam.id,
+            ...data,
           },
         }),
       ]);
@@ -5315,13 +5331,10 @@ const resolvers: Resolvers = {
       return 'OK';
     },
     changeLevel: async (_, { targetHeads, targetLevel, targetTeam, teamID, currentTl }) => {
+      console.log({ targetHeads, targetLevel, targetTeam, teamID, currentTl });
+
       let data: any = {};
-      const [targetLeader, currentTlData, team, members, targetTeams] = await prisma.$transaction([
-        prisma.teamLeader.findUnique({
-          where: {
-            id: targetHeads,
-          },
-        }),
+      const [currentTlData, team, members] = await prisma.$transaction([
         prisma.teamLeader.findUnique({
           where: {
             id: currentTl,
@@ -5337,21 +5350,22 @@ const resolvers: Resolvers = {
             teamId: teamID,
           },
         }),
-        prisma.team.findUnique({
-          where: {
-            id: targetTeam,
-          },
-        }),
       ]);
+      const targetTeams = targetTeam
+        ? await prisma.team.findUnique({
+            where: {
+              id: targetTeam,
+            },
+          })
+        : null;
+      const targetLeader = targetHeads
+        ? await prisma.teamLeader.findUnique({
+            where: {
+              id: targetHeads,
+            },
+          })
+        : null;
 
-      if (!targetLeader || !team || !targetTeams || members.length === 0 || !currentTlData) {
-        throw new GraphQLError('Bad Request', {
-          extensions: {
-            code: 'BAD_REQUEST',
-            messaga: 'Bad Request',
-          },
-        });
-      }
       const tls = await prisma.teamLeader.findMany({
         where: {
           votersId: { in: members.map((item) => item.id) },
@@ -5368,14 +5382,23 @@ const resolvers: Resolvers = {
         targetLeader,
       });
 
-      if (targetLevel === 1) {
+      if (!team || members.length === 0 || !currentTlData) {
+        throw new GraphQLError('Bad Request', {
+          extensions: {
+            code: 'BAD_REQUEST',
+            messaga: 'Bad Request',
+          },
+        });
+      }
+
+      if (targetLevel === 1 && targetLeader) {
         data = {
           barangayCoorId: targetLeader.barangayCoorId,
           purokCoorsId: targetLeader.purokCoorsId,
         };
-      } else if (targetLevel === 2) {
+      } else if (targetLevel === 2 && targetLeader) {
         data = {
-          barangayCoorId: targetLeader.barangayCoorId,
+          barangayCoorId: targetLeader?.barangayCoorId,
           purokCoorsId: null,
         };
       } else {
@@ -5385,7 +5408,7 @@ const resolvers: Resolvers = {
         };
       }
 
-      if (targetLevel <= 0 && team.level >= 1) {
+      if (targetLevel <= 0 && team.level >= 1 && targetTeams) {
         await prisma.$transaction([
           prisma.team.deleteMany({
             where: {
@@ -5414,9 +5437,9 @@ const resolvers: Resolvers = {
             data: {
               votersId: item.id,
               level: targetLevel,
-              municipalsId: targetTeams.municipalsId,
-              barangaysId: targetTeams.barangaysId,
-              purokId: targetTeams.purokId as string,
+              municipalsId: team.municipalsId,
+              barangaysId: team.barangaysId,
+              purokId: team.purokId as string,
               hubId: '',
               ...data,
             },
@@ -5425,16 +5448,16 @@ const resolvers: Resolvers = {
             data: {
               level: currentTeamlevel,
               teamLeaderId: teamLeader.id,
-              municipalsId: targetTeams.municipalsId,
-              barangaysId: targetTeams.barangaysId,
-              purokId: targetTeams.purokId as string,
+              municipalsId: team.municipalsId,
+              barangaysId: team.barangaysId,
+              purokId: team.purokId as string,
               hubId: '',
             },
           });
 
           await prisma.teamLeader.update({
             where: {
-              id: targetLeader.id,
+              id: targetLeader?.id,
             },
             data: {
               teamId: createdTeam.id,
@@ -5449,7 +5472,7 @@ const resolvers: Resolvers = {
             },
             data: {
               level: targetLevel - 1,
-              teamId: targetTeams.id,
+              teamId: targetLevel === 3 ? null : targetTeams?.id,
             },
           }),
           prisma.teamLeader.updateMany({
