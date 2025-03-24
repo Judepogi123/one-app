@@ -1,6 +1,6 @@
 import cloudinary from '../config/stoage';
 import express, { Request, Response } from 'express';
-import { loadImage, createCanvas, registerFont } from 'canvas';
+import { loadImage, createCanvas } from 'canvas';
 import multer from 'multer';
 import path from 'path';
 import PDFDocument from 'pdfkit';
@@ -8,7 +8,7 @@ import fs from 'fs';
 import { prisma } from '../config/prisma';
 import qrcode from 'qrcode';
 import { size } from 'pdfkit/js/page';
-import { alphabeticCaps, handleLevelLabel } from '../utils/data';
+import { alphabeticCaps, handleLevel, handleLevelLabel } from '../utils/data';
 import { TeamLeader } from '@prisma/client';
 const router = express.Router();
 
@@ -80,7 +80,11 @@ router.post('/generate-id', async (req: Request, res: Response) => {
         },
       });
     }
-
+    const barangayData = await prisma.barangays.findUnique({
+      where: {
+        id: barangay,
+      },
+    });
     if (tlData.length === 0) {
       return res.status(404).send('Voter not found');
     }
@@ -88,7 +92,10 @@ router.post('/generate-id', async (req: Request, res: Response) => {
     // ✅ Ensure size exists
     const doc = new PDFDocument({ size: 'A4', margin: 0 });
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="VoterIDs.pdf"`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${barangayData?.name}-${handleLevel(level)}.pdf"`,
+    );
 
     doc.pipe(res);
 
