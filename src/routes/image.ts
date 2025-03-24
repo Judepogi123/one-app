@@ -14,7 +14,6 @@ const router = express.Router();
 
 const uploadDir = path.join(__dirname, 'uploads');
 const upload = multer({ dest: uploadDir });
-
 router.post('/image', upload.single('file'), async (req: Request, res: Response) => {
   if (!req.file) {
     return res.status(400).send('No file uploaded.');
@@ -90,9 +89,7 @@ router.post('/generate-id', async (req: Request, res: Response) => {
     const doc = new PDFDocument({ size: 'A4', margin: 0 });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="VoterIDs.pdf"`);
-    registerFont(path.join(__dirname, 'fonts', 'src/public/font/open-sans.bold.ttf'), {
-      family: 'OpenSans',
-    });
+
     doc.pipe(res);
 
     const chunks = Array.from({ length: Math.ceil(tlData.length / IDsPerPage) }, (_, i) =>
@@ -175,7 +172,7 @@ router.post('/generate-id', async (req: Request, res: Response) => {
         const fontSize = totalNameCount >= 16 ? imageSize.Lfont : imageSize.Sfont;
         if (totalNameCount >= 16) {
           console.log('FontSize 1: ', fontSize);
-          ctx.font = `900 ${fontSize * scaleFactor}px OpenSans`;
+          ctx.font = `900 ${fontSize * scaleFactor}px Arial, sans-serif`;
           ctx.fillStyle = 'black';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
@@ -189,7 +186,7 @@ router.post('/generate-id', async (req: Request, res: Response) => {
         } else {
           console.log('FontSize 2: ', fontSize);
 
-          ctx.font = `900 ${fontSize * scaleFactor}px OpenSans`;
+          ctx.font = `900 ${fontSize * scaleFactor}px Arial, sans-serif`;
           ctx.fillStyle = 'black';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
