@@ -7,7 +7,7 @@
     "start": "node dist/src/config/index.js",
     "dev": "nodemon",
     "build": "npx tsc",
-    "postbuild": "cp -R src/public dist/public",
+    "postbuild": "cp -R src/public dist/src/public",
     "test": "jest"
   },
   "keywords": [],
