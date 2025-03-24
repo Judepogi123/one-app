@@ -41,7 +41,16 @@ const app = (0, express_1.default)();
 const ioserver = (0, node_http_1.createServer)(app);
 const io = new socket_io_1.Server(ioserver, {
     cors: {
-        origin: 'https://jml-client-test.netlify.app',
+        origin: [
+            'http://localhost:5173',
+            'https://jml-client-test.netlify.app',
+            'https://jml-portal.netlify.app',
+            'https://jml-client-test.netlify.app/',
+            'https://jml-portal.netlify.app',
+            'http://3.80.143.15:5173/',
+            'https://one-app-u7hu.onrender.com/',
+            'https://one-app-u7hu.onrender.com/graphql',
+        ],
         methods: ['GET', 'POST'],
     },
 });
@@ -52,7 +61,16 @@ app.use(express_1.default.urlencoded({ limit: '10mb', extended: true }));
 app.use(body_parser_1.default.urlencoded({ extended: false }));
 app.use(body_parser_1.default.json());
 app.use((0, cors_1.default)({
-    origin: 'https://jml-client-test.netlify.app',
+    origin: [
+        'http://localhost:5173',
+        'https://jml-client-test.netlify.app',
+        'https://jml-portal.netlify.app',
+        'https://jml-client-test.netlify.app/',
+        'https://jml-portal.netlify.app',
+        'http://3.80.143.15:5173/',
+        'https://one-app-u7hu.onrender.com/',
+        'https://one-app-u7hu.onrender.com/graphql',
+    ],
 }));
 app.use(express_1.default.static(path_1.default.join(__dirname, 'react-app/build')));
 app.use((req, res, next) => {

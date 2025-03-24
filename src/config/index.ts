@@ -50,7 +50,16 @@ const app = express();
 const ioserver = createServer(app);
 const io = new Server(ioserver, {
   cors: {
-    origin: 'https://jml-client-test.netlify.app',
+    origin: [
+      'http://localhost:5173',
+      'https://jml-client-test.netlify.app',
+      'https://jml-portal.netlify.app',
+      'https://jml-client-test.netlify.app/',
+      'https://jml-portal.netlify.app',
+      'http://3.80.143.15:5173/',
+      'https://one-app-u7hu.onrender.com/',
+      'https://one-app-u7hu.onrender.com/graphql',
+    ],
     methods: ['GET', 'POST'],
   },
 });
@@ -63,7 +72,16 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(
   cors({
-    origin: 'https://jml-client-test.netlify.app',
+    origin: [
+      'http://localhost:5173',
+      'https://jml-client-test.netlify.app',
+      'https://jml-portal.netlify.app',
+      'https://jml-client-test.netlify.app/',
+      'https://jml-portal.netlify.app',
+      'http://3.80.143.15:5173/',
+      'https://one-app-u7hu.onrender.com/',
+      'https://one-app-u7hu.onrender.com/graphql',
+    ],
   }),
 );
 app.use(express.static(path.join(__dirname, 'react-app/build')));

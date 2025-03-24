@@ -136,9 +136,9 @@ router.post("/generate-id", async (req: Request, res: Response) => {
           voterQR = qrCodeData?.qrCode || "";
         }
 
-        const bcImage = await loadImage(path.join(__dirname, "../../public/images/bc.png"));
-        const pcImage = await loadImage(path.join(__dirname, "../../public/images/pc.png"));
-        const tlImage = await loadImage(path.join(__dirname, "../../public/images/tl.png"));
+        const bcImage = await loadImage(path.join(__dirname, "/public/images/bc.png"));
+        const pcImage = await loadImage(path.join(__dirname, "/public/images/pc.png"));
+        const tlImage = await loadImage(path.join(__dirname, "/public/images/tl.png"));
         const iamgeList = [tlImage, tlImage, pcImage, bcImage];
 
         ctx.drawImage(iamgeList[headerLevel], 0, 0, width, height);
