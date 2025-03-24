@@ -93,9 +93,6 @@ router.post('/generate-id', (req, res) => __awaiter(void 0, void 0, void 0, func
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="VotersID.pdf"`);
         doc.pipe(res);
-        (0, canvas_1.registerFont)(path_1.default.join(__dirname, 'fonts', '../../public/font/open-sans.bold.ttf'), {
-            family: 'OpenSans',
-        });
         const chunks = Array.from({ length: Math.ceil(tlData.length / IDsPerPage) }, (_, i) => tlData.slice(i * IDsPerPage, i * IDsPerPage + IDsPerPage));
         for (let index = 0; index < chunks.length; index++) {
             if (index > 0)
@@ -160,7 +157,7 @@ router.post('/generate-id', (req, res) => __awaiter(void 0, void 0, void 0, func
                 const fontSize = totalNameCount >= 16 ? imageSize.Lfont : imageSize.Sfont;
                 if (totalNameCount >= 16) {
                     console.log('FontSize 1: ', fontSize);
-                    ctx.font = `900 ${fontSize * scaleFactor}px OpenSans`;
+                    ctx.font = `900 ${fontSize * scaleFactor}px Arial, sans-serif`;
                     ctx.fillStyle = 'black';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
@@ -173,7 +170,7 @@ router.post('/generate-id', (req, res) => __awaiter(void 0, void 0, void 0, func
                 }
                 else {
                     console.log('FontSize 2: ', fontSize);
-                    ctx.font = `900 ${fontSize * scaleFactor}px OpenSans`;
+                    ctx.font = `900 ${fontSize * scaleFactor}px Arial, sans-serif`;
                     ctx.fillStyle = 'black';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';

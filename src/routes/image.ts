@@ -1,6 +1,6 @@
 import cloudinary from '../config/stoage';
 import express, { Request, Response } from 'express';
-import { loadImage, createCanvas, registerFont } from 'canvas';
+import { loadImage, createCanvas } from 'canvas';
 import multer from 'multer';
 import path from 'path';
 import PDFDocument from 'pdfkit';
@@ -91,9 +91,6 @@ router.post('/generate-id', async (req: Request, res: Response) => {
     res.setHeader('Content-Disposition', `attachment; filename="VotersID.pdf"`);
 
     doc.pipe(res);
-    registerFont(path.join(__dirname, 'fonts', '../../public/font/open-sans.bold.ttf'), {
-      family: 'OpenSans',
-    });
     const chunks = Array.from({ length: Math.ceil(tlData.length / IDsPerPage) }, (_, i) =>
       tlData.slice(i * IDsPerPage, i * IDsPerPage + IDsPerPage),
     );
@@ -174,7 +171,7 @@ router.post('/generate-id', async (req: Request, res: Response) => {
         const fontSize = totalNameCount >= 16 ? imageSize.Lfont : imageSize.Sfont;
         if (totalNameCount >= 16) {
           console.log('FontSize 1: ', fontSize);
-          ctx.font = `900 ${fontSize * scaleFactor}px OpenSans`;
+          ctx.font = `900 ${fontSize * scaleFactor}px Arial, sans-serif`;
           ctx.fillStyle = 'black';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
@@ -188,7 +185,7 @@ router.post('/generate-id', async (req: Request, res: Response) => {
         } else {
           console.log('FontSize 2: ', fontSize);
 
-          ctx.font = `900 ${fontSize * scaleFactor}px OpenSans`;
+          ctx.font = `900 ${fontSize * scaleFactor}px Arial, sans-serif`;
           ctx.fillStyle = 'black';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
