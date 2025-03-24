@@ -85,18 +85,13 @@ router.post('/generate-id', (req, res) => __awaiter(void 0, void 0, void 0, func
                 },
             });
         }
-        const barangayData = yield prisma_1.prisma.barangays.findUnique({
-            where: {
-                id: barangay,
-            },
-        });
         if (tlData.length === 0) {
             return res.status(404).send('Voter not found');
         }
         // ✅ Ensure size exists
         const doc = new pdfkit_1.default({ size: 'A4', margin: 0 });
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="${barangayData === null || barangayData === void 0 ? void 0 : barangayData.name}-${(0, data_1.handleLevel)(level)}.pdf"`);
+        res.setHeader('Content-Disposition', `attachment; filename="VotersID.pdf"`);
         doc.pipe(res);
         const chunks = Array.from({ length: Math.ceil(tlData.length / IDsPerPage) }, (_, i) => tlData.slice(i * IDsPerPage, i * IDsPerPage + IDsPerPage));
         for (let index = 0; index < chunks.length; index++) {
@@ -130,9 +125,9 @@ router.post('/generate-id', (req, res) => __awaiter(void 0, void 0, void 0, func
                     });
                     voterQR = (qrCodeData === null || qrCodeData === void 0 ? void 0 : qrCodeData.qrCode) || '';
                 }
-                const bcImage = yield (0, canvas_1.loadImage)(path_1.default.join(__dirname, '/src/public/images/bc.png'));
-                const pcImage = yield (0, canvas_1.loadImage)(path_1.default.join(__dirname, '/src/public/images/pc.png'));
-                const tlImage = yield (0, canvas_1.loadImage)(path_1.default.join(__dirname, '/src/public/images/tl.png'));
+                const bcImage = yield (0, canvas_1.loadImage)(path_1.default.join(__dirname, 'public/images/bc.png'));
+                const pcImage = yield (0, canvas_1.loadImage)(path_1.default.join(__dirname, 'public/images/pc.png'));
+                const tlImage = yield (0, canvas_1.loadImage)(path_1.default.join(__dirname, 'public/images/tl.png'));
                 const iamgeList = [tlImage, tlImage, pcImage, bcImage];
                 ctx.drawImage(iamgeList[headerLevel], 0, 0, width, height);
                 if (voterQR) {

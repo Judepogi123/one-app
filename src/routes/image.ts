@@ -80,11 +80,7 @@ router.post('/generate-id', async (req: Request, res: Response) => {
         },
       });
     }
-    const barangayData = await prisma.barangays.findUnique({
-      where: {
-        id: barangay,
-      },
-    });
+
     if (tlData.length === 0) {
       return res.status(404).send('Voter not found');
     }
@@ -92,10 +88,7 @@ router.post('/generate-id', async (req: Request, res: Response) => {
     // ✅ Ensure size exists
     const doc = new PDFDocument({ size: 'A4', margin: 0 });
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${barangayData?.name}-${handleLevel(level)}.pdf"`,
-    );
+    res.setHeader('Content-Disposition', `attachment; filename="VotersID.pdf"`);
 
     doc.pipe(res);
 
@@ -139,9 +132,9 @@ router.post('/generate-id', async (req: Request, res: Response) => {
           voterQR = qrCodeData?.qrCode || '';
         }
 
-        const bcImage = await loadImage(path.join(__dirname, '/src/public/images/bc.png'));
-        const pcImage = await loadImage(path.join(__dirname, '/src/public/images/pc.png'));
-        const tlImage = await loadImage(path.join(__dirname, '/src/public/images/tl.png'));
+        const bcImage = await loadImage(path.join(__dirname, 'public/images/bc.png'));
+        const pcImage = await loadImage(path.join(__dirname, 'public/images/pc.png'));
+        const tlImage = await loadImage(path.join(__dirname, 'public/images/tl.png'));
         const iamgeList = [tlImage, tlImage, pcImage, bcImage];
 
         ctx.drawImage(iamgeList[headerLevel], 0, 0, width, height);
