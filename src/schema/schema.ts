@@ -204,6 +204,14 @@ type ValdilatedMember {
     teams(level: Int): [Team!]
     teamValidationStat: TeamValidationStat
     teamComment: [VoterRecords!]
+    collectionResult(id: String): BarangayCollResult
+  }
+
+  type BarangayCollResult {
+    stabOne: Int
+    stabTwo: Int
+    genQrCode: Int
+    allTeamMembers: Int
   }
 
   type BarangayCommentCount {
@@ -428,6 +436,8 @@ type ValdiatedTeams {
     getVoterQRcode(skip: Int, barangayId: String): [QRcode!]
     getPurokList(id: String!): [Purok!]
     teamList(zipCode: String!, barangayId: String!, purokId: String!, level: String!,query: String!, skip: Int!, candidate: String, withIssues: Boolean, members: String): [Team!]
+    teamCount(zipCode: String!, barangayId: String!, purokId: String!, level: String!,query: String!, skip: Int!, candidate: String, withIssues: Boolean, members: String): Int
+    teamMembersCount(zipCode: String!, barangayId: String!, purokId: String!, level: String!,query: String!, skip: Int!, candidate: String, withIssues: Boolean, members: String): Int
     candidates(zipCode: String): [Candidates!]
     candidate(id: String!):Candidates
     team(id: String!): Team
@@ -446,9 +456,51 @@ type ValdiatedTeams {
     getAssignedTeams(userId: String, zipCode: Int, barangaysId: Int, from: Int, take: Int, min: Int, max: Int):[AccountHandleTeam!]
     accountHandleTeamList: [AccountHandleTeam!]
     teamLeaderTeamHandle(level: Int, zipCode: String, barangay: String, skip: Int): [TeamLeader!]
-    figureHeads(level: Int, barangayId: String): [TeamLeader!]
+    figureHeads(level: Int, barangayId: String): [Team!]
     butaws: [Voter!]
+    getAllCollBatch(zipCode: Int): [CollectionBatch!]
+    getCollReport(zipCode: Int): [Barangay!]
+    calibrateTeamArea(zipCode: Int, barangayId: String, level: Int): [CalibratedResult!]
   }
+
+
+  type TeamListResult {
+    teamList: [Team!]
+    teamCount: Int
+    members: Int
+  }
+
+  type StabCollection {
+  id: String
+  voter: Voter!
+  stamp: Int!
+  barangay: Barangay!
+  team: Team!
+  timestamp: String!
+  collectionBatchTeam: CollectionBatchTeam
+  batch: CollectionBatch
+  }
+
+type CollectionBatchTeam {
+  id: String
+  barangay: Barangay
+  team: Team
+  batch: CollectionBatch
+  stab: Int
+  level: Int
+  timestamp: String
+  memberStab: [StabCollection!]
+}
+
+type CollectionBatch {
+  id: String
+  municipal: Municipal
+  timestamp: String
+  title: String
+  stab: Int!
+  collectionBatchTeams: [CollectionBatchTeam!]
+  stabCollections: [StabCollection!]
+}
 
   type Validation {
   id: ID!
@@ -653,10 +705,28 @@ type BarangayCoor {
     updateVoter(id: String): String!
     comments(ids: [String!], tag: Int!): String!
     calibrateTeam(id: String, tlID: String, pcID: String, bcID: String, level: Int): String!
-    calibrateTeamArea(zipCode: Int): [TeamLeader!]
     changeMerits(id: [String!], level: Int): String!
+    refreshVoter(ids: [String!], connection: Boolean, team: Boolean, header: Boolean): String!
+    resetQrCode: String!
+    newCollectionbatch(zipCode: Int, title: String, stab: String): String!
+    collectAndCheckStab(qrCode: String, code: String, method: Int): String!
   }
 
+  type CalibratedResult{
+    voter: Voter
+    votersId: String
+    level: Int
+    currentLevel: Int
+    reason: String
+    code: Int
+    barangay: Barangay
+    barangaysId: String
+    teamLeader: TeamLeader
+    teamLeaderId: String
+    team: Team
+    teamId: String
+    correct: String
+  }
   type VoterRecords {
   id: ID!
   desc: String!
@@ -1458,5 +1528,16 @@ type ValidationNotes {
   user: Users
   usersUid: String
 }
+
+input QRcodeInput {
+  id: ID!
+  number: Int
+  qrCode: String
+  timestamp: String
+  votersId: String
+  stab: Int
+  scannedDateTime: String
+}
+
 
 `;

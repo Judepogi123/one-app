@@ -1,11 +1,4 @@
-import {
-  Voters,
-  Barangays,
-  Municipals,
-  TeamLeader,
-  Users,
-} from "../../prisma/prisma";
-
+import { Voters, Barangays, Municipals, TeamLeader, Users } from '../../prisma/prisma';
 
 export interface BarangayProps {
   name: string;
@@ -20,8 +13,8 @@ export interface BarangayProps {
   femaleSize: number;
   maleSize: number;
   supporters: AllSupporters;
-  teamStat: TeamStatProps
-  leaders: TeamLeaderProps[]
+  teamStat: TeamStatProps;
+  leaders: TeamLeaderProps[];
 }
 
 interface AllSupporters {
@@ -64,7 +57,6 @@ export interface VotersProps {
   qrCodeNumber: number;
   teamId?: string;
   leader?: TeamLeaderProps;
-
 }
 
 export interface TeamStatProps {
@@ -121,10 +113,9 @@ export interface TeamLeaderProps {
     id: string;
     voter?: VotersProps | null;
   };
-  teamList: TeamsProps[]
-  voters: VotersProps[]
+  teamList: TeamsProps[];
+  voters: VotersProps[];
 }
-
 
 export interface RowProps {
   __EMPTY: string;
@@ -159,7 +150,7 @@ export interface DataProps {
   INC: string;
   OR: string;
   SC: string;
-  "18-30": string;
+  '18-30': string;
   saveStatus: string;
   [key: string]: string | number | null | undefined;
   candidateId?: string;
@@ -246,12 +237,7 @@ export interface RejectListProps {
 export interface RejectListedProps
   extends Pick<
     Voters,
-    | "firstname"
-    | "lastname"
-    | "idNumber"
-    | "barangaysId"
-    | "municipalsId"
-    | "level"
+    'firstname' | 'lastname' | 'idNumber' | 'barangaysId' | 'municipalsId' | 'level'
   > {
   id?: string;
   votersId?: string;
@@ -308,14 +294,13 @@ export interface Team {
   voters: VotersProps[];
 }
 
-export interface TeamProps extends Omit<Team, ""> {
+export interface TeamProps extends Omit<Team, ''> {
   _count: {
     voters: number;
   }[];
 }
 
-export interface ResponseWithCustomeData
-  extends Omit<RespondentResponseProps, ""> {
+export interface ResponseWithCustomeData extends Omit<RespondentResponseProps, ''> {
   customeOptions: {
     value: string;
     id: string;
@@ -370,4 +355,20 @@ export interface TeamValidationStat {
   orMembers: number;
   dead: number;
   exclude: number;
+}
+
+export interface CalibratedResult {
+  voter?: Voters;
+  votersId: string;
+  level: number; // TypeScript uses 'number' instead of 'Int'
+  reason: string; // TypeScript uses 'string' instead of 'String'
+  code: number;
+  barangay?: Barangays;
+  barangaysId: string;
+  teamLeader?: any | undefined;
+  teamLeaderId: string | null;
+  team?: Team;
+  teamId: string | null;
+  correct: string;
+  currentLevel: number;
 }

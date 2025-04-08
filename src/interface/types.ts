@@ -39,13 +39,14 @@ import {
 } from '../../prisma/prisma';
 import {
   BarangayOptionResponse,
+  CalibratedResult,
   RespondentResponseProps,
   TeamProps,
   TeamValidationStat,
   ValidatedTeamMembers,
   VotersProps,
 } from './data';
-import { BlackList, TeamlLeaderQRcodes } from '@prisma/client';
+import { BlackList, CollectionBatch, TeamlLeaderQRcodes } from '@prisma/client';
 
 export type ResolverFn<Parent, Args, Context, Result> = (
   parent: Parent,
@@ -230,6 +231,38 @@ export type Resolvers = {
       {},
       Team[]
     >;
+    teamCount: ResolverFn<
+      {},
+      {
+        zipCode: string;
+        barangayId: string;
+        purokId: string;
+        level: string;
+        query: string;
+        skip: number;
+        candidate: string;
+        withIssues: boolean;
+        members: string;
+      },
+      {},
+      number
+    >;
+    teamMembersCount: ResolverFn<
+      {},
+      {
+        zipCode: string;
+        barangayId: string;
+        purokId: string;
+        level: string;
+        query: string;
+        skip: number;
+        candidate: string;
+        withIssues: boolean;
+        members: string;
+      },
+      {},
+      number
+    >;
     candidates: ResolverFn<{}, { zipCode: string }, {}, Candidates[]>;
     team: ResolverFn<{}, { id: string }, {}, Team | null>;
     validationList: ResolverFn<{}, { id: string }, {}, Validation[]>;
@@ -283,10 +316,18 @@ export type Resolvers = {
       TeamLeader[]
     >;
     accountHandleTeamList: ResolverFn<{}, {}, {}, AccountHandleTeam[]>;
-    figureHeads: ResolverFn<{}, { level: number; barangayId: string }, {}, TeamLeader[]>;
+    figureHeads: ResolverFn<{}, { level: number; barangayId: string }, {}, Team[]>;
     butaws: ResolverFn<{}, {}, {}, Voters[]>;
     getTLQrCode: ResolverFn<{}, { skip: number; barangayId: string }, {}, TeamlLeaderQRcodes[]>;
     getVoterQRcode: ResolverFn<{}, { skip: number; barangayId: string }, {}, QRcode[]>;
+    getAllCollBatch: ResolverFn<{}, { zipCode: number }, {}, CollectionBatch[]>;
+    getCollReport: ResolverFn<{}, { zipCode: number }, {}, Barangays[]>;
+    calibrateTeamArea: ResolverFn<
+      {},
+      { zipCode: number; barangayId: string; level: number },
+      {},
+      CalibratedResult[]
+    >;
   };
   Mutation: {
     createVoter: ResolverFn<{}, Voters, {}, Voters>;
@@ -895,7 +936,7 @@ export type Resolvers = {
       {},
       string
     >;
-    calibrateTeamArea: ResolverFn<{}, { zipCode: number }, {}, TeamLeader[]>;
+
     changeMerits: ResolverFn<{}, { id: string[]; level: number }, {}, string>;
     transferSelectMembers: ResolverFn<
       {},
@@ -916,6 +957,25 @@ export type Resolvers = {
       {},
       string
     >;
+    refreshVoter: ResolverFn<
+      {},
+      {
+        ids: string[];
+        connection: boolean;
+        team: boolean;
+        header: boolean;
+      },
+      {},
+      string
+    >;
+    resetQrCode: ResolverFn<{}, {}, {}, string>;
+    newCollectionbatch: ResolverFn<
+      {},
+      { zipCode: number; title: string; stab: string },
+      {},
+      String
+    >;
+    collectAndCheckStab: ResolverFn<{}, { qrId: QRcode; code: string; method: number }, {}, string>;
   };
   Voter: {
     votersCount: ResolverFn<{}, {}, {}, number>;
@@ -995,6 +1055,17 @@ export type Resolvers = {
     teams: ResolverFn<Barangays, { level: number | undefined }, {}, Team[]>;
     teamValidationStat: ResolverFn<Barangays, {}, {}, TeamValidationStat>;
     teamComment: ResolverFn<Barangays, {}, {}, VoterRecords[]>;
+    collectionResult: ResolverFn<
+      Barangays,
+      {},
+      {},
+      {
+        stabOne: number;
+        stabTwo: number;
+        genQrCode: number;
+        allTeamMembers: number;
+      }
+    >;
   };
   Purok: {
     purokDraftedVotersCount: ResolverFn<Purok, {}, {}, number>;

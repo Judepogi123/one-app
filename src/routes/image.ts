@@ -289,13 +289,10 @@ router.get('/generate-stab', async (req: Request, res: Response) => {
           let tempTwo = voter.QRcode.find((q: { stamp: number }) => q.stamp === 2)?.qrCode || '';
 
           if (!tempOne || !tempTwo) {
-            tempOne = await qrcode.toDataURL(voter.id);
-            tempTwo = await qrcode.toDataURL(voter.id);
-
-            await prisma.$transaction([
+            const [qrOne, qrTwo] = await prisma.$transaction([
               prisma.qRcode.create({
                 data: {
-                  qrCode: tempOne,
+                  qrCode: '',
                   votersId: voter.id,
                   stamp: 1,
                   voterNumber: voter.idNumber,
@@ -303,15 +300,32 @@ router.get('/generate-stab', async (req: Request, res: Response) => {
               }),
               prisma.qRcode.create({
                 data: {
-                  qrCode: tempTwo,
+                  qrCode: '',
                   votersId: voter.id,
                   stamp: 2,
                   voterNumber: voter.idNumber,
                 },
               }),
             ]);
-          }
+            tempOne = await qrcode.toDataURL(qrOne.id);
+            tempTwo = await qrcode.toDataURL(qrTwo.id);
 
+            await prisma.$transaction([
+              prisma.qRcode.update({
+                where: { id: qrOne.id },
+                data: {
+                  qrCode: tempOne,
+                },
+              }),
+              prisma.qRcode.update({
+                where: { id: qrTwo.id },
+                data: {
+                  qrCode: tempTwo,
+                },
+              }),
+            ]);
+          }
+          console.log({ tempOne, tempTwo });
           const canvas = createCanvas(stabW * (300 / 72), stabH * (300 / 72));
           const ctx = canvas.getContext('2d');
           ctx.scale(300 / 72, 300 / 72);
@@ -325,11 +339,14 @@ router.get('/generate-stab', async (req: Request, res: Response) => {
           const qrY = stabH / 2 - qrSize / 2;
 
           for (let pos = 0; pos < 2; pos++) {
-            const base64Data =
-              pos === 0
-                ? tempOne.replace(/^data:image\/png;base64,/, '')
-                : tempTwo.replace(/^data:image\/png;base64,/, '');
-            const qrImage = await loadImage(Buffer.from(base64Data, 'base64'));
+            const qrBase64 = pos === 0 ? tempOne : tempTwo;
+
+            if (!qrBase64.startsWith('data:image/png;base64,')) {
+              console.error('Invalid QR Code format:', qrBase64);
+              throw new Error('Invalid QR Code format');
+            }
+
+            const qrImage = await loadImage(qrBase64);
             const qrX = qrMargin + pos * (stabW / 2);
             ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
 

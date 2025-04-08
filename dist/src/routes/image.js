@@ -255,12 +255,10 @@ router.get('/generate-stab', (req, res) => __awaiter(void 0, void 0, void 0, fun
                     let tempOne = ((_g = voter.QRcode.find((q) => q.stamp === 1)) === null || _g === void 0 ? void 0 : _g.qrCode) || '';
                     let tempTwo = ((_h = voter.QRcode.find((q) => q.stamp === 2)) === null || _h === void 0 ? void 0 : _h.qrCode) || '';
                     if (!tempOne || !tempTwo) {
-                        tempOne = yield qrcode_1.default.toDataURL(voter.id);
-                        tempTwo = yield qrcode_1.default.toDataURL(voter.id);
-                        yield prisma_1.prisma.$transaction([
+                        const [qrOne, qrTwo] = yield prisma_1.prisma.$transaction([
                             prisma_1.prisma.qRcode.create({
                                 data: {
-                                    qrCode: tempOne,
+                                    qrCode: '',
                                     votersId: voter.id,
                                     stamp: 1,
                                     voterNumber: voter.idNumber,
@@ -268,14 +266,31 @@ router.get('/generate-stab', (req, res) => __awaiter(void 0, void 0, void 0, fun
                             }),
                             prisma_1.prisma.qRcode.create({
                                 data: {
-                                    qrCode: tempTwo,
+                                    qrCode: '',
                                     votersId: voter.id,
                                     stamp: 2,
                                     voterNumber: voter.idNumber,
                                 },
                             }),
                         ]);
+                        tempOne = yield qrcode_1.default.toDataURL(qrOne.id);
+                        tempTwo = yield qrcode_1.default.toDataURL(qrTwo.id);
+                        yield prisma_1.prisma.$transaction([
+                            prisma_1.prisma.qRcode.update({
+                                where: { id: qrOne.id },
+                                data: {
+                                    qrCode: tempOne,
+                                },
+                            }),
+                            prisma_1.prisma.qRcode.update({
+                                where: { id: qrTwo.id },
+                                data: {
+                                    qrCode: tempTwo,
+                                },
+                            }),
+                        ]);
                     }
+                    console.log({ tempOne, tempTwo });
                     const canvas = (0, canvas_1.createCanvas)(stabW * (300 / 72), stabH * (300 / 72));
                     const ctx = canvas.getContext('2d');
                     ctx.scale(300 / 72, 300 / 72);
@@ -286,10 +301,12 @@ router.get('/generate-stab', (req, res) => __awaiter(void 0, void 0, void 0, fun
                     const qrMargin = 30;
                     const qrY = stabH / 2 - qrSize / 2;
                     for (let pos = 0; pos < 2; pos++) {
-                        const base64Data = pos === 0
-                            ? tempOne.replace(/^data:image\/png;base64,/, '')
-                            : tempTwo.replace(/^data:image\/png;base64,/, '');
-                        const qrImage = yield (0, canvas_1.loadImage)(Buffer.from(base64Data, 'base64'));
+                        const qrBase64 = pos === 0 ? tempOne : tempTwo;
+                        if (!qrBase64.startsWith('data:image/png;base64,')) {
+                            console.error('Invalid QR Code format:', qrBase64);
+                            throw new Error('Invalid QR Code format');
+                        }
+                        const qrImage = yield (0, canvas_1.loadImage)(qrBase64);
                         const qrX = qrMargin + pos * (stabW / 2);
                         ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
                         ctx.font = 'bold 10px Arial';

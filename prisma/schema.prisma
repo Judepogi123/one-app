@@ -194,6 +194,8 @@ model Voters {
   purok                  Purok?                   @relation(fields: [purokId], references: [id], onDelete: Cascade)
   Team                   Team?                    @relation(fields: [teamId], references: [id])
   Witness                Witness?
+  StabCollection         StabCollection[]
+  StabDistribution       StabDistribution[]
 }
 
 model Purok {
@@ -245,6 +247,7 @@ model Municipals {
   ValidationResult     ValidationResult[]
   ValidationTimeInput  ValidationTimeInput[]
   voters               Voters[]
+  CollectionBatch      CollectionBatch[]
 }
 
 model Barangays {
@@ -287,6 +290,9 @@ model Barangays {
   ValidationResult     ValidationResult[]
   ValidationTimeInput  ValidationTimeInput[]
   voters               Voters[]
+  StabCollection       StabCollection[]
+  CollectionBatchTeam  CollectionBatchTeam[]
+  StabDistribution     StabDistribution[]
 }
 
 model HouseHold {
@@ -375,6 +381,10 @@ model Team {
   VotersToUpdate       ValidationResult[]
   ValidationTimeInput  ValidationTimeInput[]
   voters               Voters[]
+  StabCollection       StabCollection[]
+  TeamBlackList        TeamBlackList[]
+  CollectionBatchTeam  CollectionBatchTeam[]
+  StabDistribution     StabDistribution[]
 }
 
 model TeamJoinDate {
@@ -505,6 +515,14 @@ model BlackList {
   voter        Voters     @relation(fields: [votersId], references: [id])
 }
 
+model TeamBlackList {
+  id        String   @id @default(uuid())
+  team      Team?    @relation(fields: [teamId], references: [id])
+  teamId    String?
+  timestamp DateTime @default(now())
+  reason    String?  @default("Questionable")
+}
+
 model BarangayCoor {
   id           String      @id @default(cuid())
   municipalsId Int
@@ -528,6 +546,59 @@ model QRcode {
   qrCode          String
   voterNumber     String?
   voter           Voters   @relation(fields: [votersId], references: [id], onDelete: Cascade)
+}
+
+model StabCollection {
+  id                    String               @id @default(uuid())
+  voter                 Voters               @relation(fields: [votersId], references: [id])
+  votersId              String
+  stamp                 Int
+  barangay              Barangays            @relation(fields: [barangaysId], references: [id])
+  barangaysId           String
+  team                  Team                 @relation(fields: [teamId], references: [id])
+  timestamp             DateTime
+  teamId                String
+  CollectionBatchTeam   CollectionBatchTeam? @relation(fields: [collectionBatchTeamId], references: [id])
+  collectionBatchTeamId String?
+  batch                 CollectionBatch?     @relation(fields: [collectionBatchId], references: [id])
+  collectionBatchId     String?
+}
+
+model StabDistribution {
+  id          String     @id @default(uuid())
+  voter       Voters?    @relation(fields: [votersId], references: [id])
+  votersId    String?
+  image_path  String?
+  barangay    Barangays? @relation(fields: [barangaysId], references: [id])
+  barangaysId String?
+  team        Team?      @relation(fields: [teamId], references: [id])
+  teamId      String?
+  status      Int        @default(1)
+}
+
+model CollectionBatchTeam {
+  id                String           @id @default(uuid())
+  barangay          Barangays?       @relation(fields: [barangaysId], references: [id])
+  team              Team?            @relation(fields: [teamId], references: [id])
+  teamId            String?
+  batch             CollectionBatch? @relation(fields: [collectionBatchId], references: [id])
+  collectionBatchId String?
+  stab              Int              @default(1)
+  level             Int              @default(1)
+  timestamp         DateTime         @default(now())
+  memberStab        StabCollection[]
+  barangaysId       String?
+}
+
+model CollectionBatch {
+  id                  String                @id @default(uuid())
+  municipal           Municipals            @relation(fields: [municipalsId], references: [id])
+  timestamp           DateTime?             @default(now())
+  title               String?               @default("Stab Collection")
+  stab                Int                   @default(1)
+  municipalsId        Int
+  CollectionBatchTeam CollectionBatchTeam[]
+  StabCollection      StabCollection[]
 }
 
 model SurveyorNumber {

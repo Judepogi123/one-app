@@ -39,11 +39,14 @@ import {
   AccountValidateTeam,
   ValdilatedMembers,
   UntrackedVoter,
-  TeamLeaderAttendance
-} from "@prisma/client";
+  TeamLeaderAttendance,
+  StabCollection,
+  CollectionBatch,
+  CollectionBatchTeam,
+} from '@prisma/client';
 
 const prisma = new PrismaClient({
-  log: ["info"],
+  log: ['info'],
 });
 
 export {
@@ -86,5 +89,8 @@ export {
   AccountValidateTeam,
   ValdilatedMembers,
   UntrackedVoter,
-  TeamLeaderAttendance
+  TeamLeaderAttendance,
+  StabCollection,
+  CollectionBatch,
+  CollectionBatchTeam,
 };
