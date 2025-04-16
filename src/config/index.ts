@@ -6120,17 +6120,19 @@ const resolvers: Resolvers = {
       return 'OK';
     },
     newMachine: async (_, { zipCode, precints, machineNo, barangaysId }) => {
-      console.log({ zipCode, precints, machineNo, barangaysId });
-
       const checkMachine = await prisma.machine.findFirst({
         where: {
           number: machineNo,
           municipalsId: zipCode,
         },
       });
+      console.log({ zipCode, precints, machineNo, barangaysId });
+
       if (checkMachine) {
         throw new GraphQLError('Machine already exist');
       }
+      console.log(checkMachine);
+
       const newMachineData = await prisma.machine.create({
         data: {
           municipalsId: zipCode,

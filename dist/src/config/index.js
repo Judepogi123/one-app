@@ -5547,16 +5547,17 @@ const resolvers = {
             return 'OK';
         }),
         newMachine: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode, precints, machineNo, barangaysId }) {
-            console.log({ zipCode, precints, machineNo, barangaysId });
             const checkMachine = yield prisma_1.prisma.machine.findFirst({
                 where: {
                     number: machineNo,
                     municipalsId: zipCode,
                 },
             });
+            console.log({ zipCode, precints, machineNo, barangaysId });
             if (checkMachine) {
                 throw new graphql_1.GraphQLError('Machine already exist');
             }
+            console.log(checkMachine);
             const newMachineData = yield prisma_1.prisma.machine.create({
                 data: {
                     municipalsId: zipCode,
