@@ -6120,48 +6120,62 @@ const resolvers: Resolvers = {
       return 'OK';
     },
     newMachine: async (_, { zipCode, precints, machineNo, barangaysId }) => {
-      const checkMachine = await prisma.machine.findFirst({
-        where: {
-          number: machineNo,
-          municipalsId: zipCode,
-        },
-      });
-      console.log({ zipCode, precints, machineNo, barangaysId });
+      try {
+        if (!prisma) {
+          throw new Error('Prisma client is not initialized');
+        }
 
-      if (checkMachine) {
-        throw new GraphQLError('Machine already exist');
-      }
-      console.log(checkMachine);
-
-      const newMachineData = await prisma.machine.create({
-        data: {
-          municipalsId: zipCode,
-          barangaysId: barangaysId,
-          number: machineNo,
-        },
-      });
-      if (!newMachineData) {
-        throw new GraphQLError('Failed to create new machine');
-      }
-      const existingPrecints = await prisma.precents.findMany({
-        where: {
-          municipalsId: zipCode,
-          precintNumber: { in: precints },
-        },
-      });
-      const existedPrecints = new Set(existingPrecints.map((item) => item.id));
-      const newPrecints = precints.filter((item) => !existedPrecints.has(item));
-      await prisma.precents.createMany({
-        data: newPrecints.map((item) => {
-          return {
+        const checkMachine = await prisma.machine.findFirst({
+          where: {
+            number: machineNo,
             municipalsId: zipCode,
-            precintNumber: item,
-            machineId: newMachineData.id,
-          };
-        }),
-        skipDuplicates: true,
-      });
-      return 'OK';
+          },
+        });
+
+        console.log({ zipCode, precints, machineNo, barangaysId });
+
+        if (checkMachine) {
+          throw new GraphQLError('Machine already exist');
+        }
+
+        const newMachineData = await prisma.machine.create({
+          data: {
+            municipalsId: zipCode,
+            barangaysId: barangaysId,
+            number: machineNo,
+          },
+        });
+
+        if (!newMachineData) {
+          throw new GraphQLError('Failed to create new machine');
+        }
+
+        const existingPrecints = await prisma.precents.findMany({
+          where: {
+            municipalsId: zipCode,
+            precintNumber: { in: precints },
+          },
+        });
+
+        const existedPrecints = new Set(existingPrecints.map((item) => item.id));
+        const newPrecints = precints.filter((item) => !existedPrecints.has(item));
+
+        if (newPrecints.length > 0) {
+          await prisma.precents.createMany({
+            data: newPrecints.map((item) => ({
+              municipalsId: zipCode,
+              precintNumber: item,
+              machineId: newMachineData.id,
+            })),
+            skipDuplicates: true,
+          });
+        }
+
+        return 'OK';
+      } catch (error) {
+        console.error('Error in newMachine resolver:', error);
+        throw new GraphQLError(error as unknown as string);
+      }
     },
     editMachine: async (_, { id, precincts, newPrecints, result, precinctMethod }) => {
       const machine = await prisma.machine.findUnique({
