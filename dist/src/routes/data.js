@@ -105,4 +105,9 @@ route.post('/member-stabs', (req, res) => __awaiter(void 0, void 0, void 0, func
         });
     }
 }));
+route.post('update-voter-precincts', () => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+    }
+    catch (error) { }
+}));
 exports.default = route;

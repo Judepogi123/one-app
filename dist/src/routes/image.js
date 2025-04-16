@@ -204,6 +204,7 @@ router.get('/generate-stab', (req, res) => __awaiter(void 0, void 0, void 0, fun
     try {
         const { id } = req.query;
         const CM_TO_PT = 28.3465;
+        console.log({ id });
         if (!id)
             return res.status(400).send('Bad request');
         const [stabW, stabH] = [9 * CM_TO_PT, 3.5 * CM_TO_PT];

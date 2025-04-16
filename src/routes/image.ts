@@ -223,6 +223,7 @@ router.get('/generate-stab', async (req: Request, res: Response) => {
   try {
     const { id } = req.query;
     const CM_TO_PT = 28.3465;
+    console.log({ id });
 
     if (!id) return res.status(400).send('Bad request');
 

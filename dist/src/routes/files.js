@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const multer_1 = __importDefault(require("multer"));
 const pdfkit_1 = __importDefault(require("pdfkit"));
+const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const xlsx_1 = __importDefault(require("xlsx"));
 const exceljs_1 = __importDefault(require("exceljs"));
@@ -108,6 +109,71 @@ exports.default = (io) => {
         catch (error) {
             console.log(error);
             res.status(500).send('Internal Server Error');
+        }
+    }));
+    router.post('/update-voter-precincts', upload.single('file'), (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+        if (!req.file) {
+            return res.status(400).send('No file uploaded.');
+        }
+        const filePath = path_1.default.join(uploadDir, req.file.filename);
+        try {
+            const workbook = xlsx_1.default.readFile(filePath);
+            const sheets = workbook.SheetNames;
+            const updateResults = { success: 0, failed: 0 };
+            // Process each sheet sequentially (not in parallel)
+            for (const sheetName of sheets) {
+                const worksheet = workbook.Sheets[sheetName];
+                const data = xlsx_1.default.utils.sheet_to_json(worksheet);
+                console.log(`Processing ${data.length} records from sheet ${sheetName}`);
+                const chunkSize = 100;
+                // Process data in chunks of 100
+                for (let i = 0; i < data.length; i += chunkSize) {
+                    const chunk = data.slice(i, i + chunkSize);
+                    console.log(`Processing chunk starting at record ${i + 1}`);
+                    // Process each voter in the current chunk
+                    for (const voter of chunk) {
+                        try {
+                            const [existingVoter, precinct] = yield prisma_1.prisma.$transaction([
+                                prisma_1.prisma.voters.findFirst({
+                                    where: { idNumber: voter.No },
+                                }),
+                                prisma_1.prisma.precents.findFirst({
+                                    where: { precintNumber: voter['PREC.'] },
+                                }),
+                            ]);
+                            if (!existingVoter || !precinct) {
+                                console.log(`Skipping - Voter or precinct not found for ID: ${voter.No}`);
+                                updateResults.failed++;
+                                continue;
+                            }
+                            yield prisma_1.prisma.voters.update({
+                                where: { id: existingVoter.id },
+                                data: { precintsId: precinct.id },
+                            });
+                            updateResults.success++;
+                        }
+                        catch (error) {
+                            console.error(`Error updating voter ${voter.No}:`, error);
+                            updateResults.failed++;
+                        }
+                    }
+                }
+            }
+            res.status(200).json({
+                message: 'Voter precinct update completed',
+                results: updateResults,
+            });
+        }
+        catch (error) {
+            console.error('Error processing file:', error);
+            res.status(500).send('Internal Server Error');
+        }
+        finally {
+            // Clean up the uploaded file
+            fs_1.default.unlink(filePath, (err) => {
+                if (err)
+                    console.error('Error deleting file:', err);
+            });
         }
     }));
     router.post('/draft', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -623,6 +689,7 @@ exports.default = (io) => {
         const candidate = req.body.candidate;
         const barangayList = req.body.barangayList;
         const parsedData = JSON.parse(barangayList);
+        console.log(JSON.stringify(parsedData, null, 2));
         try {
             const workbook = new exceljs_1.default.Workbook();
             workbook.created = new Date();
@@ -657,7 +724,10 @@ exports.default = (io) => {
                 { header: '5', key: 'equalFive', width: 10 },
                 { header: '4', key: 'belowFive', width: 10 },
                 { header: '1-3', key: 'belowEqualThree', width: 10 },
-                { header: 'Population', key: 'population', width: 8 },
+                { header: '0', key: 'noMembers', width: 10 },
+                { header: 'OR', key: 'orMembers', width: 10 },
+                { header: 'Dead inTeam', key: 'orMembers', width: 12 },
+                { header: 'Population', key: 'population', width: 10 },
             ];
             worksheet.getRow(1).eachCell((cell) => {
                 cell.font = { bold: true }; // Make text bold
@@ -684,6 +754,8 @@ exports.default = (io) => {
                     equalFive: item.teamStat.equalToMin,
                     belowFive: item.teamStat.belowMin,
                     belowEqualThree: item.teamStat.threeAndBelow,
+                    noMembers: item.teamStat.noMembers,
+                    orMembers: item.supporters.orMembers,
                     population: item.barangayVotersCount,
                 };
             });
@@ -705,6 +777,8 @@ exports.default = (io) => {
                 equalFive: sheetData.reduce((sum, row) => sum + (row.equalFive || 0), 0),
                 belowFive: sheetData.reduce((sum, row) => sum + (row.belowFive || 0), 0),
                 belowEqualThree: sheetData.reduce((sum, row) => sum + (row.belowEqualThree || 0), 0),
+                noMembers: sheetData.reduce((sum, row) => sum + (row.noMembers || 0), 0),
+                orMembers: sheetData.reduce((sum, row) => sum + (row.orMembers || 0), 0),
                 population: sheetData.reduce((sum, row) => sum + (row.population || 0), 0),
             });
             // Style the footer row
@@ -1356,6 +1430,205 @@ exports.default = (io) => {
             worksheet.addRows(grouped);
             res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             res.setHeader('Content-Disposition', 'attachment; filename=SupporterReport.xlsx');
+            yield workbook.xlsx.write(res);
+            res.end();
+        }
+        catch (error) {
+            console.log(error);
+            res.status(500).send('Internal Server Error');
+        }
+    })), router.post('/barangay-validation-result', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+        try {
+            const barangayId = req.body.barangayId;
+            const untracked = req.body.untracked;
+            const orMembers = req.body.orMembers;
+            const delisted = req.body.delisted;
+            const filtered = {};
+            console.log({ barangayId, untracked, orMembers, delisted });
+            if (!barangayId) {
+                return res.status(400).send('Bad request');
+            }
+            const barangay = yield prisma_1.prisma.barangays.findUnique({
+                where: {
+                    id: barangayId,
+                },
+            });
+            if (!barangay) {
+                return res.status(404).send('Barangay not found!');
+            }
+            if (delisted) {
+                filtered.DelistedVoter = {
+                    select: {
+                        id: true,
+                    },
+                };
+            }
+            if (untracked) {
+                filtered.UntrackedVoter = {
+                    select: {
+                        id: true,
+                    },
+                };
+            }
+            if (orMembers) {
+                filtered.oor = 'YES';
+            }
+            const teams = yield prisma_1.prisma.team.findMany({
+                where: {
+                    barangaysId: barangay.id,
+                    level: 1,
+                },
+                include: {
+                    voters: {
+                        where: {
+                            level: 0,
+                        },
+                        select: {
+                            firstname: true,
+                            oor: true,
+                            lastname: true,
+                            idNumber: true,
+                            level: true,
+                            status: true,
+                            DelistedVoter: {
+                                select: {
+                                    id: true,
+                                },
+                            },
+                            UntrackedVoter: {
+                                select: {
+                                    id: true,
+                                },
+                            },
+                            ValdilatedMembers: {
+                                select: {
+                                    id: true,
+                                },
+                            },
+                        },
+                    },
+                    TeamLeader: {
+                        select: {
+                            voter: {
+                                select: {
+                                    firstname: true,
+                                    lastname: true,
+                                    idNumber: true,
+                                    level: true,
+                                },
+                            },
+                            purokCoors: {
+                                select: {
+                                    voter: {
+                                        select: {
+                                            firstname: true,
+                                            lastname: true,
+                                            idNumber: true,
+                                            level: true,
+                                        },
+                                    },
+                                },
+                            },
+                            barangayCoor: {
+                                select: {
+                                    voter: {
+                                        select: {
+                                            firstname: true,
+                                            lastname: true,
+                                            idNumber: true,
+                                            level: true,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+                orderBy: {
+                    TeamLeader: {
+                        voter: {
+                            lastname: 'asc',
+                        },
+                    },
+                },
+            });
+            if (teams.length === 0) {
+                return res.status(404).send('No Teams found!');
+            }
+            const workbook = new exceljs_1.default.Workbook();
+            workbook.created = new Date();
+            const worksheet = workbook.addWorksheet(barangay.name, {
+                pageSetup: {
+                    paperSize: 9,
+                    orientation: 'landscape',
+                    fitToPage: false,
+                    showGridLines: true,
+                    margins: {
+                        left: 0.6,
+                        right: 0.6,
+                        top: 0.5,
+                        bottom: 0.5,
+                        header: 0.3,
+                        footer: 0.3,
+                    },
+                },
+                headerFooter: {
+                    firstHeader: ``,
+                    firstFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+                    oddHeader: `&L&B${barangay.name} Voter's List`,
+                    oddFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+                },
+            });
+            worksheet.columns = [
+                { header: 'Teams', key: 'tl', width: 50 },
+                // { header: "Members", key: "members", width: 40 },
+                { header: 'Tags', key: 'members', width: 15 },
+            ];
+            const dataRows = [];
+            teams.forEach((team, i) => {
+                var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
+                console.log(JSON.stringify(team, null, 2));
+                const bc = ((_b = (_a = team.TeamLeader) === null || _a === void 0 ? void 0 : _a.barangayCoor) === null || _b === void 0 ? void 0 : _b.voter)
+                    ? `     ${(0, data_1.handleLevel)((_c = team.TeamLeader.barangayCoor) === null || _c === void 0 ? void 0 : _c.voter.level)} = ${(_d = team.TeamLeader.barangayCoor) === null || _d === void 0 ? void 0 : _d.voter.idNumber} - ${(_e = team.TeamLeader.barangayCoor) === null || _e === void 0 ? void 0 : _e.voter.lastname}, ${(_f = team.TeamLeader.barangayCoor) === null || _f === void 0 ? void 0 : _f.voter.firstname}`
+                    : 'No BC';
+                const pc = ((_h = (_g = team.TeamLeader) === null || _g === void 0 ? void 0 : _g.purokCoors) === null || _h === void 0 ? void 0 : _h.voter)
+                    ? `     ${(0, data_1.handleLevel)((_j = team.TeamLeader.purokCoors) === null || _j === void 0 ? void 0 : _j.voter.level)} = ${(_k = team.TeamLeader.purokCoors) === null || _k === void 0 ? void 0 : _k.voter.idNumber} - ${(_l = team.TeamLeader.purokCoors) === null || _l === void 0 ? void 0 : _l.voter.lastname}, ${(_m = team.TeamLeader.purokCoors) === null || _m === void 0 ? void 0 : _m.voter.firstname}`
+                    : 'No PC';
+                const teamLeader = ((_o = team.TeamLeader) === null || _o === void 0 ? void 0 : _o.voter)
+                    ? `${i + 1}. ${(0, data_1.handleLevel)(team.TeamLeader.voter.level)} = ${team.TeamLeader.voter.idNumber} - ${team.TeamLeader.voter.lastname}, ${team.TeamLeader.voter.firstname} (${team.voters.length})`
+                    : 'No Leader';
+                // Define proper type for voter
+                const members = team.voters.map((voter) => `     ${voter === null || voter === void 0 ? void 0 : voter.idNumber} - ${voter === null || voter === void 0 ? void 0 : voter.lastname}, ${voter === null || voter === void 0 ? void 0 : voter.firstname}`);
+                const membersTags = team.voters.map((voter) => {
+                    const tags = [];
+                    if ((voter === null || voter === void 0 ? void 0 : voter.status) === 0)
+                        tags.push('D');
+                    if ((voter === null || voter === void 0 ? void 0 : voter.oor) === 'YES')
+                        tags.push('OR');
+                    if ((voter === null || voter === void 0 ? void 0 : voter.DelistedVoter.length) > 0)
+                        tags.push('DL');
+                    if ((voter === null || voter === void 0 ? void 0 : voter.UntrackedVoter.length) > 0)
+                        tags.push('UN');
+                    // Add other conditions as needed
+                    return `[${tags.join(',')}]`;
+                });
+                dataRows.push([bc]);
+                dataRows.push([pc]);
+                dataRows.push([teamLeader]);
+                dataRows.push(['Members']);
+                team.timestamp &&
+                    dataRows.push([`Joined at: ${(0, data_1.formatToLocalPHTime)(team.timestamp)}`]);
+                // Add members with their tags
+                team.voters.forEach((voter, index) => {
+                    dataRows.push([members[index], membersTags[index]]);
+                });
+                dataRows.push(['']); // Empty row between teams
+            });
+            worksheet.addRows(dataRows);
+            // Set the response headers
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', `attachment; filename=${barangay.name}_validation.xlsx`);
+            // Send the Excel file
             yield workbook.xlsx.write(res);
             res.end();
         }

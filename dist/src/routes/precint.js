@@ -16,14 +16,13 @@ const express_1 = __importDefault(require("express"));
 const client_1 = require("@prisma/client");
 const router = express_1.default.Router();
 const prisma = new client_1.PrismaClient();
-router.post("/new", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/new', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const data = yield prisma.precents.create({
             data: {
                 precintNumber: req.body.precintNumber,
                 municipalsId: req.body.municipalId,
-                barangayId: req.body.barangayId,
-                id: req.body.precintNumber
+                id: req.body.precintNumber,
             },
         });
         if (data) {
@@ -34,7 +33,7 @@ router.post("/new", (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
     catch (error) {
         console.log(error);
-        res.status(500).send("Internal server error");
+        res.status(500).send('Internal server error');
     }
 }));
 exports.default = router;

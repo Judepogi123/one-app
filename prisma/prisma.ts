@@ -43,6 +43,10 @@ import {
   StabCollection,
   CollectionBatch,
   CollectionBatchTeam,
+  BlackList,
+  CollectionResult,
+  TeamlLeaderQRcodes,
+  Machine,
 } from '@prisma/client';
 
 const prisma = new PrismaClient({
@@ -93,4 +97,8 @@ export {
   StabCollection,
   CollectionBatch,
   CollectionBatchTeam,
+  BlackList,
+  CollectionResult,
+  TeamlLeaderQRcodes,
+  Machine,
 };

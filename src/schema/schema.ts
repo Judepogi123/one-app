@@ -133,6 +133,7 @@ type ValdilatedMember {
     WhiteList: [BlackList!]
     team: Team
     TeamLeader: TeamLeader
+    precinct: Precent
   }
 
   type BlackList {
@@ -205,7 +206,19 @@ type ValdilatedMember {
     teamValidationStat: TeamValidationStat
     teamComment: [VoterRecords!]
     collectionResult(id: String): BarangayCollResult
+    collectionStabVarian: [CollectionResult!]
+    machines: [Machine!]
+    precinct(precinctId: String): Precent
   }
+
+  type CollectionResult {
+  id: ID!
+  barangay: Barangay
+  barangaysId: ID
+  timestamp: String
+  result: Int!
+  variance: String
+}
 
   type BarangayCollResult {
     stabOne: Int
@@ -237,9 +250,15 @@ type ValdilatedMember {
     barangayId: ID!
     municipal: Municipal!
     municipalsId: Int!
-    voters: [Voter!]!
+    voters: [Voter!]
     purok: Purok!
     purokId: Int!
+    precintNumber: String
+    _count: Int
+  }
+
+  type VotersCount {
+    Voters: Int
   }
 
   type BatchYear {
@@ -354,6 +373,7 @@ type Team {
   AccountHandleTeam: AccountHandleTeam
   AccountValidateTeam(id: String): AccountValidateTeam
   untrackedCount: Int
+  stabStatus: TeamStabStatus
 }
 
 type TeamLeaderQRcodes {
@@ -364,6 +384,12 @@ type TeamLeaderQRcodes {
 
 type VoterRecordsCount {
   voters: Int
+}
+
+type TeamStabStatus {
+  stabOnecollected: Int
+  stabTwocollected: Int
+  released: Int
 }
 
 type ValdiatedTeams {
@@ -461,9 +487,25 @@ type ValdiatedTeams {
     getAllCollBatch(zipCode: Int): [CollectionBatch!]
     getCollReport(zipCode: Int): [Barangay!]
     calibrateTeamArea(zipCode: Int, barangayId: String, level: Int): [CalibratedResult!]
+    getAllMachines(zipCode: Int): [Machine!]
   }
 
+    type Machine {
+    id: ID!
+    number: Int
+    precincts: [Precent!]
+    regVoters: Int
+    municipal: Municipal!
+    municipalsId: Int
+    location: Barangay
+    barangaysId: String
+    result: Int
+    _count: PrecintCount
+  }
 
+  type PrecintCount {
+    prints: Int
+  }
   type TeamListResult {
     teamList: [Team!]
     teamCount: Int
@@ -710,6 +752,10 @@ type BarangayCoor {
     resetQrCode: String!
     newCollectionbatch(zipCode: Int, title: String, stab: String): String!
     collectAndCheckStab(qrCode: String, code: String, method: Int): String!
+    editBarangayCollectionStab(barangayId: String, collId: String, value: Int, variance: String): String!
+    newMachine(zipCode: Int,precints: [String!], machineNo: Int,barangaysId:String): String!
+    editMachine(id: String!, precincts: [String], newPrecints: [String], result: Int, precinctMethod: Int): String!
+    removeMachine(id: String): String
   }
 
   type CalibratedResult{
@@ -763,6 +809,9 @@ type AllSupporters {
   tl: Int
   withTeams: Int
   voterWithoutTeam: Int
+  orMembers: Int
+  deadWithTeam: Int
+  DLwithTeam: Int
 }
 
 type AllTeamStatus {
@@ -774,6 +823,7 @@ type AllTeamStatus {
   belowMin: Int
   threeAndBelow: Int
   clean: Int
+  noMembers: Int
 }
 
   type QRcode {

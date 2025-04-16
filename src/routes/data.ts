@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import { prisma, TeamLeaderAttendance, StabCollection, QRcode } from '../../prisma/prisma';
+
 const route = express.Router();
 
 route.post('/attendance', async (req: Request, res: Response) => {
@@ -99,6 +100,11 @@ route.post('/member-stabs', async (req: Request, res: Response) => {
       message: 'Internal server error',
     });
   }
+});
+
+route.post('update-voter-precincts', async () => {
+  try {
+  } catch (error) {}
 });
 
 export default route;

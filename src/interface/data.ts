@@ -24,6 +24,8 @@ interface AllSupporters {
   tl: number;
   withTeams: number;
   voterWithoutTeam: number;
+  orMembers: number;
+  deadWithTeam: number;
 }
 
 export interface VotersProps {
@@ -67,6 +69,7 @@ export interface TeamStatProps {
   equalToMin: number;
   belowMin: number;
   threeAndBelow: number;
+  noMembers: number;
 }
 
 export interface TeamsProps {
@@ -154,6 +157,7 @@ export interface DataProps {
   saveStatus: string;
   [key: string]: string | number | null | undefined;
   candidateId?: string;
+  'PREC.': string | undefined;
 }
 
 export interface UpdateDataProps {

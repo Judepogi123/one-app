@@ -36,6 +36,11 @@ import {
   AccountValidateTeam,
   ValdilatedMembers,
   UntrackedVoter,
+  BlackList,
+  CollectionBatch,
+  CollectionResult,
+  TeamlLeaderQRcodes,
+  Machine,
 } from '../../prisma/prisma';
 import {
   BarangayOptionResponse,
@@ -46,7 +51,6 @@ import {
   ValidatedTeamMembers,
   VotersProps,
 } from './data';
-import { BlackList, CollectionBatch, TeamlLeaderQRcodes } from '@prisma/client';
 
 export type ResolverFn<Parent, Args, Context, Result> = (
   parent: Parent,
@@ -328,6 +332,7 @@ export type Resolvers = {
       {},
       CalibratedResult[]
     >;
+    getAllMachines: ResolverFn<{}, { zipCode: number }, {}, Machine[]>;
   };
   Mutation: {
     createVoter: ResolverFn<{}, Voters, {}, Voters>;
@@ -976,6 +981,36 @@ export type Resolvers = {
       String
     >;
     collectAndCheckStab: ResolverFn<{}, { qrId: QRcode; code: string; method: number }, {}, string>;
+    editBarangayCollectionStab: ResolverFn<
+      {},
+      {
+        barangayId: string;
+        collId: string;
+        value: number;
+        variance: string;
+      },
+      {},
+      string
+    >;
+    newMachine: ResolverFn<
+      {},
+      { zipCode: number; precints: string[]; machineNo: number; barangaysId: string },
+      {},
+      string
+    >;
+    editMachine: ResolverFn<
+      {},
+      {
+        id: string;
+        precincts: string[];
+        newPrecints: string[];
+        result: number;
+        precinctMethod: number;
+      },
+      {},
+      string
+    >;
+    removeMachine: ResolverFn<{}, { id: string }, {}, string>;
   };
   Voter: {
     votersCount: ResolverFn<{}, {}, {}, number>;
@@ -993,6 +1028,7 @@ export type Resolvers = {
     ValdilatedMember: ResolverFn<Voters, {}, {}, ValdilatedMembers | null>;
     UntrackedVoter: ResolverFn<Voters, {}, {}, UntrackedVoter | null>;
     WhiteList: ResolverFn<Voters, {}, {}, BlackList[]>;
+    precinct: ResolverFn<Voters, {}, {}, Precents | null>;
     //team: ResolverFn<Voters, {}, {}, Team | null>;
   };
   Municipal: {
@@ -1033,6 +1069,9 @@ export type Resolvers = {
         tl: number;
         withTeams: number;
         voterWithoutTeam: number;
+        orMembers: number;
+        deadWithTeam: number;
+        DLwithTeam: number;
       }
     >;
     teamStat: ResolverFn<
@@ -1048,6 +1087,7 @@ export type Resolvers = {
         belowMin: number;
         threeAndBelow: number;
         clean: number;
+        noMembers: number;
       }
     >;
     leaders: ResolverFn<Barangays, { skip: number; candidateId: string }, {}, TeamLeader[]>;
@@ -1066,6 +1106,9 @@ export type Resolvers = {
         allTeamMembers: number;
       }
     >;
+    collectionStabVarian: ResolverFn<Barangays, {}, {}, CollectionResult[]>;
+    machines: ResolverFn<Barangays, {}, {}, Machine[]>;
+    precinct: ResolverFn<Barangays, { precinctId: string }, {}, Precents | null>;
   };
   Purok: {
     purokDraftedVotersCount: ResolverFn<Purok, {}, {}, number>;
@@ -1201,6 +1244,16 @@ export type Resolvers = {
     AccountHandleTeam: ResolverFn<Team, {}, {}, AccountHandleTeam | null>;
     AccountValidateTeam: ResolverFn<Team, { id: string }, {}, AccountValidateTeam | null>;
     untrackedCount: ResolverFn<Team, {}, {}, number>;
+    stabStatus: ResolverFn<
+      Team,
+      {},
+      {},
+      {
+        stabOnecollected: number;
+        stabTwocollected: number;
+        released: number;
+      }
+    >;
   };
   TeamLeader: {
     voter: ResolverFn<TeamLeader, {}, {}, Voters | null>;
@@ -1241,5 +1294,14 @@ export type Resolvers = {
   AccountHandleTeam: {
     team: ResolverFn<AccountHandleTeam, {}, {}, Team | null>;
     account: ResolverFn<AccountHandleTeam, {}, {}, Users | null>;
+  };
+  Machine: {
+    location: ResolverFn<Machine, {}, {}, Barangays | null>;
+    precincts: ResolverFn<Machine, {}, {}, Precents[]>;
+    regVoters: ResolverFn<Machine, {}, {}, number>;
+  };
+  Precent: {
+    _count: ResolverFn<Precents, {}, {}, number>;
+    voters: ResolverFn<Precents, {}, {}, Voters[]>;
   };
 };
