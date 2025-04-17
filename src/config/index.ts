@@ -4164,9 +4164,7 @@ const resolvers: Resolvers = {
 
       console.log({ first, second, teamSecond });
 
-      // Update voters and reassign them to the first team
       await prisma.$transaction([
-        // Reassign voters of the second team to the first team
         prisma.voters.updateMany({
           where: {
             teamId: teamSecond.id, // Voters associated with the second team
@@ -4176,7 +4174,6 @@ const resolvers: Resolvers = {
           },
         }),
 
-        // Update the second team to now belong to the first team leader
         prisma.team.update({
           where: {
             id: teamSecond.id,
@@ -4185,8 +4182,6 @@ const resolvers: Resolvers = {
             teamLeaderId: firstId,
           },
         }),
-
-        // Delete the second team leader
         prisma.teamLeader.delete({
           where: {
             id: secondId,

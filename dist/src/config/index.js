@@ -3743,9 +3743,7 @@ const resolvers = {
                 throw new graphql_1.GraphQLError('Could not find any team leader or associated team');
             }
             console.log({ first, second, teamSecond });
-            // Update voters and reassign them to the first team
             yield prisma_1.prisma.$transaction([
-                // Reassign voters of the second team to the first team
                 prisma_1.prisma.voters.updateMany({
                     where: {
                         teamId: teamSecond.id, // Voters associated with the second team
@@ -3754,7 +3752,6 @@ const resolvers = {
                         teamId: first.teamId, // Reassign to the first team
                     },
                 }),
-                // Update the second team to now belong to the first team leader
                 prisma_1.prisma.team.update({
                     where: {
                         id: teamSecond.id,
@@ -3763,7 +3760,6 @@ const resolvers = {
                         teamLeaderId: firstId,
                     },
                 }),
-                // Delete the second team leader
                 prisma_1.prisma.teamLeader.delete({
                     where: {
                         id: secondId,
