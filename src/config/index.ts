@@ -6786,7 +6786,7 @@ const resolvers: Resolvers = {
         },
       });
     },
-    precinct: async (parent, { precinctId }) => {
+    precinct: async (_, { precinctId }) => {
       console.log(precinctId);
 
       if (!precinctId) {

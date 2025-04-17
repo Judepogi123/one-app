@@ -246,13 +246,9 @@ type ValdilatedMember {
 
   type Precent {
     id: ID!
-    barangay: Barangay!
-    barangayId: ID!
     municipal: Municipal!
     municipalsId: Int!
     voters: [Voter!]
-    purok: Purok!
-    purokId: Int!
     precintNumber: String
     _count: Int
   }

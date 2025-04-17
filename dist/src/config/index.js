@@ -6181,7 +6181,7 @@ const resolvers = {
                 },
             });
         }),
-        precinct: (parent_1, _a) => __awaiter(void 0, [parent_1, _a], void 0, function* (parent, { precinctId }) {
+        precinct: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { precinctId }) {
             console.log(precinctId);
             if (!precinctId) {
                 return null;
