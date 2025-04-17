@@ -6121,10 +6121,6 @@ const resolvers: Resolvers = {
     },
     newMachine: async (_, { zipCode, precints, machineNo, barangaysId }) => {
       try {
-        if (!prisma) {
-          throw new Error('Prisma client is not initialized');
-        }
-
         const checkMachine = await prisma.machine.findFirst({
           where: {
             number: machineNo,
