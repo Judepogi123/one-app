@@ -992,7 +992,7 @@ export type Resolvers = {
       {},
       string
     >;
-    newMachine: ResolverFn<
+    addMachine: ResolverFn<
       {},
       { zipCode: number; precints: string[]; machineNo: number; barangaysId: string },
       {},

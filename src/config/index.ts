@@ -6119,7 +6119,7 @@ const resolvers: Resolvers = {
       });
       return 'OK';
     },
-    newMachine: async (_, { zipCode, precints, machineNo, barangaysId }) => {
+    addMachine: async (_, { zipCode, precints, machineNo, barangaysId }) => {
       try {
         const checkMachine = await prisma.machine.findFirst({
           where: {

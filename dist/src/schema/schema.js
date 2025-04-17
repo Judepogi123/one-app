@@ -756,7 +756,7 @@ type BarangayCoor {
     newCollectionbatch(zipCode: Int, title: String, stab: String): String!
     collectAndCheckStab(qrCode: String, code: String, method: Int): String!
     editBarangayCollectionStab(barangayId: String, collId: String, value: Int, variance: String): String!
-    newMachine(zipCode: Int,precints: [String!], machineNo: Int,barangaysId:String): String!
+    addMachine(zipCode: Int,precints: [String!], machineNo: Int,barangaysId:String): String!
     editMachine(id: String!, precincts: [String], newPrecints: [String], result: Int, precinctMethod: Int): String!
     removeMachine(id: String): String
   }
