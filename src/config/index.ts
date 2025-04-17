@@ -5352,7 +5352,6 @@ const resolvers: Resolvers = {
       return 'OK';
     },
     updateVoter: async (_, { id }) => {
-      // console.log("Voter: ", id);
       // const voter = await prisma.voters.findUnique({
       //   where: {
       //     id

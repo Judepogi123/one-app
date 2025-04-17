@@ -171,11 +171,18 @@ model Voters {
   Appointments           Appointments[]
   BarangayCoor           BarangayCoor[]
   WhiteList              BlackList[]
+  CustomEntryResult      CustomEntryResult[]
+  customTeamLeader       CustomTeam?
+  CustomTeamHeader       CustomTeamHeader[]
+  CustomTeamMember       CustomTeamMember[]
   DelistedVoter          DelistedVoter[]
   DelistedVoterValidated DelistedVoterValidated[]
+  DoubleEntry            DoubleEntry[]
   DuplicateteamMebers    DuplicateteamMembers[]
   PurokCoor              PurokCoor[]
   QRcode                 QRcode[]
+  StabCollection         StabCollection[]
+  StabDistribution       StabDistribution[]
   TeamJoinDate           TeamJoinDate[]
   TeamLeader             TeamLeader[]
   TeamMembersTransac     TeamMembersTransac[]
@@ -194,13 +201,6 @@ model Voters {
   purok                  Purok?                   @relation(fields: [purokId], references: [id], onDelete: Cascade)
   Team                   Team?                    @relation(fields: [teamId], references: [id])
   Witness                Witness?
-  StabCollection         StabCollection[]
-  StabDistribution       StabDistribution[]
-  customTeamLeader       CustomTeam?
-  CustomTeamMember       CustomTeamMember[]
-  CustomTeamHeader       CustomTeamHeader[]
-  DoubleEntry            DoubleEntry[]
-  CustomEntryResult      CustomEntryResult[]
 }
 
 model Purok {
@@ -231,10 +231,14 @@ model Municipals {
   barangays            Barangays[]
   WhiteList            BlackList[]
   Candidates           Candidates[]
+  CollectionBatch      CollectionBatch[]
+  CustomTeam           CustomTeam[]
+  CustomTeamHeader     CustomTeamHeader[]
   DelistedVoter        DelistedVoter[]
   DuplicateteamMembers DuplicateteamMembers[]
   HouseHold            HouseHold[]
   Hub                  Hub[]
+  Machine              Machine[]
   NewBatchDraft        NewBatchDraft[]
   Precents             Precents[]
   Purok                Purok[]
@@ -252,10 +256,6 @@ model Municipals {
   ValidationResult     ValidationResult[]
   ValidationTimeInput  ValidationTimeInput[]
   voters               Voters[]
-  CollectionBatch      CollectionBatch[]
-  CustomTeamHeader     CustomTeamHeader[]
-  CustomTeam           CustomTeam[]
-  Machine              Machine[]
 }
 
 model Barangays {
@@ -276,16 +276,25 @@ model Barangays {
   BarangayCoor         BarangayCoor[]
   municipal            Municipals             @relation(fields: [municipalId], references: [id], onDelete: Cascade)
   WhiteList            BlackList[]
+  CollectionBatchTeam  CollectionBatchTeam[]
+  CollectionResult     CollectionResult[]
+  CustomTeam           CustomTeam[]
+  CustomTeamHeader     CustomTeamHeader[]
+  CustomTeamMember     CustomTeamMember[]
   DelistedVoter        DelistedVoter[]
+  DoubleEntry          DoubleEntry[]
   DuplicateteamMembers DuplicateteamMembers[]
   HouseHold            HouseHold[]
   Hub                  Hub[]
+  Machine              Machine[]
   NewBatchDraft        NewBatchDraft[]
   Purok                Purok[]
   PurokCoor            PurokCoor[]
   Quota                Quota[]
   RespondentResponse   RespondentResponse[]
   Response             Response[]
+  StabCollection       StabCollection[]
+  StabDistribution     StabDistribution[]
   SurveyResponse       SurveyResponse[]
   TeamLeaderBridge     Team[]
   TeamLeader           TeamLeader[]
@@ -297,24 +306,15 @@ model Barangays {
   ValidationResult     ValidationResult[]
   ValidationTimeInput  ValidationTimeInput[]
   voters               Voters[]
-  StabCollection       StabCollection[]
-  CollectionBatchTeam  CollectionBatchTeam[]
-  StabDistribution     StabDistribution[]
-  CollectionResult     CollectionResult[]
-  CustomTeamHeader     CustomTeamHeader[]
-  CustomTeam           CustomTeam[]
-  CustomTeamMember     CustomTeamMember[]
-  DoubleEntry          DoubleEntry[]
-  Machine              Machine[]
 }
 
 model CollectionResult {
   id          String     @id @default(cuid())
-  barangay    Barangays? @relation(fields: [barangaysId], references: [id])
   barangaysId String?
   timestamp   DateTime?  @default(now())
   result      Int        @default(0)
   variance    String?    @default("-")
+  barangay    Barangays? @relation(fields: [barangaysId], references: [id])
 }
 
 model HouseHold {
@@ -345,23 +345,23 @@ model Hub {
 model Machine {
   id           String     @id @default(cuid())
   number       Int        @default(autoincrement())
-  prints       Precents[]
-  municipal    Municipals @relation(fields: [municipalsId], references: [id])
   municipalsId Int
-  location     Barangays  @relation(fields: [barangaysId], references: [id])
   barangaysId  String
   result       Int        @default(0)
   votingCenter String?    @default("Unknown")
+  location     Barangays  @relation(fields: [barangaysId], references: [id])
+  municipal    Municipals @relation(fields: [municipalsId], references: [id])
+  prints       Precents[]
 }
 
 model Precents {
   id            String     @id @default(uuid())
   municipalsId  Int
   precintNumber String
+  machineId     String?
+  Machine       Machine?   @relation(fields: [machineId], references: [id])
   municipal     Municipals @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
   Voters        Voters[]
-  Machine       Machine?   @relation(fields: [machineId], references: [id])
-  machineId     String?
 }
 
 model NewBatchDraft {
@@ -397,14 +397,19 @@ model Team {
   AccountHandleTeam    AccountHandleTeam[]
   AccountValidateTean  AccountValidateTeam[]
   appointments         Appointments[]
+  CollectionBatchTeam  CollectionBatchTeam[]
+  CustomEntryResult    CustomEntryResult[]
   DuplicateteamMebers  DuplicateteamMembers[] @relation("TeamFoundIn")
   DuplicateteamMembers DuplicateteamMembers[]
+  StabCollection       StabCollection[]
+  StabDistribution     StabDistribution[]
   barangay             Barangays              @relation(fields: [barangaysId], references: [id], onDelete: Cascade)
   candidate            Candidates?            @relation(fields: [candidatesId], references: [id])
   hub                  Hub?                   @relation(fields: [hubId], references: [id])
   municipal            Municipals             @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
   purok                Purok?                 @relation(fields: [purokId], references: [id], onDelete: Cascade)
   TeamLeader           TeamLeader?            @relation(fields: [teamLeaderId], references: [id])
+  TeamBlackList        TeamBlackList[]
   TeamDistributions    TeamDistributions[]
   TeamJoinDate         TeamJoinDate[]
   TeamRecords          TeamRecords[]
@@ -415,77 +420,72 @@ model Team {
   VotersToUpdate       ValidationResult[]
   ValidationTimeInput  ValidationTimeInput[]
   voters               Voters[]
-  StabCollection       StabCollection[]
-  TeamBlackList        TeamBlackList[]
-  CollectionBatchTeam  CollectionBatchTeam[]
-  StabDistribution     StabDistribution[]
-  CustomEntryResult    CustomEntryResult[]
 }
 
 model CustomTeamHeader {
   id           String       @id @default(cuid())
   level        Int          @default(3)
   forAll       Boolean      @default(false)
-  voter        Voters?      @relation(fields: [votersId], references: [id])
   votersId     String?
   voterCode    String?
-  barangay     Barangays    @relation(fields: [barangaysId], references: [id])
   barangaysId  String
-  municipal    Municipals   @relation(fields: [municipalsId], references: [id])
   municipalsId Int
-  bcTeams      CustomTeam[] @relation("CustomTeamHeaderBC") // Teams where this is the BC
-  tlTeams      CustomTeam[] @relation("CustomTeamHeaderTL") // Teams where this is the TL
+  bcTeams      CustomTeam[] @relation("CustomTeamHeaderBC")
+  tlTeams      CustomTeam[] @relation("CustomTeamHeaderTL")
+  barangay     Barangays    @relation(fields: [barangaysId], references: [id])
+  municipal    Municipals   @relation(fields: [municipalsId], references: [id])
+  voter        Voters?      @relation(fields: [votersId], references: [id])
 }
 
 model CustomTeam {
   id                   String             @id @default(cuid())
-  teamLeader           Voters             @relation(fields: [votersId], references: [id])
   votersId             String             @unique
-  barangay             Barangays          @relation(fields: [barangaysId], references: [id])
   level                Int                @default(1)
-  members              CustomTeamMember[]
   timestamp            DateTime?          @default(now())
   barangaysId          String
-  municipal            Municipals         @relation(fields: [municipalsId], references: [id])
   municipalsId         Int
-  bc                   CustomTeamHeader?  @relation(name: "CustomTeamHeaderBC", fields: [customTeamHeaderBCId], references: [id])
   customTeamHeaderBCId String?
-  tl                   CustomTeamHeader?  @relation(name: "CustomTeamHeaderTL", fields: [customTeamHeaderTLId], references: [id])
   customTeamHeaderTLId String?
+  barangay             Barangays          @relation(fields: [barangaysId], references: [id])
+  bc                   CustomTeamHeader?  @relation("CustomTeamHeaderBC", fields: [customTeamHeaderBCId], references: [id])
+  tl                   CustomTeamHeader?  @relation("CustomTeamHeaderTL", fields: [customTeamHeaderTLId], references: [id])
+  municipal            Municipals         @relation(fields: [municipalsId], references: [id])
+  teamLeader           Voters             @relation(fields: [votersId], references: [id])
+  members              CustomTeamMember[]
 }
 
 model CustomTeamMember {
   id           String      @id @default(cuid())
-  CustomTeam   CustomTeam? @relation(fields: [customTeamId], references: [id])
   customTeamId String?
-  voter        Voters      @relation(fields: [votersId], references: [id])
   votersId     String
   voterCode    String?
-  barangay     Barangays   @relation(fields: [barangaysId], references: [id])
   barangaysId  String
+  barangay     Barangays   @relation(fields: [barangaysId], references: [id])
+  CustomTeam   CustomTeam? @relation(fields: [customTeamId], references: [id])
+  voter        Voters      @relation(fields: [votersId], references: [id])
 }
 
 model CustomEntryResult {
   id        String   @id @default(uuid())
   status    Int      @default(1)
-  voter     Voters   @relation(fields: [votersId], references: [id])
   votersId  String
-  team      Team?    @relation(fields: [teamId], references: [id])
   teamId    String?
   timestamp DateTime @default(now())
+  team      Team?    @relation(fields: [teamId], references: [id])
+  voter     Voters   @relation(fields: [votersId], references: [id])
 }
 
 model DoubleEntry {
   id           String      @id @default(cuid())
-  teamLeader   TeamLeader? @relation(name: "TeamLeaderRelation", fields: [teamLeaderId], references: [id])
   teamLeaderId String?
-  attemptTL    TeamLeader? @relation(name: "AttemptTLRelation", fields: [attemptTLId], references: [id])
   attemptTLId  String?
-  voter        Voters      @relation(fields: [votersId], references: [id])
   votersId     String
   timestamp    DateTime    @default(now())
-  barangay     Barangays   @relation(fields: [barangaysId], references: [id])
   barangaysId  String
+  attemptTL    TeamLeader? @relation("AttemptTLRelation", fields: [attemptTLId], references: [id])
+  barangay     Barangays   @relation(fields: [barangaysId], references: [id])
+  teamLeader   TeamLeader? @relation("TeamLeaderRelation", fields: [teamLeaderId], references: [id])
+  voter        Voters      @relation(fields: [votersId], references: [id])
 }
 
 model TeamJoinDate {
@@ -515,6 +515,8 @@ model TeamLeader {
   purokCoorsId         String?
   teamLeaderId         String?
   teamlLeaderQRcodesId String?                @unique
+  attemtEntry          DoubleEntry[]          @relation("AttemptTLRelation")
+  DoubleEntry          DoubleEntry[]          @relation("TeamLeaderRelation")
   Hub                  Hub[]
   team                 Team[]
   barangayCoor         TeamLeader?            @relation("BarangayCoor", fields: [barangayCoorId], references: [id])
@@ -533,8 +535,6 @@ model TeamLeader {
   TeamLeaderAttendance TeamLeaderAttendance[]
   ValidatedTeamMembers ValidatedTeamMembers[]
   ValidatedTeams       ValidatedTeams[]
-  DoubleEntry          DoubleEntry[]          @relation("TeamLeaderRelation")
-  attemtEntry          DoubleEntry[]          @relation("AttemptTLRelation")
 }
 
 model TeamlLeaderQRcodes {
@@ -620,10 +620,10 @@ model BlackList {
 
 model TeamBlackList {
   id        String   @id @default(uuid())
-  team      Team?    @relation(fields: [teamId], references: [id])
   teamId    String?
   timestamp DateTime @default(now())
   reason    String?  @default("Questionable")
+  team      Team?    @relation(fields: [teamId], references: [id])
 }
 
 model BarangayCoor {
@@ -653,54 +653,54 @@ model QRcode {
 
 model StabCollection {
   id                    String               @id @default(uuid())
-  voter                 Voters               @relation(fields: [votersId], references: [id])
   votersId              String
   stamp                 Int
-  barangay              Barangays            @relation(fields: [barangaysId], references: [id])
   barangaysId           String
-  team                  Team                 @relation(fields: [teamId], references: [id])
   timestamp             DateTime
   teamId                String
-  CollectionBatchTeam   CollectionBatchTeam? @relation(fields: [collectionBatchTeamId], references: [id])
-  collectionBatchTeamId String?
-  batch                 CollectionBatch?     @relation(fields: [collectionBatchId], references: [id])
   collectionBatchId     String?
+  collectionBatchTeamId String?
+  barangay              Barangays            @relation(fields: [barangaysId], references: [id])
+  batch                 CollectionBatch?     @relation(fields: [collectionBatchId], references: [id])
+  CollectionBatchTeam   CollectionBatchTeam? @relation(fields: [collectionBatchTeamId], references: [id])
+  team                  Team                 @relation(fields: [teamId], references: [id])
+  voter                 Voters               @relation(fields: [votersId], references: [id])
 }
 
 model StabDistribution {
   id          String     @id @default(uuid())
-  voter       Voters?    @relation(fields: [votersId], references: [id])
   votersId    String?
   image_path  String?
-  barangay    Barangays? @relation(fields: [barangaysId], references: [id])
   barangaysId String?
-  team        Team?      @relation(fields: [teamId], references: [id])
   teamId      String?
   status      Int        @default(1)
   timestamp   DateTime?  @default(now())
+  barangay    Barangays? @relation(fields: [barangaysId], references: [id])
+  team        Team?      @relation(fields: [teamId], references: [id])
+  voter       Voters?    @relation(fields: [votersId], references: [id])
 }
 
 model CollectionBatchTeam {
   id                String           @id @default(uuid())
-  barangay          Barangays?       @relation(fields: [barangaysId], references: [id])
-  team              Team?            @relation(fields: [teamId], references: [id])
   teamId            String?
-  batch             CollectionBatch? @relation(fields: [collectionBatchId], references: [id])
   collectionBatchId String?
   stab              Int              @default(1)
   level             Int              @default(1)
   timestamp         DateTime         @default(now())
-  memberStab        StabCollection[]
   barangaysId       String?
+  barangay          Barangays?       @relation(fields: [barangaysId], references: [id])
+  batch             CollectionBatch? @relation(fields: [collectionBatchId], references: [id])
+  team              Team?            @relation(fields: [teamId], references: [id])
+  memberStab        StabCollection[]
 }
 
 model CollectionBatch {
   id                  String                @id @default(uuid())
-  municipal           Municipals            @relation(fields: [municipalsId], references: [id])
   timestamp           DateTime?             @default(now())
   title               String?               @default("Stab Collection")
-  stab                Int                   @default(1)
   municipalsId        Int
+  stab                Int                   @default(1)
+  municipal           Municipals            @relation(fields: [municipalsId], references: [id])
   CollectionBatchTeam CollectionBatchTeam[]
   StabCollection      StabCollection[]
 }
