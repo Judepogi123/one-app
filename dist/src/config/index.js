@@ -5542,6 +5542,7 @@ const resolvers = {
             return 'OK';
         }),
         addMachine: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode, precints, machineNo, barangaysId }) {
+            console.log({ zipCode, precints, machineNo, barangaysId });
             try {
                 const checkMachine = yield prisma_1.prisma.machine.findFirst({
                     where: {

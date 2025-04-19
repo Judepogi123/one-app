@@ -6114,6 +6114,8 @@ const resolvers: Resolvers = {
       return 'OK';
     },
     addMachine: async (_, { zipCode, precints, machineNo, barangaysId }) => {
+      console.log({ zipCode, precints, machineNo, barangaysId });
+
       try {
         const checkMachine = await prisma.machine.findFirst({
           where: {
