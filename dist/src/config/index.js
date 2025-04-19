@@ -4927,16 +4927,6 @@ const resolvers = {
             //   },
             // });
             // console.log(tls);
-            const pre = yield prisma_1.prisma.precents.findMany({
-                include: {
-                    _count: {
-                        select: {
-                            Voters: true,
-                        },
-                    },
-                },
-            });
-            console.log(JSON.stringify(pre, null, 2));
             // const responseTwo = await prisma.response.groupBy({
             //   by: ["respondentResponseId", "optionId", "queryId"],
             //   where: {
@@ -4970,78 +4960,84 @@ const resolvers = {
             // }
             // console.log(target);
             yield prisma_1.prisma.$transaction([
-            // prisma.users.update({
-            //   where: {
-            //     uid: target.uid,
-            //   },
-            //   data: {
-            //     status: 0,
-            //     role: 2
-            //   }
-            // }),
-            // prisma.users.update({
-            //   where: {
-            //     uid: account.uid,
-            //   },
-            //   data: {
-            //     status: 1,
-            //     role: 1
-            //   }
-            // }),
-            // prisma.teamLeader.updateMany({
-            //   where: {
-            //     municipalsId: 4905,
-            //   },
-            //   data: {
-            //     candidatesId: 'eb2e1921-c9c1-459c-b1ea-8d4543b9772b',
-            //   },
-            // }),
-            // prisma.team.updateMany({
-            //   where: {
-            //     municipalsId: 4905,
-            //   },
-            //   data: {
-            //     candidatesId: 'eb2e1921-c9c1-459c-b1ea-8d4543b9772b',
-            //   },
-            // }),
-            // prisma.voters.updateMany({
-            //   where: {
-            //     municipalsId: 4905,
-            //     teamId: { not: null },
-            //     candidatesId: null,
-            //   },
-            //   data: {
-            //     candidatesId: 'eb2e1921-c9c1-459c-b1ea-8d4543b9772b',
-            //   },
-            // }),
-            // prisma.voters.updateMany({
-            //   where:{
-            //     municipalsId: 4905,
-            //     teamId: {not: null},
-            //     candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0"
-            //   },
-            //   data: {
-            //     candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
-            //   }
-            // }),
-            // prisma.team.updateMany({
-            //   where:{
-            //     municipalsId: 4905,
-            //     candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0"
-            //   },
-            //   data: {
-            //     candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
-            //   }
-            // }),
-            // prisma.teamLeader.updateMany({
-            //   where: {
-            //      municipalsId: 4905,
-            //     candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0"
-            //   },
-            //   data: {
-            //     candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
-            //   }
-            // })
+                // prisma.users.update({
+                //   where: {
+                //     uid: target.uid,
+                //   },
+                //   data: {
+                //     status: 0,
+                //     role: 2
+                //   }
+                // }),
+                // prisma.users.update({
+                //   where: {
+                //     uid: account.uid,
+                //   },
+                //   data: {
+                //     status: 1,
+                //     role: 1
+                //   }
+                // }),
+                // prisma.teamLeader.updateMany({
+                //   where: {
+                //     municipalsId: 4905,
+                //   },
+                //   data: {
+                //     candidatesId: 'eb2e1921-c9c1-459c-b1ea-8d4543b9772b',
+                //   },
+                // }),
+                // prisma.team.updateMany({
+                //   where: {
+                //     municipalsId: 4905,
+                //   },
+                //   data: {
+                //     candidatesId: 'eb2e1921-c9c1-459c-b1ea-8d4543b9772b',
+                //   },
+                // }),
+                // prisma.voters.updateMany({
+                //   where: {
+                //     municipalsId: 4905,
+                //     teamId: { not: null },
+                //     candidatesId: null,
+                //   },
+                //   data: {
+                //     candidatesId: 'eb2e1921-c9c1-459c-b1ea-8d4543b9772b',
+                //   },
+                // }),
+                // prisma.voters.updateMany({
+                //   where:{
+                //     municipalsId: 4905,
+                //     teamId: {not: null},
+                //     candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0"
+                //   },
+                //   data: {
+                //     candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
+                //   }
+                // }),
+                // prisma.team.updateMany({
+                //   where:{
+                //     municipalsId: 4905,
+                //     candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0"
+                //   },
+                //   data: {
+                //     candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
+                //   }
+                // }),
+                // prisma.teamLeader.updateMany({
+                //   where: {
+                //      municipalsId: 4905,
+                //     candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0"
+                //   },
+                //   data: {
+                //     candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
+                //   }
+                // })
+                prisma_1.prisma.voters.updateMany({
+                    where: {},
+                    data: {
+                        precintsId: null,
+                    },
+                }),
             ]);
             // await prisma.teamLeader.update({
             //   where: {

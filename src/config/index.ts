@@ -5457,17 +5457,6 @@ const resolvers: Resolvers = {
       // });
       // console.log(tls);
 
-      const pre = await prisma.precents.findMany({
-        include: {
-          _count: {
-            select: {
-              Voters: true,
-            },
-          },
-        },
-      });
-      console.log(JSON.stringify(pre, null, 2));
-
       // const responseTwo = await prisma.response.groupBy({
       //   by: ["respondentResponseId", "optionId", "queryId"],
       //   where: {
@@ -5577,6 +5566,12 @@ const resolvers: Resolvers = {
         //     candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
         //   }
         // })
+        prisma.voters.updateMany({
+          where: {},
+          data: {
+            precintsId: null,
+          },
+        }),
       ]);
 
       // await prisma.teamLeader.update({

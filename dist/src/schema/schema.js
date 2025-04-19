@@ -755,6 +755,7 @@ type BarangayCoor {
     addMachine(zipCode: Int,precints: [String!], machineNo: Int,barangaysId:String): String!
     editMachine(id: String!, precincts: [String], newPrecints: [String], result: Int, precinctMethod: Int): String!
     removeMachine(id: String): String
+
   }
 
   type CalibratedResult{
