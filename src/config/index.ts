@@ -4419,7 +4419,6 @@ const resolvers: Resolvers = {
               const valueForUpdate = handleDataType(prop.type, prop.value);
               const voterPropsTyped = voter as Record<string, any>;
 
-              // Ensure both are strings for comparison safety
               return String(voterPropsTyped[prop.props]) !== String(valueForUpdate);
             },
           );
@@ -4528,7 +4527,6 @@ const resolvers: Resolvers = {
 
         const voterIds = untrackedList.map((item) => item.votersId as string);
 
-        // Fetch existing voters
         const voters = await prisma.voters.findMany({
           where: {
             id: { in: voterIds },

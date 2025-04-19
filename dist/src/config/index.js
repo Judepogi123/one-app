@@ -3955,7 +3955,6 @@ const resolvers = {
                     const propsToUpdate = item.props.filter((prop) => {
                         const valueForUpdate = (0, data_2.handleDataType)(prop.type, prop.value);
                         const voterPropsTyped = voter;
-                        // Ensure both are strings for comparison safety
                         return String(voterPropsTyped[prop.props]) !== String(valueForUpdate);
                     });
                     if (propsToUpdate.length > 0) {
@@ -4048,7 +4047,6 @@ const resolvers = {
             if (untrackedList.length > 0) {
                 console.log('Original untracked list:', untrackedList);
                 const voterIds = untrackedList.map((item) => item.votersId);
-                // Fetch existing voters
                 const voters = yield prisma_1.prisma.voters.findMany({
                     where: {
                         id: { in: voterIds },
