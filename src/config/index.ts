@@ -165,7 +165,7 @@ const resolvers: Resolvers = {
       return await prisma.barangays.findMany();
     },
     barangayList: async (_, { zipCode }) => {
-      console.log(zipCode);
+      console.log('Zip: ', zipCode);
 
       return await prisma.barangays.findMany({
         where: { municipalId: zipCode },
