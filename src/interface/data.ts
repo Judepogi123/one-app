@@ -198,7 +198,7 @@ export interface RespondentResponseProps {
   queries: string;
   surveyId: string;
   queryId: string;
-  ageBracketId: string;
+  ageBracketId: string | null;
   genderId: string;
   respondentResponseId: string;
   option: OptionProps[];

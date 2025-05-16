@@ -420,6 +420,7 @@ model Team {
   VotersToUpdate       ValidationResult[]
   ValidationTimeInput  ValidationTimeInput[]
   voters               Voters[]
+  MembersAttendance    MembersAttendance?
 }
 
 model CustomTeamHeader {
@@ -871,7 +872,7 @@ model RespondentResponse {
   municipalsId        Int
   barangaysId         String
   surveyId            String
-  surveyResponseId    String
+  surveyResponseId    String?
   mediaUrlId          String?
   valid               Boolean            @default(true)
   validatedResponseId String?
@@ -883,7 +884,7 @@ model RespondentResponse {
   media               MediaUrl?          @relation(fields: [mediaUrlId], references: [id])
   municipal           Municipals         @relation(fields: [municipalsId], references: [id], onDelete: Cascade)
   survey              Survey             @relation(fields: [surveyId], references: [id], onDelete: Cascade)
-  surveyResponse      SurveyResponse     @relation(fields: [surveyResponseId], references: [id], onDelete: Cascade)
+  surveyResponse      SurveyResponse?    @relation(fields: [surveyResponseId], references: [id], onDelete: Cascade)
   Users               Users?             @relation(fields: [usersUid], references: [uid])
   ValidatedResponse   ValidatedResponse? @relation(fields: [validatedResponseId], references: [id])
   Response            Response[]
@@ -909,7 +910,7 @@ model Response {
   municipalsId         Int
   surveyId             String
   respondentResponseId String
-  surveyResponseId     String
+  surveyResponseId     String?
   customOptionId       String?
   QueryAnswer          QueryAnswer[]
   ageBracket           AgeBracket         @relation(fields: [ageBracketId], references: [id], onDelete: Cascade)
@@ -921,7 +922,7 @@ model Response {
   queries              Queries            @relation(fields: [queryId], references: [id], onDelete: Cascade)
   respondentResponse   RespondentResponse @relation(fields: [respondentResponseId], references: [id], onDelete: Cascade)
   survey               Survey             @relation(fields: [surveyId], references: [id], onDelete: Cascade)
-  surveyResponse       SurveyResponse     @relation(fields: [surveyResponseId], references: [id], onDelete: Cascade)
+  surveyResponse       SurveyResponse?    @relation(fields: [surveyResponseId], references: [id], onDelete: Cascade)
 }
 
 model QueryAnswer {
@@ -1197,4 +1198,12 @@ model TeamMembersTransac {
   teamUpdateArchiveId String?
   TeamUpdateArchive   TeamUpdateArchive? @relation(fields: [teamUpdateArchiveId], references: [id])
   voter               Voters             @relation(fields: [votersId], references: [id], onDelete: Cascade)
+}
+
+model MembersAttendance {
+  id        String   @id @default(uuid())
+  team      Team     @relation(fields: [teamId], references: [id])
+  teamId    String   @unique
+  actual    Int?     @default(0)
+  timestamp DateTime @default(now())
 }

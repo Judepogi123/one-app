@@ -41,6 +41,7 @@ import {
   CollectionResult,
   TeamlLeaderQRcodes,
   Machine,
+  MembersAttendance,
 } from '../../prisma/prisma';
 import {
   BarangayOptionResponse,
@@ -333,6 +334,7 @@ export type Resolvers = {
       CalibratedResult[]
     >;
     getAllMachines: ResolverFn<{}, { zipCode: number }, {}, Machine[]>;
+    checkStab: ResolverFn<{}, { id: string }, {}, QRcode | null>;
   };
   Mutation: {
     createVoter: ResolverFn<{}, Voters, {}, Voters>;
@@ -1006,11 +1008,25 @@ export type Resolvers = {
         newPrecints: string[];
         result: number;
         precinctMethod: number;
+        machineNo: number | undefined;
       },
       {},
       string
     >;
     removeMachine: ResolverFn<{}, { id: string }, {}, string>;
+    teamMembersAttendance: ResolverFn<
+      {},
+      {
+        teams: {
+          teamId: string;
+          value: string;
+        }[];
+      },
+      {},
+      string
+    >;
+    resetStab: ResolverFn<{}, { zipCode: number; barangayId: string }, {}, string>;
+    newMachinePrecinct: ResolverFn<{}, { machineId: string; precinctNo: string }, {}, string>;
   };
   Voter: {
     votersCount: ResolverFn<{}, {}, {}, number>;
@@ -1254,6 +1270,7 @@ export type Resolvers = {
         released: number;
       }
     >;
+    membersAttendance: ResolverFn<Team, {}, {}, MembersAttendance | null>;
   };
   TeamLeader: {
     voter: ResolverFn<TeamLeader, {}, {}, Voters | null>;
@@ -1303,5 +1320,11 @@ export type Resolvers = {
   Precent: {
     _count: ResolverFn<Precents, {}, {}, number>;
     voters: ResolverFn<Precents, {}, {}, Voters[]>;
+    inTeam: ResolverFn<Precents, {}, {}, number>;
+    stabOne: ResolverFn<Precents, {}, {}, number>;
+    stabTwo: ResolverFn<Precents, {}, {}, number>;
+  };
+  QRcode: {
+    voter: ResolverFn<QRcode, { id: string }, {}, Voters | null>;
   };
 };

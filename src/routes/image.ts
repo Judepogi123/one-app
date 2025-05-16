@@ -238,7 +238,7 @@ router.get('/generate-stab', async (req: Request, res: Response) => {
     if (!barangayData) return res.status(404).send('Barangay not found');
 
     let teams = await prisma.team.findMany({
-      where: { barangaysId: barangayData.id, candidatesId: { not: null } },
+      where: { barangaysId: barangayData.id, candidatesId: { not: null }, level: 1 },
       include: {
         TeamLeader: {
           select: {
@@ -249,6 +249,13 @@ router.get('/generate-stab', async (req: Request, res: Response) => {
         },
         voters: {
           select: { firstname: true, lastname: true, idNumber: true, QRcode: true, id: true },
+        },
+      },
+      orderBy: {
+        TeamLeader: {
+          voter: {
+            lastname: 'desc',
+          },
         },
       },
     });

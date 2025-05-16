@@ -266,6 +266,8 @@ const resolvers: Resolvers = {
       return await prisma.surveyResponse.findMany();
     },
     allSurveyResponse: async (_, { survey }) => {
+      console.log(survey);
+
       return await prisma.surveyResponse.findMany({
         where: { municipalsId: survey.municipalsId, surveyId: survey.surveyId },
         orderBy: { timestamp: 'asc' },
@@ -1485,6 +1487,71 @@ const resolvers: Resolvers = {
         },
       });
     },
+    checkStab: async (_, { id }) => {
+      if (!id) return null;
+      return await prisma.qRcode.findUnique({
+        where: {
+          id,
+        },
+        include: {
+          voter: {
+            select: {
+              firstname: true,
+              lastname: true,
+              idNumber: true,
+              id: true,
+            },
+            include: {
+              barangay: {
+                select: {
+                  name: true,
+                },
+              },
+              Team: {
+                select: {
+                  TeamLeader: {
+                    select: {
+                      voter: {
+                        select: {
+                          firstname: true,
+                          lastname: true,
+                          idNumber: true,
+                          id: true,
+                        },
+                      },
+                      purokCoors: {
+                        select: {
+                          voter: {
+                            select: {
+                              firstname: true,
+                              lastname: true,
+                              idNumber: true,
+                              id: true,
+                            },
+                          },
+                        },
+                      },
+                      barangayCoor: {
+                        select: {
+                          voter: {
+                            select: {
+                              firstname: true,
+                              lastname: true,
+                              idNumber: true,
+                              id: true,
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+    },
   },
   Mutation: {
     signUp: async (_, { user }) => {
@@ -1833,29 +1900,42 @@ const resolvers: Resolvers = {
       });
     },
     harvestResponse: async (_, { response, surveyResponse, respondentResponse, customOptions }) => {
-      console.log({
-        response,
-        respondentResponse,
-      });
+      console.log('Incoming Data:', { response, respondentResponse, surveyResponse });
 
-      for (let item of surveyResponse) {
-        try {
-          await prisma.surveyResponse.create({
-            data: {
-              id: item.id,
-              municipalsId: item.municipalsId,
-              barangaysId: item.barangaysId,
-              surveyId: item.surveyId,
-              usersUid: item.accountID,
-            },
-          });
-        } catch (error) {
-          continue;
+      // Step 1: Create Survey Responses first
+      try {
+        const createdSurveyResponses = await prisma.surveyResponse.createMany({
+          data: surveyResponse.map((item) => ({
+            id: item.id,
+            usersUid: item.accountID,
+            municipalsId: item.municipalsId,
+            barangaysId: item.barangaysId,
+            surveyId: item.surveyId,
+          })),
+          skipDuplicates: true,
+        });
+
+        if (!createdSurveyResponses || createdSurveyResponses.count === 0) {
+          console.error('No survey responses were created.');
+          return 'Failed: No survey responses created';
         }
+      } catch (error) {
+        console.error('surveyResponse error', error);
+        return 'Failed: Error creating survey responses';
       }
 
+      // Step 2: Create Respondent Responses
       for (let item of respondentResponse) {
         try {
+          const surveyResponseData = await prisma.surveyResponse.findUnique({
+            where: { id: item.surveyResponseId },
+          });
+
+          if (!surveyResponseData) {
+            console.warn(`SurveyResponse not found for respondent response: ${item.id}`);
+            continue;
+          }
+
           await prisma.respondentResponse.create({
             data: {
               id: item.id,
@@ -1865,17 +1945,27 @@ const resolvers: Resolvers = {
               municipalsId: item.municipalsId,
               surveyId: item.surveyId,
               usersUid: item.accountID,
+              valid: item.valid ?? true,
               surveyResponseId: item.surveyResponseId,
-              valid: item.valid,
             },
           });
         } catch (error) {
-          continue;
+          console.error('Error creating respondent response:', error);
         }
       }
 
+      // Step 3: Create individual responses
       for (let item of response) {
         try {
+          const surveyResponseData = await prisma.surveyResponse.findUnique({
+            where: { id: item.surveyResponseId },
+          });
+
+          if (!surveyResponseData) {
+            console.warn(`SurveyResponse not found for response: ${item.id}`);
+            continue;
+          }
+
           await prisma.response.create({
             data: {
               id: item.id,
@@ -1884,21 +1974,22 @@ const resolvers: Resolvers = {
               barangaysId: item.barangaysId,
               municipalsId: item.municipalsId,
               surveyId: item.surveyId,
-              surveyResponseId: item.surveyResponseId,
-              optionId: item.optionId || null,
+              optionId: item.optionId ?? null,
               queryId: item.queryId,
               respondentResponseId: item.respondentResponseId,
+              surveyResponseId: item.surveyResponseId,
             },
           });
         } catch (error) {
-          continue;
+          console.error('Error creating response:', error);
         }
       }
 
-      if (customOptions.length) {
+      // Step 4: Create custom options if any
+      if (customOptions?.length) {
         for (let item of customOptions) {
           try {
-            await prisma.customOption.createMany({
+            await prisma.customOption.create({
               data: {
                 id: item.id,
                 value: item.value,
@@ -1907,72 +1998,11 @@ const resolvers: Resolvers = {
               },
             });
           } catch (error) {
-            continue;
+            console.error('Error creating custom option:', error);
           }
         }
       }
 
-      // await prisma.surveyResponse.createMany({
-      //   data: surveyResponse.map((item) => {
-      //     return {
-      //       id: item.id,
-      //       municipalsId: item.municipalsId,
-      //       barangaysId: item.barangaysId,
-      //       surveyId: item.surveyId,
-      //       usersUid: item.accountID,
-      //     };
-      //   }),
-      //   skipDuplicates: true,
-      // });
-
-      // await prisma.respondentResponse.createMany({
-      //   data: respondentResponse.map((item) => {
-      //     return {
-      //       id: item.id,
-      //       ageBracketId: item.ageBracketId,
-      //       genderId: item.genderId,
-      //       barangaysId: item.barangaysId,
-      //       municipalsId: item.municipalsId,
-      //       surveyId: item.surveyId,
-      //       usersUid: item.accountID,
-      //       surveyResponseId: item.surveyResponseId,
-      //       valid: item.valid,
-      //     };
-      //   }),
-      //   skipDuplicates: true,
-      // });
-
-      // await prisma.response.createMany({
-      //   data: response.map((item) => {
-      //     return {
-      //       id: item.id,
-      //       ageBracketId: item.ageBracketId,
-      //       genderId: item.genderId,
-      //       barangaysId: item.barangaysId,
-      //       municipalsId: item.municipalsId,
-      //       surveyId: item.surveyId,
-      //       surveyResponseId: item.surveyResponseId,
-      //       optionId: item.optionId || null,
-      //       queryId: item.queryId,
-      //       respondentResponseId: item.respondentResponseId,
-      //     };
-      //   }),
-      //   skipDuplicates: true,
-      // });
-
-      // if (customOptions.length) {
-      //   await prisma.customOption.createMany({
-      //     data: customOptions.map((item) => {
-      //       return {
-      //         id: item.id,
-      //         value: item.value,
-      //         queriesId: item.queriesId,
-      //         respondentResponseId: item.respondentResponseId,
-      //       };
-      //     }),
-      //     skipDuplicates: true,
-      //   });
-      // }
       return 'OK';
     },
     submitResponse: async (_, { respondentResponse, response, surveyResponse }) => {
@@ -2208,6 +2238,17 @@ const resolvers: Resolvers = {
       });
     },
     resetSurveyResponse: async (_, { id, zipCode }) => {
+      await prisma.$transaction([
+        prisma.surveyResponse.deleteMany({
+          where: { surveyId: id, municipalsId: zipCode },
+        }),
+        prisma.respondentResponse.deleteMany({
+          where: { surveyId: id, municipalsId: zipCode },
+        }),
+        prisma.response.deleteMany({
+          where: { surveyId: id, municipalsId: zipCode },
+        }),
+      ]);
       const result = await prisma.surveyResponse.deleteMany({
         where: { surveyId: id, municipalsId: zipCode },
       });
@@ -2747,19 +2788,19 @@ const resolvers: Resolvers = {
           }
 
           // Check for status
-          if (voter.status === 0) {
-            rejectList.push({
-              id: member.id,
-              firstname: member.firstname,
-              lastname: member.lastname,
-              municipal: member.municipalsId,
-              barangay: member.barangaysId,
-              reason: 'Sumaka-bilang buhay na.',
-              teamId: member.teamId,
-              code: 11,
-            });
-            return;
-          }
+          // if (voter.status === 0) {
+          //   rejectList.push({
+          //     id: member.id,
+          //     firstname: member.firstname,
+          //     lastname: member.lastname,
+          //     municipal: member.municipalsId,
+          //     barangay: member.barangaysId,
+          //     reason: 'Sumaka-bilang buhay na.',
+          //     teamId: member.teamId,
+          //     code: 11,
+          //   });
+          //   return;
+          // }
 
           // if (voter.oor === "YES") {
           //   rejectList.push({
@@ -5350,11 +5391,11 @@ const resolvers: Resolvers = {
       return 'OK';
     },
     updateVoter: async (_, { id }) => {
-      // const voter = await prisma.voters.findUnique({
-      //   where: {
-      //     id
-      //   }
-      // })
+      const voter = await prisma.voters.updateMany({
+        data: {
+          precintsId: null,
+        },
+      });
       // console.log(voter);
       // const tl = await prisma.teamLeader.findFirst({
       //   where: {
@@ -5428,6 +5469,130 @@ const resolvers: Resolvers = {
       //     }
       //   }),
       // ])
+      // await prisma.$transaction([
+      //   prisma.respondentResponse.deleteMany({
+      //     where: {
+      //       surveyId: 'cm9qakae60005q82gbyugffre',
+      //     },
+      //   }),
+      //   prisma.response.deleteMany({
+      //     where: {
+      //       surveyId: 'cm9qakae60005q82gbyugffre',
+      //     },
+      //   }),
+      // ]);
+      // const [surveyResponse, respondentResponse, response] = await prisma.$transaction([
+      //   prisma.surveyResponse.findUnique({
+      //     where: {
+      //       id: 'd2cabd04-1ce5-4f4c-ba3b-7ee2ffb410d1',
+      //     },
+      //     include: {
+      //       barangay: {
+      //         select: {
+      //           name: true,
+      //         },
+      //       },
+      //     },
+      //   }),
+      //   prisma.respondentResponse.findMany({
+      //     where: {
+      //       surveyResponseId: 'd2cabd04-1ce5-4f4c-ba3b-7ee2ffb410d1',
+      //     },
+      //   }),
+      //   prisma.response.count({
+      //     where: {
+      //       surveyResponseId: 'd2cabd04-1ce5-4f4c-ba3b-7ee2ffb410d1',
+      //     },
+      //   }),
+      // ]);
+      // if (!surveyResponse) {
+      //   throw new GraphQLError('Eror');
+      // }
+      // await prisma.$transaction([
+      //   prisma.surveyResponse.update({
+      //     where: {
+      //       id: surveyResponse.id,
+      //     },
+      //     data: {
+      //       barangaysId: 'c7f5f5ba-dde1-4087-8abb-ce30245f1b64',
+      //       municipalsId: 4905,
+      //     },
+      //   }),
+      //   prisma.respondentResponse.updateMany({
+      //     where: {
+      //       surveyResponseId: surveyResponse.id,
+      //     },
+      //     data: {
+      //       barangaysId: 'c7f5f5ba-dde1-4087-8abb-ce30245f1b64',
+      //       municipalsId: 4905,
+      //     },
+      //   }),
+      //   prisma.response.updateMany({
+      //     where: {
+      //       surveyResponseId: surveyResponse.id,
+      //     },
+      //     data: {
+      //       barangaysId: 'c7f5f5ba-dde1-4087-8abb-ce30245f1b64',
+      //       municipalsId: 4905,
+      //     },
+      //   }),
+      // ]);
+
+      // console.log({ surveyResponse, respondentResponse, response });
+      // await prisma.voters.updateMany({
+      //   where: {
+      //     id: {in: deads.map((item) => item.id)},
+      //   },data:{
+      //     teamId: null,
+      //     level: 0,
+      //     candidatesId: null,
+      //   }
+      // })
+      // const survey = await prisma.survey.findUnique({
+      //   where: {
+      //     id: 'cm9qakae60005q82gbyugffre',
+      //   },
+      //   include: {
+      //     RespondentResponse: {
+      //       include: {
+      //         Response: true,
+      //       },
+      //     },
+      //   },
+      // });
+      // console.log('Survey: ', survey);
+
+      // const duplicates = await prisma.voters.groupBy({
+      //   by: ['lastname', 'firstname', 'municipalsId', 'teamId', 'barangaysId', 'candidatesId'],
+      //   having: {
+      //     lastname: {
+      //       _count: {
+      //         gt: 1,
+      //       },
+      //     },
+      //     firstname: {
+      //       _count: {
+      //         gt: 1,
+      //       },
+      //     },
+      //     municipalsId: 4905,
+      //     teamId: { not: null },
+      //     candidatesId: { not: null },
+      //   },
+      //   orderBy: {
+      //     _count: {
+      //       lastname: 'desc',
+      //     },
+      //   },
+      // });
+      // if (duplicates.length > 0) {
+      //   const response = await prisma.voters.findMany({
+      //     where: {
+      //       id: { in: duplicates.map((item) => item.id) },
+      //     },
+      //   });
+      //   console.log('Team: ', response);
+      // }
 
       //tls attendance
       // const tls = await prisma.teamLeaderAttendance.findFirst({
@@ -5566,12 +5731,6 @@ const resolvers: Resolvers = {
         //     candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
         //   }
         // })
-        prisma.voters.updateMany({
-          where: {},
-          data: {
-            precintsId: null,
-          },
-        }),
       ]);
 
       // await prisma.teamLeader.update({
@@ -6162,7 +6321,9 @@ const resolvers: Resolvers = {
         throw new GraphQLError(error as unknown as string);
       }
     },
-    editMachine: async (_, { id, precincts, newPrecints, result, precinctMethod }) => {
+    editMachine: async (_, { id, precincts, newPrecints, result, precinctMethod, machineNo }) => {
+      console.log({ id, precincts, newPrecints, result, precinctMethod, machineNo });
+
       const machine = await prisma.machine.findUnique({
         where: {
           id: id,
@@ -6172,17 +6333,40 @@ const resolvers: Resolvers = {
         throw new GraphQLError('Machine not found!');
       }
       if (precincts.length > 0) {
-        const foundPrecincts = await prisma.precents.findMany({
-          where: {
-            id: { in: precincts },
-          },
-        });
-        if (foundPrecincts.length > 0) {
-          await prisma.precents.deleteMany({
+        console.log('Transact 0');
+        const [foundPrecincts, voters] = await prisma.$transaction([
+          prisma.precents.findMany({
             where: {
-              id: { in: foundPrecincts.map((item) => item.id) },
+              id: { in: precincts },
             },
-          });
+          }),
+          prisma.voters.findMany({
+            where: {
+              precintsId: { in: precincts },
+            },
+          }),
+        ]);
+        console.log('Transact 1');
+
+        if (foundPrecincts.length > 0 && precinctMethod === 1) {
+          console.log('Transact 2');
+          console.log({ foundPrecincts, voters });
+
+          await prisma.$transaction([
+            prisma.precents.deleteMany({
+              where: {
+                id: { in: foundPrecincts.map((item) => item.id) },
+              },
+            }),
+            prisma.voters.updateMany({
+              where: {
+                id: { in: voters.map((item) => item.id) },
+              },
+              data: {
+                precintsId: null,
+              },
+            }),
+          ]);
         }
       }
       if (newPrecints.length > 0) {
@@ -6206,11 +6390,22 @@ const resolvers: Resolvers = {
           }),
         });
       }
+      if (machineNo) {
+        await prisma.machine.update({
+          data: {
+            number: machineNo,
+          },
+          where: {
+            id: machine.id,
+          },
+        });
+      }
       if (machine.result !== result) {
         await prisma.$transaction([
           prisma.machine.update({
             data: {
               result: result ?? 0,
+              number: machineNo,
             },
             where: {
               id: machine.id,
@@ -6240,6 +6435,164 @@ const resolvers: Resolvers = {
           },
         }),
       ]);
+      return 'OK';
+    },
+    teamMembersAttendance: async (_, { teams }) => {
+      try {
+        console.log('Input teams:', teams);
+
+        // Validate input
+        if (!teams || !Array.isArray(teams) || teams.length === 0) {
+          throw new Error('Invalid teams input');
+        }
+
+        // Get team IDs from input
+        const teamIds = teams.map((item) => item.teamId);
+        if (teamIds.length === 0) {
+          throw new Error('No valid team IDs provided');
+        }
+
+        // Find teams in database
+        console.log('teamIds', teamIds);
+
+        const teamsList = await prisma.team.findMany({
+          where: {
+            id: { in: teamIds },
+          },
+        });
+
+        if (teamsList.length === 0) {
+          throw new Error('No teams found with the provided IDs');
+        }
+
+        // Get existing attendance records
+        const membersAttendance = await prisma.membersAttendance.findMany({
+          where: {
+            teamId: { in: teamIds },
+          },
+        });
+
+        // Process each team
+        const operations = teamsList.map(async (team) => {
+          const inputTeam = teams.find((t) => t.teamId === team.id);
+          if (!inputTeam || inputTeam.value === undefined) {
+            console.warn(`No value provided for team ${team.id}`);
+            return;
+          }
+
+          const actualValue = parseInt(inputTeam.value, 10);
+          if (isNaN(actualValue)) {
+            throw new Error(`Invalid value '${inputTeam.value}' for team ${team.id}`);
+          }
+
+          const existingAttendance = membersAttendance.find((a) => a.teamId === team.id);
+
+          if (existingAttendance) {
+            // Update existing record
+            return prisma.membersAttendance.update({
+              where: { id: existingAttendance.id },
+              data: { actual: actualValue },
+            });
+          } else {
+            // Create new record
+            return prisma.membersAttendance.create({
+              data: {
+                teamId: team.id,
+                actual: actualValue,
+              },
+            });
+          }
+        });
+
+        // Execute all operations
+        await Promise.all(operations);
+
+        return 'OK';
+      } catch (error) {
+        console.error('Error in teamMembersAttendance:', error);
+        throw new Error(`Failed to update attendance: ${error}`);
+      }
+    },
+    resetStab: async (_, { zipCode, barangayId }) => {
+      let toUpdate: any[] = [];
+      if (barangayId) {
+        toUpdate = await prisma.qRcode.findMany({
+          where: {
+            voter: {
+              barangaysId: barangayId,
+            },
+            scannedDateTime: {
+              not: 'N/A',
+            },
+          },
+        });
+        await prisma.membersAttendance.updateMany({
+          where: {
+            team: {
+              barangaysId: barangayId,
+            },
+          },
+          data: {
+            actual: 0,
+          },
+        });
+      }
+      if (zipCode) {
+        toUpdate = await prisma.qRcode.findMany({
+          where: {
+            voter: {
+              municipalsId: zipCode,
+            },
+            scannedDateTime: {
+              not: 'N/A',
+            },
+          },
+        });
+      }
+
+      if (toUpdate.length > 0) {
+        const ids = toUpdate.map((item) => item.id);
+        await prisma.qRcode.updateMany({
+          where: {
+            id: { in: ids },
+          },
+          data: {
+            scannedDateTime: 'N/A',
+          },
+        });
+      }
+      return 'OK';
+    },
+    newMachinePrecinct: async (_, { precinctNo, machineId }) => {
+      console.log({ precinctNo, machineId });
+
+      const [precinct, machine] = await prisma.$transaction([
+        prisma.precents.findFirst({
+          where: {
+            precintNumber: precinctNo,
+            machineId: machineId,
+          },
+        }),
+        prisma.machine.findUnique({
+          where: {
+            id: machineId,
+          },
+        }),
+      ]);
+      if (!machine) {
+        throw new GraphQLError('Machine not found!');
+      }
+      if (precinct) {
+        throw new GraphQLError('Precinct already exist in this machine');
+      }
+
+      await prisma.precents.create({
+        data: {
+          municipalsId: machine.municipalsId,
+          machineId: machine.id,
+          precintNumber: precinctNo,
+        },
+      });
       return 'OK';
     },
   },
@@ -6482,8 +6835,9 @@ const resolvers: Resolvers = {
             DelistedVoter: {
               some: {},
             },
-            candidatesId: { not: null },
             teamId: { not: null },
+            barangaysId: parent.id,
+            level: 0,
           },
         }),
       ]);
@@ -6497,6 +6851,17 @@ const resolvers: Resolvers = {
         },
       });
       const totalMember = tl.reduce((acc, item) => acc + item.voters.length, 0);
+      console.log({
+        figureHeads: tl.length + pc + bc,
+        bc,
+        pc,
+        tl: tl.length,
+        withTeams: totalMember,
+        voterWithoutTeam: voterWithoutTeam,
+        orMembers: or,
+        deadWithTeam: dead,
+        DLwithTeam: dl,
+      });
 
       return {
         figureHeads: tl.length + pc + bc,
@@ -7397,6 +7762,13 @@ const resolvers: Resolvers = {
         released,
       };
     },
+    membersAttendance: async (parent) => {
+      return await prisma.membersAttendance.findFirst({
+        where: {
+          teamId: parent.id,
+        },
+      });
+    },
   },
   TeamLeader: {
     voter: async (parent) => {
@@ -7616,6 +7988,48 @@ const resolvers: Resolvers = {
           precintsId: parent.id,
           teamId: { not: null },
           candidatesId: { not: null },
+        },
+      });
+    },
+    inTeam: async (parent) => {
+      return await prisma.voters.count({
+        where: {
+          precintsId: parent.id,
+          teamId: { not: null },
+          municipalsId: parent.municipalsId,
+        },
+      });
+    },
+    stabOne: async (parent) => {
+      const count = await prisma.qRcode.count({
+        where: {
+          voter: {
+            precintsId: parent.id,
+          },
+          scannedDateTime: { not: 'N/A' },
+          stamp: 1,
+        },
+      });
+      return count;
+    },
+    stabTwo: async (parent) => {
+      const count = await prisma.qRcode.count({
+        where: {
+          voter: {
+            precintsId: parent.id,
+          },
+          scannedDateTime: { not: 'N/A' },
+          stamp: 2,
+        },
+      });
+      return count;
+    },
+  },
+  QRcode: {
+    voter: async (parent) => {
+      return await prisma.voters.findFirst({
+        where: {
+          id: parent.votersId,
         },
       });
     },

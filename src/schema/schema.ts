@@ -251,6 +251,9 @@ type ValdilatedMember {
     voters: [Voter!]
     precintNumber: String
     _count: Int
+    inTeam: Int
+    stabOne: Int
+    stabTwo: Int
   }
 
   type VotersCount {
@@ -370,6 +373,14 @@ type Team {
   AccountValidateTeam(id: String): AccountValidateTeam
   untrackedCount: Int
   stabStatus: TeamStabStatus
+  membersAttendance: MembersAttendance
+}
+
+type MembersAttendance {
+  id: String
+  actual: Int
+  team: Team
+  timestamp: String
 }
 
 type TeamLeaderQRcodes {
@@ -484,6 +495,7 @@ type ValdiatedTeams {
     getCollReport(zipCode: Int): [Barangay!]
     calibrateTeamArea(zipCode: Int, barangayId: String, level: Int): [CalibratedResult!]
     getAllMachines(zipCode: Int): [Machine!]
+    checkStab(id: String): QRcode
   }
 
     type Machine {
@@ -750,9 +762,16 @@ type BarangayCoor {
     collectAndCheckStab(qrCode: String, code: String, method: Int): String!
     editBarangayCollectionStab(barangayId: String, collId: String, value: Int, variance: String): String!
     addMachine(zipCode: Int,precints: [String!], machineNo: Int,barangaysId:String): String!
-    editMachine(id: String!, precincts: [String], newPrecints: [String], result: Int, precinctMethod: Int): String!
+    editMachine(id: String!, precincts: [String], newPrecints: [String], result: Int, precinctMethod: Int, machineNo: Int): String!
     removeMachine(id: String): String
+    teamMembersAttendance(teams: [EditTeamAttendance!]): String!
+    resetStab(zipCode: Int, barangayId: String): String
+    newMachinePrecinct(machineId: String!, precinctNo: String!): String!
+  }
 
+  input EditTeamAttendance {
+    teamId: String!
+    value: String
   }
 
   type CalibratedResult{
@@ -804,6 +823,7 @@ type AllSupporters {
   bc: Int
   pc: Int
   tl: Int
+  dl: Int
   withTeams: Int
   voterWithoutTeam: Int
   orMembers: Int

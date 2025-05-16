@@ -237,6 +237,7 @@ const resolvers = {
             return yield prisma_1.prisma.surveyResponse.findMany();
         }),
         allSurveyResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { survey }) {
+            console.log(survey);
             return yield prisma_1.prisma.surveyResponse.findMany({
                 where: { municipalsId: survey.municipalsId, surveyId: survey.surveyId },
                 orderBy: { timestamp: 'asc' },
@@ -1318,6 +1319,72 @@ const resolvers = {
                 },
             });
         }),
+        checkStab: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
+            if (!id)
+                return null;
+            return yield prisma_1.prisma.qRcode.findUnique({
+                where: {
+                    id,
+                },
+                include: {
+                    voter: {
+                        select: {
+                            firstname: true,
+                            lastname: true,
+                            idNumber: true,
+                            id: true,
+                        },
+                        include: {
+                            barangay: {
+                                select: {
+                                    name: true,
+                                },
+                            },
+                            Team: {
+                                select: {
+                                    TeamLeader: {
+                                        select: {
+                                            voter: {
+                                                select: {
+                                                    firstname: true,
+                                                    lastname: true,
+                                                    idNumber: true,
+                                                    id: true,
+                                                },
+                                            },
+                                            purokCoors: {
+                                                select: {
+                                                    voter: {
+                                                        select: {
+                                                            firstname: true,
+                                                            lastname: true,
+                                                            idNumber: true,
+                                                            id: true,
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                            barangayCoor: {
+                                                select: {
+                                                    voter: {
+                                                        select: {
+                                                            firstname: true,
+                                                            lastname: true,
+                                                            idNumber: true,
+                                                            id: true,
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+        }),
     },
     Mutation: {
         signUp: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { user }) {
@@ -1654,28 +1721,39 @@ const resolvers = {
             });
         }),
         harvestResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { response, surveyResponse, respondentResponse, customOptions }) {
-            console.log({
-                response,
-                respondentResponse,
-            });
-            for (let item of surveyResponse) {
-                try {
-                    yield prisma_1.prisma.surveyResponse.create({
-                        data: {
-                            id: item.id,
-                            municipalsId: item.municipalsId,
-                            barangaysId: item.barangaysId,
-                            surveyId: item.surveyId,
-                            usersUid: item.accountID,
-                        },
-                    });
-                }
-                catch (error) {
-                    continue;
+            var _b, _c;
+            console.log('Incoming Data:', { response, respondentResponse, surveyResponse });
+            // Step 1: Create Survey Responses first
+            try {
+                const createdSurveyResponses = yield prisma_1.prisma.surveyResponse.createMany({
+                    data: surveyResponse.map((item) => ({
+                        id: item.id,
+                        usersUid: item.accountID,
+                        municipalsId: item.municipalsId,
+                        barangaysId: item.barangaysId,
+                        surveyId: item.surveyId,
+                    })),
+                    skipDuplicates: true,
+                });
+                if (!createdSurveyResponses || createdSurveyResponses.count === 0) {
+                    console.error('No survey responses were created.');
+                    return 'Failed: No survey responses created';
                 }
             }
+            catch (error) {
+                console.error('surveyResponse error', error);
+                return 'Failed: Error creating survey responses';
+            }
+            // Step 2: Create Respondent Responses
             for (let item of respondentResponse) {
                 try {
+                    const surveyResponseData = yield prisma_1.prisma.surveyResponse.findUnique({
+                        where: { id: item.surveyResponseId },
+                    });
+                    if (!surveyResponseData) {
+                        console.warn(`SurveyResponse not found for respondent response: ${item.id}`);
+                        continue;
+                    }
                     yield prisma_1.prisma.respondentResponse.create({
                         data: {
                             id: item.id,
@@ -1685,17 +1763,25 @@ const resolvers = {
                             municipalsId: item.municipalsId,
                             surveyId: item.surveyId,
                             usersUid: item.accountID,
+                            valid: (_b = item.valid) !== null && _b !== void 0 ? _b : true,
                             surveyResponseId: item.surveyResponseId,
-                            valid: item.valid,
                         },
                     });
                 }
                 catch (error) {
-                    continue;
+                    console.error('Error creating respondent response:', error);
                 }
             }
+            // Step 3: Create individual responses
             for (let item of response) {
                 try {
+                    const surveyResponseData = yield prisma_1.prisma.surveyResponse.findUnique({
+                        where: { id: item.surveyResponseId },
+                    });
+                    if (!surveyResponseData) {
+                        console.warn(`SurveyResponse not found for response: ${item.id}`);
+                        continue;
+                    }
                     yield prisma_1.prisma.response.create({
                         data: {
                             id: item.id,
@@ -1704,21 +1790,22 @@ const resolvers = {
                             barangaysId: item.barangaysId,
                             municipalsId: item.municipalsId,
                             surveyId: item.surveyId,
-                            surveyResponseId: item.surveyResponseId,
-                            optionId: item.optionId || null,
+                            optionId: (_c = item.optionId) !== null && _c !== void 0 ? _c : null,
                             queryId: item.queryId,
                             respondentResponseId: item.respondentResponseId,
+                            surveyResponseId: item.surveyResponseId,
                         },
                     });
                 }
                 catch (error) {
-                    continue;
+                    console.error('Error creating response:', error);
                 }
             }
-            if (customOptions.length) {
+            // Step 4: Create custom options if any
+            if (customOptions === null || customOptions === void 0 ? void 0 : customOptions.length) {
                 for (let item of customOptions) {
                     try {
-                        yield prisma_1.prisma.customOption.createMany({
+                        yield prisma_1.prisma.customOption.create({
                             data: {
                                 id: item.id,
                                 value: item.value,
@@ -1728,68 +1815,10 @@ const resolvers = {
                         });
                     }
                     catch (error) {
-                        continue;
+                        console.error('Error creating custom option:', error);
                     }
                 }
             }
-            // await prisma.surveyResponse.createMany({
-            //   data: surveyResponse.map((item) => {
-            //     return {
-            //       id: item.id,
-            //       municipalsId: item.municipalsId,
-            //       barangaysId: item.barangaysId,
-            //       surveyId: item.surveyId,
-            //       usersUid: item.accountID,
-            //     };
-            //   }),
-            //   skipDuplicates: true,
-            // });
-            // await prisma.respondentResponse.createMany({
-            //   data: respondentResponse.map((item) => {
-            //     return {
-            //       id: item.id,
-            //       ageBracketId: item.ageBracketId,
-            //       genderId: item.genderId,
-            //       barangaysId: item.barangaysId,
-            //       municipalsId: item.municipalsId,
-            //       surveyId: item.surveyId,
-            //       usersUid: item.accountID,
-            //       surveyResponseId: item.surveyResponseId,
-            //       valid: item.valid,
-            //     };
-            //   }),
-            //   skipDuplicates: true,
-            // });
-            // await prisma.response.createMany({
-            //   data: response.map((item) => {
-            //     return {
-            //       id: item.id,
-            //       ageBracketId: item.ageBracketId,
-            //       genderId: item.genderId,
-            //       barangaysId: item.barangaysId,
-            //       municipalsId: item.municipalsId,
-            //       surveyId: item.surveyId,
-            //       surveyResponseId: item.surveyResponseId,
-            //       optionId: item.optionId || null,
-            //       queryId: item.queryId,
-            //       respondentResponseId: item.respondentResponseId,
-            //     };
-            //   }),
-            //   skipDuplicates: true,
-            // });
-            // if (customOptions.length) {
-            //   await prisma.customOption.createMany({
-            //     data: customOptions.map((item) => {
-            //       return {
-            //         id: item.id,
-            //         value: item.value,
-            //         queriesId: item.queriesId,
-            //         respondentResponseId: item.respondentResponseId,
-            //       };
-            //     }),
-            //     skipDuplicates: true,
-            //   });
-            // }
             return 'OK';
         }),
         submitResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { respondentResponse, response, surveyResponse }) {
@@ -2008,6 +2037,17 @@ const resolvers = {
             });
         }),
         resetSurveyResponse: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id, zipCode }) {
+            yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.surveyResponse.deleteMany({
+                    where: { surveyId: id, municipalsId: zipCode },
+                }),
+                prisma_1.prisma.respondentResponse.deleteMany({
+                    where: { surveyId: id, municipalsId: zipCode },
+                }),
+                prisma_1.prisma.response.deleteMany({
+                    where: { surveyId: id, municipalsId: zipCode },
+                }),
+            ]);
             const result = yield prisma_1.prisma.surveyResponse.deleteMany({
                 where: { surveyId: id, municipalsId: zipCode },
             });
@@ -2495,19 +2535,19 @@ const resolvers = {
                     return;
                 }
                 // Check for status
-                if (voter.status === 0) {
-                    rejectList.push({
-                        id: member.id,
-                        firstname: member.firstname,
-                        lastname: member.lastname,
-                        municipal: member.municipalsId,
-                        barangay: member.barangaysId,
-                        reason: 'Sumaka-bilang buhay na.',
-                        teamId: member.teamId,
-                        code: 11,
-                    });
-                    return;
-                }
+                // if (voter.status === 0) {
+                //   rejectList.push({
+                //     id: member.id,
+                //     firstname: member.firstname,
+                //     lastname: member.lastname,
+                //     municipal: member.municipalsId,
+                //     barangay: member.barangaysId,
+                //     reason: 'Sumaka-bilang buhay na.',
+                //     teamId: member.teamId,
+                //     code: 11,
+                //   });
+                //   return;
+                // }
                 // if (voter.oor === "YES") {
                 //   rejectList.push({
                 //     id: member.id,
@@ -4824,11 +4864,11 @@ const resolvers = {
             return 'OK';
         }),
         updateVoter: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
-            // const voter = await prisma.voters.findUnique({
-            //   where: {
-            //     id
-            //   }
-            // })
+            const voter = yield prisma_1.prisma.voters.updateMany({
+                data: {
+                    precintsId: null,
+                },
+            });
             // console.log(voter);
             // const tl = await prisma.teamLeader.findFirst({
             //   where: {
@@ -4900,6 +4940,128 @@ const resolvers = {
             //     }
             //   }),
             // ])
+            // await prisma.$transaction([
+            //   prisma.respondentResponse.deleteMany({
+            //     where: {
+            //       surveyId: 'cm9qakae60005q82gbyugffre',
+            //     },
+            //   }),
+            //   prisma.response.deleteMany({
+            //     where: {
+            //       surveyId: 'cm9qakae60005q82gbyugffre',
+            //     },
+            //   }),
+            // ]);
+            // const [surveyResponse, respondentResponse, response] = await prisma.$transaction([
+            //   prisma.surveyResponse.findUnique({
+            //     where: {
+            //       id: 'd2cabd04-1ce5-4f4c-ba3b-7ee2ffb410d1',
+            //     },
+            //     include: {
+            //       barangay: {
+            //         select: {
+            //           name: true,
+            //         },
+            //       },
+            //     },
+            //   }),
+            //   prisma.respondentResponse.findMany({
+            //     where: {
+            //       surveyResponseId: 'd2cabd04-1ce5-4f4c-ba3b-7ee2ffb410d1',
+            //     },
+            //   }),
+            //   prisma.response.count({
+            //     where: {
+            //       surveyResponseId: 'd2cabd04-1ce5-4f4c-ba3b-7ee2ffb410d1',
+            //     },
+            //   }),
+            // ]);
+            // if (!surveyResponse) {
+            //   throw new GraphQLError('Eror');
+            // }
+            // await prisma.$transaction([
+            //   prisma.surveyResponse.update({
+            //     where: {
+            //       id: surveyResponse.id,
+            //     },
+            //     data: {
+            //       barangaysId: 'c7f5f5ba-dde1-4087-8abb-ce30245f1b64',
+            //       municipalsId: 4905,
+            //     },
+            //   }),
+            //   prisma.respondentResponse.updateMany({
+            //     where: {
+            //       surveyResponseId: surveyResponse.id,
+            //     },
+            //     data: {
+            //       barangaysId: 'c7f5f5ba-dde1-4087-8abb-ce30245f1b64',
+            //       municipalsId: 4905,
+            //     },
+            //   }),
+            //   prisma.response.updateMany({
+            //     where: {
+            //       surveyResponseId: surveyResponse.id,
+            //     },
+            //     data: {
+            //       barangaysId: 'c7f5f5ba-dde1-4087-8abb-ce30245f1b64',
+            //       municipalsId: 4905,
+            //     },
+            //   }),
+            // ]);
+            // console.log({ surveyResponse, respondentResponse, response });
+            // await prisma.voters.updateMany({
+            //   where: {
+            //     id: {in: deads.map((item) => item.id)},
+            //   },data:{
+            //     teamId: null,
+            //     level: 0,
+            //     candidatesId: null,
+            //   }
+            // })
+            // const survey = await prisma.survey.findUnique({
+            //   where: {
+            //     id: 'cm9qakae60005q82gbyugffre',
+            //   },
+            //   include: {
+            //     RespondentResponse: {
+            //       include: {
+            //         Response: true,
+            //       },
+            //     },
+            //   },
+            // });
+            // console.log('Survey: ', survey);
+            // const duplicates = await prisma.voters.groupBy({
+            //   by: ['lastname', 'firstname', 'municipalsId', 'teamId', 'barangaysId', 'candidatesId'],
+            //   having: {
+            //     lastname: {
+            //       _count: {
+            //         gt: 1,
+            //       },
+            //     },
+            //     firstname: {
+            //       _count: {
+            //         gt: 1,
+            //       },
+            //     },
+            //     municipalsId: 4905,
+            //     teamId: { not: null },
+            //     candidatesId: { not: null },
+            //   },
+            //   orderBy: {
+            //     _count: {
+            //       lastname: 'desc',
+            //     },
+            //   },
+            // });
+            // if (duplicates.length > 0) {
+            //   const response = await prisma.voters.findMany({
+            //     where: {
+            //       id: { in: duplicates.map((item) => item.id) },
+            //     },
+            //   });
+            //   console.log('Team: ', response);
+            // }
             //tls attendance
             // const tls = await prisma.teamLeaderAttendance.findFirst({
             //   where: {
@@ -4960,84 +5122,78 @@ const resolvers = {
             // }
             // console.log(target);
             yield prisma_1.prisma.$transaction([
-                // prisma.users.update({
-                //   where: {
-                //     uid: target.uid,
-                //   },
-                //   data: {
-                //     status: 0,
-                //     role: 2
-                //   }
-                // }),
-                // prisma.users.update({
-                //   where: {
-                //     uid: account.uid,
-                //   },
-                //   data: {
-                //     status: 1,
-                //     role: 1
-                //   }
-                // }),
-                // prisma.teamLeader.updateMany({
-                //   where: {
-                //     municipalsId: 4905,
-                //   },
-                //   data: {
-                //     candidatesId: 'eb2e1921-c9c1-459c-b1ea-8d4543b9772b',
-                //   },
-                // }),
-                // prisma.team.updateMany({
-                //   where: {
-                //     municipalsId: 4905,
-                //   },
-                //   data: {
-                //     candidatesId: 'eb2e1921-c9c1-459c-b1ea-8d4543b9772b',
-                //   },
-                // }),
-                // prisma.voters.updateMany({
-                //   where: {
-                //     municipalsId: 4905,
-                //     teamId: { not: null },
-                //     candidatesId: null,
-                //   },
-                //   data: {
-                //     candidatesId: 'eb2e1921-c9c1-459c-b1ea-8d4543b9772b',
-                //   },
-                // }),
-                // prisma.voters.updateMany({
-                //   where:{
-                //     municipalsId: 4905,
-                //     teamId: {not: null},
-                //     candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0"
-                //   },
-                //   data: {
-                //     candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
-                //   }
-                // }),
-                // prisma.team.updateMany({
-                //   where:{
-                //     municipalsId: 4905,
-                //     candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0"
-                //   },
-                //   data: {
-                //     candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
-                //   }
-                // }),
-                // prisma.teamLeader.updateMany({
-                //   where: {
-                //      municipalsId: 4905,
-                //     candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0"
-                //   },
-                //   data: {
-                //     candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
-                //   }
-                // })
-                prisma_1.prisma.voters.updateMany({
-                    where: {},
-                    data: {
-                        precintsId: null,
-                    },
-                }),
+            // prisma.users.update({
+            //   where: {
+            //     uid: target.uid,
+            //   },
+            //   data: {
+            //     status: 0,
+            //     role: 2
+            //   }
+            // }),
+            // prisma.users.update({
+            //   where: {
+            //     uid: account.uid,
+            //   },
+            //   data: {
+            //     status: 1,
+            //     role: 1
+            //   }
+            // }),
+            // prisma.teamLeader.updateMany({
+            //   where: {
+            //     municipalsId: 4905,
+            //   },
+            //   data: {
+            //     candidatesId: 'eb2e1921-c9c1-459c-b1ea-8d4543b9772b',
+            //   },
+            // }),
+            // prisma.team.updateMany({
+            //   where: {
+            //     municipalsId: 4905,
+            //   },
+            //   data: {
+            //     candidatesId: 'eb2e1921-c9c1-459c-b1ea-8d4543b9772b',
+            //   },
+            // }),
+            // prisma.voters.updateMany({
+            //   where: {
+            //     municipalsId: 4905,
+            //     teamId: { not: null },
+            //     candidatesId: null,
+            //   },
+            //   data: {
+            //     candidatesId: 'eb2e1921-c9c1-459c-b1ea-8d4543b9772b',
+            //   },
+            // }),
+            // prisma.voters.updateMany({
+            //   where:{
+            //     municipalsId: 4905,
+            //     teamId: {not: null},
+            //     candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0"
+            //   },
+            //   data: {
+            //     candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
+            //   }
+            // }),
+            // prisma.team.updateMany({
+            //   where:{
+            //     municipalsId: 4905,
+            //     candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0"
+            //   },
+            //   data: {
+            //     candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
+            //   }
+            // }),
+            // prisma.teamLeader.updateMany({
+            //   where: {
+            //      municipalsId: 4905,
+            //     candidatesId: "842e7060-e38a-48a1-8f29-ec9c766b0fa0"
+            //   },
+            //   data: {
+            //     candidatesId: "eb2e1921-c9c1-459c-b1ea-8d4543b9772b"
+            //   }
+            // })
             ]);
             // await prisma.teamLeader.update({
             //   where: {
@@ -5583,7 +5739,8 @@ const resolvers = {
                 throw new graphql_1.GraphQLError(error);
             }
         }),
-        editMachine: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id, precincts, newPrecints, result, precinctMethod }) {
+        editMachine: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id, precincts, newPrecints, result, precinctMethod, machineNo }) {
+            console.log({ id, precincts, newPrecints, result, precinctMethod, machineNo });
             const machine = yield prisma_1.prisma.machine.findUnique({
                 where: {
                     id: id,
@@ -5593,17 +5750,38 @@ const resolvers = {
                 throw new graphql_1.GraphQLError('Machine not found!');
             }
             if (precincts.length > 0) {
-                const foundPrecincts = yield prisma_1.prisma.precents.findMany({
-                    where: {
-                        id: { in: precincts },
-                    },
-                });
-                if (foundPrecincts.length > 0) {
-                    yield prisma_1.prisma.precents.deleteMany({
+                console.log('Transact 0');
+                const [foundPrecincts, voters] = yield prisma_1.prisma.$transaction([
+                    prisma_1.prisma.precents.findMany({
                         where: {
-                            id: { in: foundPrecincts.map((item) => item.id) },
+                            id: { in: precincts },
                         },
-                    });
+                    }),
+                    prisma_1.prisma.voters.findMany({
+                        where: {
+                            precintsId: { in: precincts },
+                        },
+                    }),
+                ]);
+                console.log('Transact 1');
+                if (foundPrecincts.length > 0 && precinctMethod === 1) {
+                    console.log('Transact 2');
+                    console.log({ foundPrecincts, voters });
+                    yield prisma_1.prisma.$transaction([
+                        prisma_1.prisma.precents.deleteMany({
+                            where: {
+                                id: { in: foundPrecincts.map((item) => item.id) },
+                            },
+                        }),
+                        prisma_1.prisma.voters.updateMany({
+                            where: {
+                                id: { in: voters.map((item) => item.id) },
+                            },
+                            data: {
+                                precintsId: null,
+                            },
+                        }),
+                    ]);
                 }
             }
             if (newPrecints.length > 0) {
@@ -5626,11 +5804,22 @@ const resolvers = {
                     }),
                 });
             }
+            if (machineNo) {
+                yield prisma_1.prisma.machine.update({
+                    data: {
+                        number: machineNo,
+                    },
+                    where: {
+                        id: machine.id,
+                    },
+                });
+            }
             if (machine.result !== result) {
                 yield prisma_1.prisma.$transaction([
                     prisma_1.prisma.machine.update({
                         data: {
                             result: result !== null && result !== void 0 ? result : 0,
+                            number: machineNo,
                         },
                         where: {
                             id: machine.id,
@@ -5658,6 +5847,151 @@ const resolvers = {
                     },
                 }),
             ]);
+            return 'OK';
+        }),
+        teamMembersAttendance: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { teams }) {
+            try {
+                console.log('Input teams:', teams);
+                // Validate input
+                if (!teams || !Array.isArray(teams) || teams.length === 0) {
+                    throw new Error('Invalid teams input');
+                }
+                // Get team IDs from input
+                const teamIds = teams.map((item) => item.teamId);
+                if (teamIds.length === 0) {
+                    throw new Error('No valid team IDs provided');
+                }
+                // Find teams in database
+                console.log('teamIds', teamIds);
+                const teamsList = yield prisma_1.prisma.team.findMany({
+                    where: {
+                        id: { in: teamIds },
+                    },
+                });
+                if (teamsList.length === 0) {
+                    throw new Error('No teams found with the provided IDs');
+                }
+                // Get existing attendance records
+                const membersAttendance = yield prisma_1.prisma.membersAttendance.findMany({
+                    where: {
+                        teamId: { in: teamIds },
+                    },
+                });
+                // Process each team
+                const operations = teamsList.map((team) => __awaiter(void 0, void 0, void 0, function* () {
+                    const inputTeam = teams.find((t) => t.teamId === team.id);
+                    if (!inputTeam || inputTeam.value === undefined) {
+                        console.warn(`No value provided for team ${team.id}`);
+                        return;
+                    }
+                    const actualValue = parseInt(inputTeam.value, 10);
+                    if (isNaN(actualValue)) {
+                        throw new Error(`Invalid value '${inputTeam.value}' for team ${team.id}`);
+                    }
+                    const existingAttendance = membersAttendance.find((a) => a.teamId === team.id);
+                    if (existingAttendance) {
+                        // Update existing record
+                        return prisma_1.prisma.membersAttendance.update({
+                            where: { id: existingAttendance.id },
+                            data: { actual: actualValue },
+                        });
+                    }
+                    else {
+                        // Create new record
+                        return prisma_1.prisma.membersAttendance.create({
+                            data: {
+                                teamId: team.id,
+                                actual: actualValue,
+                            },
+                        });
+                    }
+                }));
+                // Execute all operations
+                yield Promise.all(operations);
+                return 'OK';
+            }
+            catch (error) {
+                console.error('Error in teamMembersAttendance:', error);
+                throw new Error(`Failed to update attendance: ${error}`);
+            }
+        }),
+        resetStab: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode, barangayId }) {
+            let toUpdate = [];
+            if (barangayId) {
+                toUpdate = yield prisma_1.prisma.qRcode.findMany({
+                    where: {
+                        voter: {
+                            barangaysId: barangayId,
+                        },
+                        scannedDateTime: {
+                            not: 'N/A',
+                        },
+                    },
+                });
+                yield prisma_1.prisma.membersAttendance.updateMany({
+                    where: {
+                        team: {
+                            barangaysId: barangayId,
+                        },
+                    },
+                    data: {
+                        actual: 0,
+                    },
+                });
+            }
+            if (zipCode) {
+                toUpdate = yield prisma_1.prisma.qRcode.findMany({
+                    where: {
+                        voter: {
+                            municipalsId: zipCode,
+                        },
+                        scannedDateTime: {
+                            not: 'N/A',
+                        },
+                    },
+                });
+            }
+            if (toUpdate.length > 0) {
+                const ids = toUpdate.map((item) => item.id);
+                yield prisma_1.prisma.qRcode.updateMany({
+                    where: {
+                        id: { in: ids },
+                    },
+                    data: {
+                        scannedDateTime: 'N/A',
+                    },
+                });
+            }
+            return 'OK';
+        }),
+        newMachinePrecinct: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { precinctNo, machineId }) {
+            console.log({ precinctNo, machineId });
+            const [precinct, machine] = yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.precents.findFirst({
+                    where: {
+                        precintNumber: precinctNo,
+                        machineId: machineId,
+                    },
+                }),
+                prisma_1.prisma.machine.findUnique({
+                    where: {
+                        id: machineId,
+                    },
+                }),
+            ]);
+            if (!machine) {
+                throw new graphql_1.GraphQLError('Machine not found!');
+            }
+            if (precinct) {
+                throw new graphql_1.GraphQLError('Precinct already exist in this machine');
+            }
+            yield prisma_1.prisma.precents.create({
+                data: {
+                    municipalsId: machine.municipalsId,
+                    machineId: machine.id,
+                    precintNumber: precinctNo,
+                },
+            });
             return 'OK';
         }),
     },
@@ -5901,8 +6235,9 @@ const resolvers = {
                         DelistedVoter: {
                             some: {},
                         },
-                        candidatesId: { not: null },
                         teamId: { not: null },
+                        barangaysId: parent.id,
+                        level: 0,
                     },
                 }),
             ]);
@@ -5915,6 +6250,17 @@ const resolvers = {
                 },
             });
             const totalMember = tl.reduce((acc, item) => acc + item.voters.length, 0);
+            console.log({
+                figureHeads: tl.length + pc + bc,
+                bc,
+                pc,
+                tl: tl.length,
+                withTeams: totalMember,
+                voterWithoutTeam: voterWithoutTeam,
+                orMembers: or,
+                deadWithTeam: dead,
+                DLwithTeam: dl,
+            });
             return {
                 figureHeads: tl.length + pc + bc,
                 bc,
@@ -6755,6 +7101,13 @@ const resolvers = {
                 released,
             };
         }),
+        membersAttendance: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma_1.prisma.membersAttendance.findFirst({
+                where: {
+                    teamId: parent.id,
+                },
+            });
+        }),
     },
     TeamLeader: {
         voter: (parent) => __awaiter(void 0, void 0, void 0, function* () {
@@ -6977,6 +7330,48 @@ const resolvers = {
                     precintsId: parent.id,
                     teamId: { not: null },
                     candidatesId: { not: null },
+                },
+            });
+        }),
+        inTeam: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma_1.prisma.voters.count({
+                where: {
+                    precintsId: parent.id,
+                    teamId: { not: null },
+                    municipalsId: parent.municipalsId,
+                },
+            });
+        }),
+        stabOne: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            const count = yield prisma_1.prisma.qRcode.count({
+                where: {
+                    voter: {
+                        precintsId: parent.id,
+                    },
+                    scannedDateTime: { not: 'N/A' },
+                    stamp: 1,
+                },
+            });
+            return count;
+        }),
+        stabTwo: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            const count = yield prisma_1.prisma.qRcode.count({
+                where: {
+                    voter: {
+                        precintsId: parent.id,
+                    },
+                    scannedDateTime: { not: 'N/A' },
+                    stamp: 2,
+                },
+            });
+            return count;
+        }),
+    },
+    QRcode: {
+        voter: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma_1.prisma.voters.findFirst({
+                where: {
+                    id: parent.votersId,
                 },
             });
         }),

@@ -62,6 +62,8 @@ route.post('/member-stabs', async (req: Request, res: Response) => {
     });
   }
 
+  console.log(data);
+
   try {
     const checkedStab = await prisma.qRcode.findUnique({
       where: { id: data },
@@ -99,6 +101,199 @@ route.post('/member-stabs', async (req: Request, res: Response) => {
       success: false,
       message: 'Internal server error',
     });
+  }
+});
+
+route.post('reset-stab', async (req: Request, res: Response) => {
+  try {
+    const id = req.body.id;
+    if (!id) {
+      return res.status(400).send('Bad request');
+    }
+    const checked = await prisma.qRcode.findFirst({
+      where: {
+        id: id,
+      },
+    });
+    if (!checked) {
+      return res.status(404).send('Not found!');
+    }
+    await prisma.qRcode.update({
+      where: {
+        id: checked.id,
+      },
+      data: {
+        scannedDateTime: 'N/A',
+      },
+    });
+  } catch (error) {
+    res.status(500).send('Internal Server error');
+  }
+});
+route.post('/check-stab-code', async (req: Request, res: Response) => {
+  try {
+    const { id, barnagayNumber, zipCode, stamp } = req.body;
+    console.log('ID: ', id, barnagayNumber, zipCode, stamp);
+
+    if (!id || !barnagayNumber || !zipCode || !stamp) {
+      return res.status(400).send('Bad Request');
+    }
+    const [barangay] = await prisma.$transaction([
+      prisma.barangays.findFirst({
+        where: {
+          number: parseInt(barnagayNumber, 10),
+          municipalId: parseInt(zipCode, 10),
+        },
+      }),
+    ]);
+    if (!barangay) {
+      return res.status(400).send('Barangay not found!');
+    }
+    const qrData = await prisma.qRcode.findFirst({
+      where: {
+        voter: {
+          idNumber: id,
+          barangaysId: barangay.id,
+        },
+        stamp: parseInt(stamp, 10),
+      },
+    });
+
+    if (!qrData) {
+      return res.status(404).send('NO Data found!');
+    }
+    const voter = await prisma.voters.findUnique({
+      where: {
+        id: qrData.votersId as string,
+      },
+      include: {
+        barangay: {
+          select: {
+            name: true,
+          },
+        },
+        municipal: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+    if (!voter) {
+      return res.status(404).send('Voter not found!');
+    }
+    const team = await prisma.team.findUnique({
+      where: {
+        id: voter.teamId as string,
+      },
+      include: {
+        TeamLeader: {
+          select: {
+            voter: {
+              select: {
+                firstname: true,
+                lastname: true,
+                idNumber: true,
+                id: true,
+              },
+            },
+            barangay: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!team || !voter || !qrData)
+      return res.status(200).send({ voter: null, team: null, qrCode: null });
+    const { TeamLeader, ...teamProps } = team;
+    const { municipal, ...voterProps } = voter;
+    return res.status(200).send({
+      voter: { municipality: municipal, ...voterProps },
+      team: { teamLeader: TeamLeader, ...teamProps },
+      qrCode: qrData,
+    });
+  } catch (error) {
+    console.log('Error:', error);
+
+    res.status(500).send('Internal Server Error');
+  }
+});
+route.post('/check-stab', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.body;
+    console.log('ID: ', id);
+
+    if (!id) {
+      return res.status(400).send('Bad Request');
+    }
+    const qrData = await prisma.qRcode.findUnique({
+      where: {
+        id: id.toString(),
+      },
+    });
+    if (!qrData) {
+      return res.status(404).send('NO Data found!');
+    }
+    const voter = await prisma.voters.findUnique({
+      where: {
+        id: qrData.votersId as string,
+      },
+      include: {
+        barangay: {
+          select: {
+            name: true,
+          },
+        },
+        municipal: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+    if (!voter) {
+      return res.status(404).send('Voter not found!');
+    }
+    const team = await prisma.team.findUnique({
+      where: {
+        id: voter.teamId as string,
+      },
+      include: {
+        TeamLeader: {
+          select: {
+            voter: {
+              select: {
+                firstname: true,
+                lastname: true,
+                idNumber: true,
+                id: true,
+              },
+            },
+            barangay: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!team || !voter || !qrData)
+      return res.status(200).send({ voter: null, team: null, qrCode: null });
+    const { TeamLeader, ...teamProps } = team;
+    const { municipal, ...voterProps } = voter;
+    return res.status(200).send({
+      voter: { municipality: municipal, ...voterProps },
+      team: { teamLeader: TeamLeader, ...teamProps },
+      qrCode: qrData,
+    });
+  } catch (error) {
+    console.log('Error:', error);
+
+    res.status(500).send('Internal Server Error');
   }
 });
 

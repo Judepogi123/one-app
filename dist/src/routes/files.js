@@ -115,11 +115,20 @@ exports.default = (io) => {
         if (!req.file) {
             return res.status(400).send('No file uploaded.');
         }
+        const barangayId = req.body.barangayId;
         const filePath = path_1.default.join(uploadDir, req.file.filename);
         try {
             const workbook = xlsx_1.default.readFile(filePath);
             const sheets = workbook.SheetNames;
             const updateResults = { success: 0, failed: 0 };
+            const barangay = yield prisma_1.prisma.barangays.findUnique({
+                where: {
+                    id: barangayId,
+                },
+            });
+            if (!barangay) {
+                throw new graphql_1.GraphQLError('Barangay not found!');
+            }
             // Process each sheet sequentially (not in parallel)
             for (const sheetName of sheets) {
                 const worksheet = workbook.Sheets[sheetName];
@@ -135,10 +144,10 @@ exports.default = (io) => {
                         try {
                             const [existingVoter, precinct] = yield prisma_1.prisma.$transaction([
                                 prisma_1.prisma.voters.findFirst({
-                                    where: { idNumber: voter.No },
+                                    where: { idNumber: voter.No, barangaysId: barangay.id },
                                 }),
                                 prisma_1.prisma.precents.findFirst({
-                                    where: { precintNumber: voter['PREC.'] },
+                                    where: { precintNumber: voter['PREC.'], municipalsId: barangay.municipalId },
                                 }),
                             ]);
                             if (!existingVoter || !precinct) {
@@ -1879,7 +1888,7 @@ exports.default = (io) => {
         }
     })), router.post('/generate-team', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         try {
-            const { delisted, ud, nd, op, or, inc, dead, selected, min, max, barangay, zipCode, selectedId, membersCount, level, } = req.body;
+            const { delisted, ud, nd, op, or, inc, dead, selected, min, max, barangay, zipCode, selectedId, membersCount, level, membersCountOnly, } = req.body;
             const workbook = new exceljs_1.default.Workbook();
             workbook.created = new Date();
             const filter = {};
@@ -1930,24 +1939,25 @@ exports.default = (io) => {
             if (!municipal || !barangayData) {
                 return res.status(400).json({ message: 'Bad request' });
             }
-            // console.log({
-            //   delisted,
-            //   ud,
-            //   nd,
-            //   op,
-            //   or,
-            //   inc,
-            //   dead,
-            //   selected,
-            //   min,
-            //   max,
-            //   barangay,
-            //   zipCode,
-            //   selectedId,
-            //   membersCount,
-            //   level
-            // });
-            // console.log({filter});
+            console.log({
+                delisted,
+                ud,
+                nd,
+                op,
+                or,
+                inc,
+                dead,
+                selected,
+                min,
+                max,
+                barangay,
+                zipCode,
+                selectedId,
+                membersCount,
+                level,
+                membersCountOnly,
+            });
+            console.log({ filter });
             let teamToInsert = [];
             let skip = 0;
             let haveMore = true;
@@ -2185,6 +2195,458 @@ exports.default = (io) => {
             console.log(error);
             res.status(500).send('Internal Server Error');
         }
+    })), router.post('/print-bararangay-stab-collection', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+        try {
+            const { id } = req.body; // Destructure the ID from body for clarity
+            if (!id) {
+                return res.status(400).send('Barangay ID is required');
+            }
+            const [teams, barangay] = yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.team.findMany({
+                    where: {
+                        barangaysId: id,
+                    },
+                    include: {
+                        MembersAttendance: {
+                            select: {
+                                id: true,
+                                actual: true,
+                            },
+                        },
+                        barangay: {
+                            select: {
+                                id: true,
+                            },
+                        },
+                        TeamLeader: {
+                            include: {
+                                voter: {
+                                    select: {
+                                        idNumber: true,
+                                        firstname: true,
+                                        lastname: true,
+                                        level: true,
+                                    },
+                                },
+                            },
+                        },
+                        _count: {
+                            select: {
+                                voters: {
+                                    where: {
+                                        QRcode: {
+                                            some: {
+                                                scannedDateTime: 'N/A',
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        voters: {
+                            include: {
+                                QRcode: {
+                                    select: {
+                                        scannedDateTime: true,
+                                        stamp: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    orderBy: {
+                        TeamLeader: {
+                            voter: {
+                                lastname: 'asc',
+                            },
+                        },
+                    },
+                }),
+                prisma_1.prisma.barangays.findUnique({
+                    where: {
+                        id,
+                    },
+                }),
+            ]);
+            if (!teams.length || !barangay) {
+                return res.status(404).send('No data found for the specified barangay');
+            }
+            const workbook = new exceljs_1.default.Workbook();
+            workbook.created = new Date();
+            const worksheet = workbook.addWorksheet(`${barangay.name}`, {
+                pageSetup: {
+                    orientation: 'portrait',
+                },
+                headerFooter: {
+                    oddHeader: `&L&B${barangay.name} Stab Collection Report`,
+                    oddFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+                },
+            });
+            worksheet.columns = [
+                { header: 'Team Leader', key: 'tl', width: 30 },
+                { header: 'Members', key: 'members', width: 30 },
+                { header: 'Stab 1', key: 'one', width: 10 },
+                { header: 'Stab 2', key: 'two', width: 10 },
+                { header: 'Actual Present', key: 'present', width: 10 },
+            ];
+            // Style header row
+            worksheet.getRow(1).eachCell((cell) => {
+                cell.font = { bold: true };
+                cell.alignment = { horizontal: 'center' };
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' },
+                };
+            });
+            const reportData = teams.map((team) => {
+                var _a, _b, _c;
+                const totalStabOne = team.voters.reduce((acc, voter) => {
+                    const stabOne = voter.QRcode.filter((qr) => qr.stamp === 1 && qr.scannedDateTime !== 'N/A').length;
+                    return acc + stabOne;
+                }, 0);
+                const totalStabTwo = team.voters.reduce((acc, voter) => {
+                    const stabTwo = voter.QRcode.filter((qr) => qr.stamp === 2 && qr.scannedDateTime !== 'N/A').length;
+                    return acc + stabTwo;
+                }, 0);
+                return {
+                    tl: ((_a = team.TeamLeader) === null || _a === void 0 ? void 0 : _a.voter)
+                        ? `${team.TeamLeader.voter.lastname}, ${team.TeamLeader.voter.firstname}`
+                        : 'No Team Leader',
+                    members: team._count.voters,
+                    one: totalStabOne,
+                    two: totalStabTwo,
+                    present: (_c = (_b = team.MembersAttendance) === null || _b === void 0 ? void 0 : _b.actual) !== null && _c !== void 0 ? _c : 0,
+                };
+            });
+            worksheet.addRows(reportData);
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', `attachment; filename="${barangay.name}-collection-report.xlsx"`);
+            yield workbook.xlsx.write(res);
+            res.end();
+        }
+        catch (error) {
+            console.error('Error generating report:', error);
+            res.status(500).send('Internal Server Error');
+        }
+    })), router.post('prin-team-stat', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+        try {
+            const { barangayId } = req.body;
+            if (!barangayId) {
+                return res.status(400).send('Bad request');
+            }
+            const workbook = new exceljs_1.default.Workbook();
+            workbook.created = new Date();
+            const worksheet = workbook.addWorksheet(``, {
+                pageSetup: {
+                    orientation: 'portrait',
+                },
+                headerFooter: {
+                    oddHeader: `&L&B$ - Option: `,
+                    oddFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+                },
+            });
+            worksheet.columns = [
+                { header: 'Team', key: 'team', width: 40 },
+                { header: 'Tags', key: 'tags', width: 20 },
+            ];
+            worksheet.getRow(1).eachCell((cell) => {
+                cell.font = { bold: true };
+                cell.alignment = { horizontal: 'center' };
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' },
+                };
+            });
+            const [teams, barangay] = yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.team.findMany({
+                    where: {
+                        barangaysId: barangayId,
+                    },
+                    include: {
+                        voters: {
+                            select: {
+                                id: true,
+                                oor: true,
+                                firstname: true,
+                                lastname: true,
+                                idNumber: true,
+                                status: true,
+                            },
+                        },
+                        TeamLeader: {
+                            select: {
+                                voter: {
+                                    select: {
+                                        id: true,
+                                        firstname: true,
+                                        lastname: true,
+                                        idNumber: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                }),
+                prisma_1.prisma.barangays.findUnique({
+                    where: {
+                        id: barangayId,
+                    },
+                }),
+            ]);
+            if (!barangay) {
+                return res.status(400).send('Bad Request');
+            }
+            const dataToInsert = [];
+            teams.map((item) => {
+                var _a, _b, _c, _d;
+                const actualCount = `Actual: ${item.voters.length - item.voters.filter((voter) => voter.oor === 'YES').length || 0}`;
+                const tl = `TL: ${item.TeamLeader
+                    ? `${(_a = item.TeamLeader.voter) === null || _a === void 0 ? void 0 : _a.idNumber} - ${(_b = item.TeamLeader.voter) === null || _b === void 0 ? void 0 : _b.lastname}, ${(_c = item.TeamLeader.voter) === null || _c === void 0 ? void 0 : _c.firstname}`
+                    : 'Unknown'}`;
+                const or = `OR: ${item.voters.filter((voter) => voter.oor === 'YES').length}`;
+                const membersCount = `Handle: ${(_d = item.voters.length) !== null && _d !== void 0 ? _d : 0}`;
+                dataToInsert.push([tl]);
+                dataToInsert.push([or]);
+                dataToInsert.push([membersCount]);
+                dataToInsert.push([actualCount]);
+                dataToInsert.push([`Members`]);
+                const members = item.voters.map((voter) => `${voter.idNumber} -${voter.lastname}, ${voter.firstname}`);
+                const membersTags = item.voters.map((voter) => `[${(voter === null || voter === void 0 ? void 0 : voter.status) === 0 ? 'D,' : ''} ${(voter === null || voter === void 0 ? void 0 : voter.oor) === 'YES' ? 'OR,' : ''}]`);
+                for (let i = 0; i < members.length; i++) {
+                    dataToInsert.push([members[i], membersTags[i]]);
+                }
+            });
+            worksheet.addRows(dataToInsert);
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', `attachment; filename="${barangay.name}-Team.xlsx"`);
+            yield workbook.xlsx.write(res);
+            res.end();
+        }
+        catch (error) {
+            res.status(500).send('Internal Server Error');
+        }
+    })), router.post('/print-survey-options', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+        try {
+            const { zipCode, multiple, surveyId, queryId } = req.body;
+            if (!zipCode || !surveyId || !queryId) {
+                return res.status(400).json({ error: 'Missing required fields' });
+            }
+            const [barangays, options, survey, query, allResponses] = yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.barangays.findMany({
+                    where: { municipalId: parseInt(zipCode, 10) },
+                    orderBy: { name: 'asc' },
+                    include: {
+                        _count: {
+                            select: {
+                                RespondentResponse: {
+                                    where: {
+                                        surveyId: surveyId,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                }),
+                prisma_1.prisma.option.findMany({
+                    where: { queryId },
+                }),
+                prisma_1.prisma.survey.findUnique({ where: { id: surveyId } }),
+                prisma_1.prisma.queries.findUnique({ where: { id: queryId } }),
+                prisma_1.prisma.response.findMany({ where: { queryId } }),
+            ]);
+            if (!barangays.length || !options.length || !survey || !query) {
+                return res.status(404).json({ error: 'No data found' });
+            }
+            const workbook = new exceljs_1.default.Workbook();
+            workbook.created = new Date();
+            for (const option of options) {
+                const worksheet = workbook.addWorksheet(`${option.title}`, {
+                    pageSetup: {
+                        orientation: 'portrait',
+                    },
+                    headerFooter: {
+                        oddHeader: `&L&B${survey.tagID} - Option: ${option.title}`,
+                        oddFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+                    },
+                });
+                if (multiple) {
+                    worksheet.columns = [
+                        { header: 'Barangay', key: 'barangay', width: 30 },
+                        { header: 'Respondents', key: 'respondents', width: 30 },
+                        { header: 'Votes', key: 'votes', width: 10 },
+                        { header: 'Rank', key: 'rank', width: 10 },
+                    ];
+                    worksheet.getRow(1).eachCell((cell) => {
+                        cell.font = { bold: true };
+                        cell.alignment = { horizontal: 'center' };
+                        cell.border = {
+                            top: { style: 'thin' },
+                            left: { style: 'thin' },
+                            bottom: { style: 'thin' },
+                            right: { style: 'thin' },
+                        };
+                    });
+                }
+                else {
+                    worksheet.columns = [
+                        { header: 'Barangay', key: 'barangay', width: 20 },
+                        { header: 'Respondents', key: 'respondents', width: 10 },
+                        { header: 'Votes', key: 'votes', width: 10 },
+                        { header: 'Result', key: 'rank', width: 10 },
+                    ];
+                    worksheet.getRow(1).eachCell((cell) => {
+                        cell.font = { bold: true };
+                        cell.alignment = { horizontal: 'center' };
+                        cell.border = {
+                            top: { style: 'thin' },
+                            left: { style: 'thin' },
+                            bottom: { style: 'thin' },
+                            right: { style: 'thin' },
+                        };
+                    });
+                }
+                const data = barangays.map((barangay) => {
+                    var _a, _b, _c;
+                    // Count votes for this option in this barangay
+                    const voteCount = allResponses.filter((resp) => resp.optionId === option.id && resp.barangaysId === barangay.id).length;
+                    // Count votes for all options in this barangay
+                    const optionVotesInBarangay = options.map((opt) => {
+                        const count = allResponses.filter((resp) => resp.optionId === opt.id && resp.barangaysId === barangay.id).length;
+                        return {
+                            optionId: opt.id,
+                            count,
+                        };
+                    });
+                    // Sort descending to compute ranks
+                    const ranked = optionVotesInBarangay
+                        .sort((a, b) => b.count - a.count)
+                        .map((item, index) => (Object.assign(Object.assign({}, item), { rank: item.count > 0 ? index + 1 : 0 })));
+                    const thisOptionRank = ((_a = ranked.find((r) => r.optionId === option.id)) === null || _a === void 0 ? void 0 : _a.rank) || 0;
+                    if (!multiple) {
+                        return {
+                            barangay: barangay.name,
+                            respondents: (_b = barangay._count.RespondentResponse) !== null && _b !== void 0 ? _b : 0,
+                            votes: voteCount,
+                            rank: thisOptionRank,
+                        };
+                    }
+                    return {
+                        barangay: barangay.name,
+                        respondents: (_c = barangay._count.RespondentResponse) !== null && _c !== void 0 ? _c : 0,
+                        votes: voteCount,
+                        rank: thisOptionRank,
+                    };
+                });
+                worksheet.addRows(data);
+            }
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', `attachment; filename="${survey.tagID}-${zipCode}-by-option.xlsx"`);
+            yield workbook.xlsx.write(res);
+            res.end();
+        }
+        catch (error) {
+            console.error('Error generating Excel:', error);
+            res.status(500).json({ error: 'Failed to generate Excel' });
+        }
+    })), router.post('/print-team-members', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+        try {
+            const { id } = req.body;
+            if (!id) {
+                return res.status(400).send('Bad request');
+            }
+            console.log({ id });
+            const [teams, barangay] = yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.team.findMany({
+                    where: {
+                        barangaysId: id,
+                        level: 1,
+                    },
+                    include: {
+                        _count: {
+                            select: {
+                                voters: true,
+                            },
+                        },
+                        TeamLeader: {
+                            select: {
+                                voter: {
+                                    select: {
+                                        firstname: true,
+                                        lastname: true,
+                                        idNumber: true,
+                                        id: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    orderBy: {
+                        TeamLeader: {
+                            voter: {
+                                lastname: 'asc',
+                            },
+                        },
+                    },
+                }),
+                prisma_1.prisma.barangays.findUnique({
+                    where: {
+                        id,
+                    },
+                }),
+            ]);
+            if (teams.length === 0 || !barangay) {
+                return res.status(404).send('Invalid data');
+            }
+            const workbook = new exceljs_1.default.Workbook();
+            workbook.created = new Date();
+            const worksheet = workbook.addWorksheet(`${barangay.name}`, {
+                pageSetup: {
+                    orientation: 'portrait',
+                },
+                headerFooter: {
+                    oddHeader: `&C&BABC PARTY VOLUNTEER ATTENDANCE`,
+                    oddFooter: `&RBarangay: ${barangay.name}`,
+                },
+            });
+            worksheet.columns = [
+                { header: 'No.', key: 'no', width: 5 },
+                { header: 'Fullname', key: 'fullname', width: 40 },
+                { header: '', key: 'handle', width: 10 },
+                { header: 'Actual', key: 'actual', width: 10 },
+            ];
+            worksheet.getRow(1).eachCell((cell) => {
+                cell.font = { bold: true };
+                cell.alignment = { horizontal: 'center' };
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' },
+                };
+            });
+            console.log({ teams, barangay });
+            const data = teams.map((item, i) => {
+                var _a, _b, _c, _d, _e;
+                return {
+                    no: `${1 + i}.`,
+                    fullname: `${(_b = (_a = item.TeamLeader) === null || _a === void 0 ? void 0 : _a.voter) === null || _b === void 0 ? void 0 : _b.lastname}, ${(_d = (_c = item.TeamLeader) === null || _c === void 0 ? void 0 : _c.voter) === null || _d === void 0 ? void 0 : _d.firstname}`,
+                    handle: (_e = item._count.voters) !== null && _e !== void 0 ? _e : 0,
+                    actual: '',
+                };
+            });
+            worksheet.addRows(data);
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', `attachment; filename="${barangay.name}.xlsx"`);
+            yield workbook.xlsx.write(res);
+            res.end();
+        }
+        catch (error) {
+            res.status(500).send('Internal Server Error');
+        }
     })), router.post('/barangay-attendance', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const { day, barangayId } = req.body;
         try {
@@ -2245,13 +2707,6 @@ exports.default = (io) => {
                 },
             });
             console.log({ data });
-            barangayId
-                ? doc.fontSize(16).text(`${barangay === null || barangay === void 0 ? void 0 : barangay.name}-(${(0, data_1.formatToLocalPHTime)(day)})`, {
-                    align: 'left',
-                })
-                : doc.fontSize(16).text(`${(0, data_1.formatToLocalPHTime)(day)}`, {
-                    align: 'left',
-                });
             doc.moveDown(2);
             doc.fontSize(14).text(`Total Attendee/s: ${data.length}`, {
                 align: 'left',
@@ -2277,10 +2732,10 @@ exports.default = (io) => {
             doc.moveDown(2);
             if (data.length > 0) {
                 data.map((item, i) => {
-                    var _a, _b, _c, _d;
+                    var _a, _b, _c, _d, _e;
                     doc
                         .fontSize(12)
-                        .text(`${i + 1}. ${item.teamLeader.barangay.name} ${(0, data_1.handleLevel)((_b = (_a = item.teamLeader) === null || _a === void 0 ? void 0 : _a.voter) === null || _b === void 0 ? void 0 : _b.level)} - ${(_c = item.teamLeader.voter) === null || _c === void 0 ? void 0 : _c.lastname}, ${(_d = item.teamLeader.voter) === null || _d === void 0 ? void 0 : _d.firstname}      ${(0, data_1.formatToLocalPHTime)(item.date)}`, { indent: 20, align: 'left' });
+                        .text(`${i + 1}. ${item.teamLeader.barangay.name} ${(0, data_1.handleLevel)((_b = (_a = item.teamLeader) === null || _a === void 0 ? void 0 : _a.voter) === null || _b === void 0 ? void 0 : _b.level)} - ${(_c = item.teamLeader.voter) === null || _c === void 0 ? void 0 : _c.lastname}, ${(_d = item.teamLeader.voter) === null || _d === void 0 ? void 0 : _d.firstname} (${(_e = item.teamLeader.voter) === null || _e === void 0 ? void 0 : _e.idNumber})      ${(0, data_1.formatToLocalPHTime)(item.date)}`, { indent: 20, align: 'left' });
                     doc.moveDown(1);
                 });
             }
@@ -2292,6 +2747,7 @@ exports.default = (io) => {
     })), router.post('/generate-survey-report', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         var _a, _b, _c;
         const { code, zipCode, barangayId } = req.body;
+        console.log({ code, zipCode, barangayId });
         if (!code || !zipCode || !barangayId) {
             return res.status(400).send('Bad request');
         }
@@ -2448,15 +2904,15 @@ exports.default = (io) => {
                     barangay.RespondentResponse.forEach((respondent) => {
                         uniqueResponses.add(respondent.id); // Count each unique respondent response
                         respondent.Response.forEach((response) => {
-                            var _a, _b, _c;
+                            var _a, _b, _c, _d;
                             const queryId = response.queries.id;
                             const queryText = response.queries.queries;
                             const queryAccess = response.queries.access;
                             const optionId = (_a = response.option) === null || _a === void 0 ? void 0 : _a.id;
                             const optionTitle = (_b = response.option) === null || _b === void 0 ? void 0 : _b.title;
-                            const gender = respondent.gender.name.toLowerCase();
+                            const gender = (_c = respondent === null || respondent === void 0 ? void 0 : respondent.gender) === null || _c === void 0 ? void 0 : _c.name.toLowerCase();
                             // **Fix: Ensure option belongs to the correct query**
-                            if (!optionId || ((_c = response === null || response === void 0 ? void 0 : response.option) === null || _c === void 0 ? void 0 : _c.queryId) !== queryId) {
+                            if (!optionId || ((_d = response === null || response === void 0 ? void 0 : response.option) === null || _d === void 0 ? void 0 : _d.queryId) !== queryId) {
                                 return; // Skip this option if it doesn’t match the query
                             }
                             if (!queryMap.has(queryId)) {
@@ -2525,8 +2981,8 @@ exports.default = (io) => {
                 if (query.Option) {
                     query.Option.forEach((option, j) => {
                         doc.fontSize(10).text(`${data_1.alphabetic[j]}. ${option.title}`, { indent: 40 });
-                        const male = option.Response.filter((item) => item.respondentResponse.gender.name.toLowerCase() === 'male').length;
-                        const female = option.Response.filter((item) => item.respondentResponse.gender.name.toLowerCase() === 'female').length;
+                        const male = option.Response.filter((item) => { var _a, _b, _c; return ((_c = (_b = (_a = item === null || item === void 0 ? void 0 : item.respondentResponse) === null || _a === void 0 ? void 0 : _a.gender) === null || _b === void 0 ? void 0 : _b.name) === null || _c === void 0 ? void 0 : _c.toLowerCase()) === 'male'; }).length;
+                        const female = option.Response.filter((item) => { var _a, _b, _c; return ((_c = (_b = (_a = item === null || item === void 0 ? void 0 : item.respondentResponse) === null || _a === void 0 ? void 0 : _a.gender) === null || _b === void 0 ? void 0 : _b.name) === null || _c === void 0 ? void 0 : _c.toLowerCase()) === 'female'; }).length;
                         doc.moveDown(0.5);
                         doc
                             .fontSize(10)
