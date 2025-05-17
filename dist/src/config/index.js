@@ -140,7 +140,8 @@ const resolvers = {
             return yield prisma_1.prisma.barangays.findMany();
         }),
         barangayList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode }) {
-            console.log('Zip: ', zipCode);
+            console.log('Zip Code: ', zipCode);
+            //Tangin Yan
             return yield prisma_1.prisma.barangays.findMany({
                 where: { municipalId: zipCode },
                 orderBy: { name: 'asc' },

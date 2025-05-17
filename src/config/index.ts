@@ -165,7 +165,8 @@ const resolvers: Resolvers = {
       return await prisma.barangays.findMany();
     },
     barangayList: async (_, { zipCode }) => {
-      console.log('Zip: ', zipCode);
+      console.log('Zip Code: ', zipCode);
+      //Tangin Yan
 
       return await prisma.barangays.findMany({
         where: { municipalId: zipCode },
