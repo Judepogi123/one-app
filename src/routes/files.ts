@@ -18,6 +18,7 @@ import {
   handleLevelLabel,
   handleLevel,
   formatToLocalPHTime,
+  handleCalVariance,
 } from '../utils/data';
 
 //database
@@ -1666,7 +1667,153 @@ export default (io: any) => {
         res.status(500).send('Internal Server Error');
       }
     }),
+    router.post('/print-members-status', async (req: Request, res: Response) => {
+      try {
+        const { zipCode } = req.body;
+        if (!zipCode) {
+          return res.status(400).send('Bad request!');
+        }
 
+        const barangays = await prisma.barangays.findMany({
+          where: {
+            municipalId: parseInt(zipCode, 10),
+          },
+          include: {
+            TeamLeaderBridge: {
+              where: {
+                level: 1,
+              },
+              include: {
+                MembersAttendance: true,
+                _count: {
+                  select: {
+                    voters: true,
+                  },
+                },
+                voters: {
+                  select: {
+                    id: true,
+                    QRcode: true,
+                  },
+                },
+              },
+            },
+            Machine: true,
+          },
+          orderBy: {
+            name: 'asc',
+          },
+        });
+        if (barangays.length === 0) {
+          return res.status(400).send('Bad request, no Barangay found!');
+        }
+
+        const workbook = new ExcelJS.Workbook();
+        workbook.created = new Date();
+        const worksheet = workbook.addWorksheet(zipCode, {
+          pageSetup: {
+            paperSize: 9,
+            orientation: 'landscape',
+            fitToPage: false,
+            showGridLines: true,
+            margins: {
+              left: 0.6,
+              right: 0.6,
+              top: 0.5,
+              bottom: 0.5,
+              header: 0.3,
+              footer: 0.3,
+            },
+          },
+          headerFooter: {
+            firstHeader: ``,
+            firstFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+            oddHeader: `&L&B${zipCode} Election Day Report`,
+            oddFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+          },
+        });
+
+        worksheet.columns = [
+          { header: 'Barangay', key: 'barangay', width: 20 },
+          { header: 'Machine/s', key: 'machine', width: 10 },
+          { header: 'Team (TL only)', key: 'tl', width: 14 },
+          { header: 'Members', key: 'members', width: 10 },
+          { header: 'Total', key: 'total', width: 10 }, // Fixed typo in key ('tatal' -> 'total')
+          { header: 'Stab 1', key: 'stabOne', width: 12 },
+          { header: 'Stab 2', key: 'stabTwo', width: 12 },
+          { header: 'Total ER', key: 'totalSov', width: 16 },
+          { header: 'Variance', key: 'variance', width: 14 },
+        ];
+        worksheet.getRow(1).eachCell((cell) => {
+          cell.font = { bold: true };
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' },
+          };
+        });
+
+        const data = barangays.map((item) => {
+          // Calculate total members
+          const totalMembers = item.TeamLeaderBridge.reduce((acc, base) => {
+            return acc + (base._count?.voters || 0);
+          }, 0);
+          const totalSovs =
+            item.Machine.reduce((acc, base) => {
+              return acc + (base.result || 0);
+            }, 0) || 0;
+
+          // Calculate Stab 1 and Stab 2 counts
+          let totalStabOne = 0;
+          let totalStabTwo = 0;
+
+          item.TeamLeaderBridge.forEach((tl) => {
+            tl.voters.forEach((voter) => {
+              if (voter.QRcode) {
+                totalStabOne += voter.QRcode.filter(
+                  (stab) => stab.stamp === 1 && stab.scannedDateTime !== 'N/A',
+                ).length;
+                totalStabTwo += voter.QRcode.filter(
+                  (stab) => stab.stamp === 2 && stab.scannedDateTime !== 'N/A',
+                ).length;
+              }
+            });
+          });
+
+          const totalTeamAndMembers = (item.TeamLeaderBridge.length || 0) + totalMembers;
+
+          return {
+            barangay: item.name,
+            machine: item.Machine.length ?? 0,
+            tl: item.TeamLeaderBridge.length ?? 0,
+            members: totalMembers,
+            total: totalTeamAndMembers,
+            stabOne: totalStabOne,
+            stabTwo: totalStabTwo,
+            totalSov: totalSovs,
+            variance: handleCalVariance(totalTeamAndMembers, totalSovs),
+          };
+        });
+
+        // Add rows to worksheet
+        data.forEach((row) => worksheet.addRow(row));
+
+        // Set response headers and send the workbook
+        res.setHeader(
+          'Content-Type',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
+        res.setHeader('Content-Disposition', `attachment; filename=${zipCode}_report.xlsx`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+      } catch (error) {
+        console.log(error);
+        res.status(500).send('Internal server error');
+      }
+    }),
     router.post('/barangay-validation-result', async (req: Request, res: Response) => {
       try {
         const barangayId = req.body.barangayId;

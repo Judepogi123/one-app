@@ -103,7 +103,42 @@ route.post('/member-stabs', async (req: Request, res: Response) => {
     });
   }
 });
+route.post('/barangay-list', async (req: Request, res: Response) => {
+  try {
+    const { zipCode } = req.body;
+    console.log({ zipCode });
 
+    if (!zipCode) {
+      return res.status(400).send('Bad request!');
+    }
+    const parsedZipCode = parseInt(zipCode, 10);
+    const [municipal, barangays] = await prisma.$transaction([
+      prisma.municipals.findUnique({
+        where: {
+          id: parsedZipCode,
+        },
+      }),
+      prisma.barangays.findMany({
+        where: {
+          municipalId: parsedZipCode,
+        },
+        orderBy: {
+          name: 'asc',
+        },
+      }),
+    ]);
+
+    if (!municipal || barangays.length === 0) {
+      return res.status(400).send('Municiapl or Barangay not found');
+    }
+    return res.status(200).send({
+      municipal,
+      barangayList: barangays,
+    });
+  } catch (error) {
+    res.status(500).send(`Internal servel Error: ${error}`);
+  }
+});
 route.post('reset-stab', async (req: Request, res: Response) => {
   try {
     const id = req.body.id;
