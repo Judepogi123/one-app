@@ -52,7 +52,38 @@ route.post('/attendance', async (req: Request, res: Response) => {
     res.status(500).json({ message: error });
   }
 });
+route.get('/figure-head-id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.query;
+    console.log('id', id);
 
+    if (!id) {
+      return res.status(400).send('Bad request!');
+    }
+    const fhID = await prisma.teamLeader.findUnique({
+      where: {
+        id: id as string,
+      },
+      include: {
+        voter: {
+          select: {
+            firstname: true,
+            lastname: true,
+            idNumber: true,
+            id: true,
+          },
+        },
+      },
+    });
+    if (!fhID) {
+      return res.status(404).send('ID not found!');
+    }
+    return res.status(200).send(fhID);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send('Internal Server Error');
+  }
+});
 route.post('/member-stabs', async (req: Request, res: Response) => {
   const data = req.body.stab as string;
   if (!data) {
