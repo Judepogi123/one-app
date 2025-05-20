@@ -420,7 +420,7 @@ model Team {
   VotersToUpdate       ValidationResult[]
   ValidationTimeInput  ValidationTimeInput[]
   voters               Voters[]
-  MembersAttendance    MembersAttendance?
+  membersAttendance    MembersAttendance?
 }
 
 model CustomTeamHeader {

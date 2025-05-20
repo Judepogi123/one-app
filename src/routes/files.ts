@@ -1695,7 +1695,7 @@ export default (io: any) => {
                     QRcode: true,
                   },
                 },
-                MembersAttendance: {
+                membersAttendance: {
                   select: {
                     actual: true,
                   },
@@ -1784,7 +1784,7 @@ export default (io: any) => {
           let barangayStabOne = 0;
           let barangayStabTwo = 0;
           let barangayTeamAttendance = item.TeamLeaderBridge.reduce((acc, base) => {
-            return acc + (base.MembersAttendance?.actual || 0);
+            return acc + (base.membersAttendance?.actual || 0);
           }, 0);
 
           item.TeamLeaderBridge.forEach((tl) => {
@@ -2820,7 +2820,7 @@ export default (io: any) => {
               barangaysId: id,
             },
             include: {
-              MembersAttendance: {
+              membersAttendance: {
                 select: {
                   id: true,
                   actual: true,
@@ -2941,7 +2941,7 @@ export default (io: any) => {
             members: team._count.voters,
             one: totalStabOne,
             two: totalStabTwo,
-            present: team.MembersAttendance?.actual ?? 0,
+            present: team.membersAttendance?.actual ?? 0,
           };
         });
 
