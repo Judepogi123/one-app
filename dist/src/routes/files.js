@@ -2571,6 +2571,149 @@ exports.default = (io) => {
             console.log(error);
             res.status(500).send('Internal Server Error');
         }
+    })), router.post('/barangay-machine-report', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+        try {
+            const { barangayId } = req.body;
+            console.log({ barangayId });
+            if (!barangayId) {
+                return res.status(400).send('Barangay ID is required');
+            }
+            const [machines, barangay] = yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.machine.findMany({
+                    where: { barangaysId: barangayId },
+                    include: {
+                        prints: {
+                            include: {
+                                Voters: {
+                                    select: {
+                                        QRcode: {
+                                            where: {
+                                                scannedDateTime: { not: 'N/A' },
+                                            },
+                                        },
+                                        id: true,
+                                        teamId: true,
+                                        candidatesId: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    orderBy: {
+                        number: 'asc',
+                    },
+                }),
+                prisma_1.prisma.barangays.findUnique({
+                    where: {
+                        id: barangayId,
+                    },
+                }),
+            ]);
+            if (!machines.length || !barangay) {
+                return res.status(404).send('No data found for the specified barangay');
+            }
+            const workbook = new exceljs_1.default.Workbook();
+            workbook.created = new Date();
+            const worksheet = workbook.addWorksheet(`${barangay.name}`, {
+                pageSetup: {
+                    orientation: 'portrait',
+                },
+                headerFooter: {
+                    oddHeader: `&L&B${barangay.name} Machine Report`,
+                    oddFooter: `&RGenerated on: ${new Date().toLocaleDateString()}`,
+                },
+            });
+            worksheet.columns = [
+                { header: 'Machine No', key: 'no', width: 12 },
+                { header: 'Precinct', key: 'precinct', width: 20 },
+                { header: 'Reg. Voters', key: 'reg', width: 14 },
+                { header: 'In Team', key: 'inTeam', width: 12 },
+                { header: 'Stab One', key: 'stabOne', width: 14 },
+                { header: 'Stab Two', key: 'stabTwo', width: 14 },
+            ];
+            // Style header row
+            worksheet.getRow(1).eachCell((cell) => {
+                cell.font = { bold: true };
+                cell.alignment = { horizontal: 'center' };
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' },
+                };
+            });
+            let grandTotalStabOne = 0;
+            let grandTotalStabTwo = 0;
+            let grandTotalRegVoters = 0;
+            let grandTotalInTeam = 0;
+            let grandTotalPrecinct = 0;
+            machines.forEach((machine, i) => {
+                let machineStabOne = 0;
+                let machineStabTwo = 0;
+                let machineRegVoters = 0;
+                let machineInTeam = 0;
+                let machinePrecinctCount = machine.prints.length;
+                machine.prints.forEach((print) => {
+                    const precinctStabOne = print.Voters.reduce((acc, voter) => {
+                        return acc + voter.QRcode.filter((qr) => qr.stamp === 1).length;
+                    }, 0);
+                    const precinctStabTwo = print.Voters.reduce((acc, voter) => {
+                        return acc + voter.QRcode.filter((qr) => qr.stamp === 2).length;
+                    }, 0);
+                    const precinctVoters = print.Voters.length;
+                    const precinctInTeam = print.Voters.filter((voter) => voter.teamId && voter.candidatesId).length;
+                    machineStabOne += precinctStabOne;
+                    machineStabTwo += precinctStabTwo;
+                    machineRegVoters += precinctVoters;
+                    machineInTeam += precinctInTeam;
+                    worksheet.addRow({
+                        no: machine.number,
+                        precinct: print.precintNumber,
+                        reg: precinctVoters,
+                        inTeam: precinctInTeam,
+                        stabOne: precinctStabOne,
+                        stabTwo: precinctStabTwo,
+                    });
+                });
+                // Add machine totals
+                worksheet.addRow({ no: `ER: ${machine.result}` });
+                worksheet.addRow({
+                    no: 'Total',
+                    precinct: machinePrecinctCount,
+                    reg: machineRegVoters,
+                    inTeam: machineInTeam,
+                    stabOne: machineStabOne,
+                    stabTwo: machineStabTwo,
+                });
+                // Add empty row for separation
+                worksheet.addRow([]);
+                worksheet.addRow([]);
+                // Accumulate grand totals
+                grandTotalStabOne += machineStabOne;
+                grandTotalStabTwo += machineStabTwo;
+                grandTotalRegVoters += machineRegVoters;
+                grandTotalInTeam += machineInTeam;
+                grandTotalPrecinct += machinePrecinctCount;
+            });
+            worksheet.addRow([]);
+            // Add grand totals
+            worksheet.addRow({
+                no: 'Overall Total',
+                precinct: grandTotalPrecinct,
+                reg: grandTotalRegVoters,
+                inTeam: grandTotalInTeam,
+                stabOne: grandTotalStabOne,
+                stabTwo: grandTotalStabTwo,
+            });
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', `attachment; filename=${barangay.name.replace(/\s+/g, '_')}-Machine_report.xlsx`);
+            yield workbook.xlsx.write(res);
+            res.end();
+        }
+        catch (error) {
+            console.error('Error generating barangay machine report:', error);
+            res.status(500).send('Internal server error');
+        }
     })), router.post('/print-bararangay-stab-collection', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         try {
             const { id } = req.body; // Destructure the ID from body for clarity
@@ -2581,6 +2724,7 @@ exports.default = (io) => {
                 prisma_1.prisma.team.findMany({
                     where: {
                         barangaysId: id,
+                        level: 1,
                     },
                     include: {
                         membersAttendance: {
