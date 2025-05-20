@@ -1462,12 +1462,6 @@ exports.default = (io) => {
                             level: 1,
                         },
                         include: {
-                            MembersAttendance: {
-                                select: {
-                                    id: true,
-                                    actual: true,
-                                },
-                            },
                             _count: {
                                 select: {
                                     voters: true,
@@ -1477,6 +1471,11 @@ exports.default = (io) => {
                                 select: {
                                     id: true,
                                     QRcode: true,
+                                },
+                            },
+                            MembersAttendance: {
+                                select: {
+                                    actual: true,
                                 },
                             },
                         },
@@ -1522,7 +1521,7 @@ exports.default = (io) => {
                 { header: 'Total', key: 'total', width: 10 },
                 { header: 'Stab 1', key: 'stabOne', width: 12 },
                 { header: 'Stab 2', key: 'stabTwo', width: 12 },
-                { header: "Member's Attendance", key: 'attendance', width: 12 },
+                { header: "Member's Attendance", key: 'attendance', width: 18 },
                 { header: 'Total ER', key: 'totalSov', width: 16 },
                 { header: 'Variance', key: 'variance', width: 14 },
             ];
