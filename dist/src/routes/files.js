@@ -1462,7 +1462,12 @@ exports.default = (io) => {
                             level: 1,
                         },
                         include: {
-                            MembersAttendance: true,
+                            MembersAttendance: {
+                                select: {
+                                    id: true,
+                                    actual: true,
+                                },
+                            },
                             _count: {
                                 select: {
                                     voters: true,
@@ -1517,6 +1522,7 @@ exports.default = (io) => {
                 { header: 'Total', key: 'total', width: 10 },
                 { header: 'Stab 1', key: 'stabOne', width: 12 },
                 { header: 'Stab 2', key: 'stabTwo', width: 12 },
+                { header: "Member's Attendance", key: 'attendance', width: 12 },
                 { header: 'Total ER', key: 'totalSov', width: 16 },
                 { header: 'Variance', key: 'variance', width: 14 },
             ];
@@ -1534,6 +1540,7 @@ exports.default = (io) => {
             let totalMachines = 0;
             let totalTLs = 0;
             let totalMembers = 0;
+            let totalTeamAttendance = 0;
             let totalTeamAndMembers = 0;
             let totalStabOne = 0;
             let totalStabTwo = 0;
@@ -1551,6 +1558,10 @@ exports.default = (io) => {
                 // Calculate Stab 1 and Stab 2 counts
                 let barangayStabOne = 0;
                 let barangayStabTwo = 0;
+                let barangayTeamAttendance = item.TeamLeaderBridge.reduce((acc, base) => {
+                    var _a;
+                    return acc + (((_a = base.MembersAttendance) === null || _a === void 0 ? void 0 : _a.actual) || 0);
+                }, 0);
                 item.TeamLeaderBridge.forEach((tl) => {
                     tl.voters.forEach((voter) => {
                         if (voter.QRcode) {
@@ -1567,6 +1578,7 @@ exports.default = (io) => {
                 totalTeamAndMembers += barangayTeamAndMembers;
                 totalStabOne += barangayStabOne;
                 totalStabTwo += barangayStabTwo;
+                totalTeamAttendance += barangayTeamAttendance;
                 totalSovs += barangaySovs;
                 const result = barangaySovs - barangayTeamAndMembers;
                 return {
@@ -1577,6 +1589,7 @@ exports.default = (io) => {
                     total: barangayTeamAndMembers,
                     stabOne: barangayStabOne,
                     stabTwo: barangayStabTwo,
+                    attendance: barangayTeamAttendance,
                     totalSov: barangaySovs,
                     variance: `${(0, data_1.handleCalVariance)(barangayTeamAndMembers, barangaySovs)} ${(0, data_1.calculatePercentage)(result, barangaySovs)}%`,
                 };
@@ -1594,6 +1607,7 @@ exports.default = (io) => {
                 stabOne: totalStabOne,
                 stabTwo: totalStabTwo,
                 totalSov: totalSovs,
+                attendance: totalTeamAttendance,
                 variance: (0, data_1.calculatePercentage)(overallTotal, totalSovs),
             });
             // Style the totals row
