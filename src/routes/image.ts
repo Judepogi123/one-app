@@ -32,7 +32,306 @@ router.post('/image', upload.single('file'), async (req: Request, res: Response)
     res.status(500).send('Internal server error');
   }
 });
+router.post('/generate-custom-id-front', async (req: Request, res: Response) => {
+  try {
+    const { templateId, voterIDs, all, barangayId, level } = req.body;
+    console.log({ templateId, voterIDs, all, barangayId, level });
 
+    if (!templateId || voterIDs.length === 0) {
+      console.log('Error: 1');
+      return res.status(400).send('Bad Request');
+    }
+    let tlData: any[] = [];
+    if (all) {
+      tlData = await prisma.teamLeader.findMany({
+        where: {
+          barangaysId: barangayId,
+        },
+      });
+    } else {
+      tlData = await prisma.teamLeader.findMany({
+        where: {
+          votersId: { in: voterIDs },
+        },
+        include: {
+          barangay: {
+            select: {
+              name: true,
+              id: true,
+            },
+          },
+          voter: {
+            select: {
+              lastname: true,
+              level: true,
+              firstname: true,
+              id: true,
+            },
+          },
+          qrCode: {
+            select: {
+              qrCode: true,
+            },
+          },
+        },
+      });
+    }
+    const [template] = await prisma.$transaction([
+      prisma.templateId.findUnique({
+        where: {
+          id: templateId,
+        },
+      }),
+    ]);
+    if (tlData.length === 0 || !template) {
+      console.log('Error: 2');
+      console.log({ tlData, template });
+
+      return res.status(400).send('Bad Request: Voters or Template not found!');
+    }
+    const sizes = { w: 8.5, h: 10.5, Lfont: 20, Sfont: 24, LYname: 140, GYname: 125 };
+    const cmToPx = 37.7953;
+    const CM_TO_PT = 28.3465;
+    const scaleFactor = 4;
+    const IDsPerPage = 4;
+
+    let generated: any[] = [];
+
+    const doc = new PDFDocument({ size: 'A4', margin: 0 });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="VotersID.pdf"`);
+
+    doc.pipe(res);
+    const chunks = Array.from({ length: Math.ceil(tlData.length / IDsPerPage) }, (_, i) =>
+      tlData.slice(i * IDsPerPage, i * IDsPerPage + IDsPerPage),
+    );
+
+    for (let index = 0; index < chunks.length; index++) {
+      if (index > 0) doc.addPage();
+      const chunk = chunks[index];
+
+      for (let i = 0; i < chunk.length; i++) {
+        const tl = chunk[i];
+        const { voter } = tl;
+
+        const baseWidth = sizes.w * cmToPx;
+        const baseHeight = sizes.h * cmToPx;
+        const width = baseWidth * scaleFactor;
+        const height = baseHeight * scaleFactor;
+
+        let voterQR = '';
+
+        if (!tl.teamlLeaderQRcodesId) {
+          voterQR = await qrcode.toDataURL(tl.id);
+          const qrCode = await prisma.teamlLeaderQRcodes.create({
+            data: { qrCode: voterQR },
+          });
+          await prisma.teamLeader.update({
+            where: { id: tl.id },
+            data: { teamlLeaderQRcodesId: qrCode.id },
+          });
+        } else {
+          const qrCodeData = await prisma.teamlLeaderQRcodes.findUnique({
+            where: { id: tl.teamlLeaderQRcodesId },
+          });
+          voterQR = qrCodeData?.qrCode || '';
+        }
+        const canvas = createCanvas(width, height);
+        const ctx = canvas.getContext('2d');
+        const imageUrl = template.url;
+
+        // Load the image from the URL
+        const image = await loadImage(imageUrl);
+        ctx.drawImage(image, 0, 0, width, height);
+
+        const lastnameCount = voter.lastname.trim().length ?? 0;
+        const firstnameCount = voter.firstname.trim().length ?? 0;
+        const totalNameCount = firstnameCount + lastnameCount;
+        console.log(totalNameCount);
+
+        if (voterQR) {
+          const base64Data = voterQR.replace(/^data:image\/png;base64,/, '');
+          const qrImage = await loadImage(Buffer.from(base64Data, 'base64'));
+
+          const qrX = width - 600;
+          const qrY = (height - 650) / 2;
+          const codeY = qrY + 20;
+          ctx.drawImage(qrImage, qrX, codeY, 420, 420);
+        }
+        const centerX = width / 2;
+        if (totalNameCount >= 20) {
+          const nameY = height - 115 * scaleFactor;
+          ctx.font = `bold ${20 * scaleFactor}px Arial, sans-serif`;
+          ctx.fillStyle = 'black';
+          ctx.textAlign = 'center'; // Align text to the right of `letterW`
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`${voter.lastname},`, centerX, nameY);
+          ctx.fillText(`${voter.firstname}`, centerX, nameY + 100);
+
+          const barangayY = height - 65 * scaleFactor;
+          ctx.font = `${16 * scaleFactor}px Arial, sans-serif`;
+          ctx.fillStyle = 'black';
+          ctx.textAlign = 'center'; // Align text to the right of `letterW`
+          ctx.textBaseline = 'middle';
+
+          ctx.fillText(tl.barangay.name, centerX, barangayY);
+        } else {
+          const nameY = height - 115 * scaleFactor;
+          ctx.font = `bold ${20 * scaleFactor}px Arial, sans-serif`;
+          ctx.fillStyle = 'black';
+          ctx.textAlign = 'center'; // Align text to the right of `letterW`
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`${voter.lastname}, ${voter.firstname}`, centerX, nameY);
+
+          const barangayY = height - 90 * scaleFactor;
+          ctx.font = `${16 * scaleFactor}px Arial, sans-serif`;
+          ctx.fillStyle = 'black';
+          ctx.textAlign = 'center'; // Align text to the right of `letterW`
+          ctx.textBaseline = 'middle';
+
+          ctx.fillText(tl.barangay.name, centerX, barangayY);
+        }
+
+        const imageBuffer = canvas.toBuffer('image/png', {
+          compressionLevel: 9,
+          resolution: 300,
+        });
+
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        const xOffset = 25 + col * (sizes.w * CM_TO_PT + 15);
+        const yOffset = 25 + row * (sizes.h * CM_TO_PT + 15);
+
+        doc.image(imageBuffer, xOffset, yOffset, {
+          width: sizes.w * CM_TO_PT + 3,
+          height: sizes.h * CM_TO_PT,
+        });
+        console.log('Voter: ', voter);
+
+        generated.push(voter.id);
+      }
+    }
+    if (generated.length > 0) {
+      await prisma.idRecords.createMany({
+        data: generated.map((item) => {
+          return {
+            votersId: item,
+            templateIdId: templateId,
+          };
+        }),
+      });
+    }
+    doc.end();
+  } catch (error) {
+    console.log(error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+router.post('/generate-custom-id-rear', async (req: Request, res: Response) => {
+  try {
+    const { templateId, voterIDs, all, barangayId, level } = req.body;
+    console.log({ templateId, voterIDs, all, barangayId, level });
+
+    if (!templateId || voterIDs.length === 0) {
+      console.log('Error: 1');
+      return res.status(400).send('Bad Request');
+    }
+    let tlData: any[] = [];
+    if (all) {
+      tlData = await prisma.teamLeader.findMany({
+        where: {
+          barangaysId: barangayId,
+        },
+      });
+    } else {
+      tlData = await prisma.teamLeader.findMany({
+        where: {
+          votersId: { in: voterIDs },
+        },
+      });
+    }
+    const [template] = await prisma.$transaction([
+      prisma.templateId.findUnique({
+        where: {
+          id: templateId,
+        },
+      }),
+    ]);
+    if (tlData.length === 0 || !template) {
+      console.log('Error: 2');
+      console.log({ tlData, template });
+
+      return res.status(400).send('Bad Request: Voters or Template not found!');
+    }
+    const sizes = { w: 8.5, h: 10.5, Lfont: 20, Sfont: 24, LYname: 140, GYname: 125 };
+    const cmToPx = 37.7953;
+    const CM_TO_PT = 28.3465;
+    const scaleFactor = 4;
+    const IDsPerPage = 4;
+
+    let generated: any[] = [];
+
+    const doc = new PDFDocument({ size: 'A4', margin: 0 });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="VotersID.pdf"`);
+
+    doc.pipe(res);
+    const chunks = Array.from({ length: Math.ceil(tlData.length / IDsPerPage) }, (_, i) =>
+      tlData.slice(i * IDsPerPage, i * IDsPerPage + IDsPerPage),
+    );
+
+    for (let index = 0; index < chunks.length; index++) {
+      if (index > 0) doc.addPage();
+      const chunk = chunks[index];
+
+      for (let i = 0; i < chunk.length; i++) {
+        const tl = chunk[i];
+
+        const baseWidth = sizes.w * cmToPx;
+        const baseHeight = sizes.h * cmToPx;
+        const width = baseWidth * scaleFactor;
+        const height = baseHeight * scaleFactor;
+
+        const canvas = createCanvas(width, height);
+        const ctx = canvas.getContext('2d');
+        const imageUrl = template.url;
+
+        // Load the image from the URL
+        const image = await loadImage(imageUrl);
+        ctx.drawImage(image, 0, 0, width, height);
+
+        const imageBuffer = canvas.toBuffer('image/png', {
+          compressionLevel: 9,
+          resolution: 300,
+        });
+
+        const col = i % 2;
+        const row = Math.floor(i / 2);
+        const xOffset = 68 + col * (sizes.w * CM_TO_PT + 15);
+        const yOffset = 25 + row * (sizes.h * CM_TO_PT + 15);
+
+        doc.image(imageBuffer, xOffset, yOffset, {
+          width: sizes.w * CM_TO_PT + 3,
+          height: sizes.h * CM_TO_PT,
+        });
+      }
+    }
+    if (generated.length > 0) {
+      await prisma.idRecords.createMany({
+        data: generated.map((item) => {
+          return {
+            votersId: item,
+            templateIdId: templateId,
+          };
+        }),
+      });
+    }
+    doc.end();
+  } catch (error) {
+    console.log(error);
+    res.status(500).send('Internal Server Error');
+  }
+});
 router.post('/generate-id', async (req: Request, res: Response) => {
   const { id, level, barangay, selectedOnly } = req.body;
 

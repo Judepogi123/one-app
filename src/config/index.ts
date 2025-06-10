@@ -1553,6 +1553,129 @@ const resolvers: Resolvers = {
         },
       });
     },
+    searchFigureHead: async (_, { barangayId, zipCode, query, level, skip }) => {
+      console.log({ barangayId, zipCode, query, level, skip });
+
+      const filter: any = {
+        level: parseInt(level, 10),
+      };
+
+      // Apply location filters if provided
+      if (barangayId !== 'all') {
+        filter.barangaysId = barangayId;
+      }
+      if (zipCode !== 'all') {
+        filter.municipalsId = parseInt(zipCode, 10);
+      }
+
+      // Apply search query if provided
+      if (query) {
+        const searchTerms = query.trim().split(/\s+/); // Split on any whitespace
+
+        if (searchTerms.length === 1) {
+          // Single term - search in firstname, lastname, or idNumber
+          filter.OR = [
+            { lastname: { contains: searchTerms[0], mode: 'insensitive' } },
+            { firstname: { contains: searchTerms[0], mode: 'insensitive' } },
+            { idNumber: { contains: searchTerms[0], mode: 'insensitive' } },
+          ];
+        } else {
+          // Multiple terms - try to match combinations of firstname and lastname
+          filter.AND = searchTerms.map((term) => ({
+            OR: [
+              { firstname: { contains: term, mode: 'insensitive' } },
+              { lastname: { contains: term, mode: 'insensitive' } },
+            ],
+          }));
+
+          // Also include the original OR condition for idNumber matches
+          filter.OR = [
+            { AND: filter.AND },
+            { idNumber: { contains: query.trim(), mode: 'insensitive' } },
+          ];
+          delete filter.AND; // Remove the AND since we've incorporated it into OR
+        }
+      }
+
+      return await prisma.voters.findMany({
+        where: filter,
+        take: 10,
+        skip: skip ?? 0,
+        orderBy: {
+          lastname: 'asc',
+        },
+      });
+    },
+    getAllIDs: async (_, { zipCode }) => {
+      const filter: any = {};
+      if (zipCode !== 'all') {
+        filter.municipalsId = parseInt(zipCode, 10);
+      }
+      return await prisma.templateId.findMany({
+        where: {
+          ...filter,
+        },
+      });
+    },
+    barangayVoters: async (_, { barangayID, skip }) => {
+      console.log({ barangayID });
+
+      return await prisma.voters.findMany({
+        where: {
+          barangaysId: barangayID,
+          level: { not: 0 },
+        },
+        orderBy: {
+          lastname: 'asc',
+        },
+      });
+    },
+    generatedRecord: async (_, { zipCode, query, templateId, skip }) => {
+      const filter: any = {};
+      if (zipCode !== 'all') {
+        filter.municipalsId = parseInt(zipCode, 10);
+      }
+      if (query) {
+        const searchTerms = query.trim().split(/\s+/); // Split on any whitespace
+
+        if (searchTerms.length === 1) {
+          // Single term - search in firstname, lastname, or idNumber
+          filter.OR = [
+            { lastname: { contains: searchTerms[0], mode: 'insensitive' } },
+            { firstname: { contains: searchTerms[0], mode: 'insensitive' } },
+            { idNumber: { contains: searchTerms[0], mode: 'insensitive' } },
+          ];
+        } else {
+          // Multiple terms - try to match combinations of firstname and lastname
+          filter.AND = searchTerms.map((term) => ({
+            OR: [
+              { firstname: { contains: term, mode: 'insensitive' } },
+              { lastname: { contains: term, mode: 'insensitive' } },
+            ],
+          }));
+
+          // Also include the original OR condition for idNumber matches
+          filter.OR = [
+            { AND: filter.AND },
+            { idNumber: { contains: query.trim(), mode: 'insensitive' } },
+          ];
+          delete filter.AND; // Remove the AND since we've incorporated it into OR
+        }
+      }
+
+      return await prisma.idRecords.findMany({
+        where: {
+          voter: {
+            ...filter,
+          },
+        },
+        take: 20,
+        skip: skip ?? 0,
+        orderBy: {
+          timestamp: 'desc',
+        },
+      });
+    },
   },
   Mutation: {
     signUp: async (_, { user }) => {
@@ -6596,6 +6719,20 @@ const resolvers: Resolvers = {
       });
       return 'OK';
     },
+    uploadIdTemplate: async (_, { name, uri, municipalsId, level, desc }) => {
+      console.log({ name, uri, municipalsId, level, desc });
+
+      await prisma.templateId.create({
+        data: {
+          name: name,
+          url: uri,
+          municipalsId: municipalsId,
+          level,
+          desc,
+        },
+      });
+      return 'OK';
+    },
   },
   Voter: {
     votersCount: async () => {
@@ -8031,6 +8168,22 @@ const resolvers: Resolvers = {
       return await prisma.voters.findFirst({
         where: {
           id: parent.votersId,
+        },
+      });
+    },
+  },
+  IdRecords: {
+    voter: async (parent) => {
+      return await prisma.voters.findFirst({
+        where: {
+          id: parent.votersId,
+        },
+      });
+    },
+    template: async (parent) => {
+      return await prisma.templateId.findFirst({
+        where: {
+          id: parent.templateIdId,
         },
       });
     },

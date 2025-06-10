@@ -1386,6 +1386,117 @@ const resolvers = {
                 },
             });
         }),
+        searchFigureHead: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { barangayId, zipCode, query, level, skip }) {
+            console.log({ barangayId, zipCode, query, level, skip });
+            const filter = {
+                level: parseInt(level, 10),
+            };
+            // Apply location filters if provided
+            if (barangayId !== 'all') {
+                filter.barangaysId = barangayId;
+            }
+            if (zipCode !== 'all') {
+                filter.municipalsId = parseInt(zipCode, 10);
+            }
+            // Apply search query if provided
+            if (query) {
+                const searchTerms = query.trim().split(/\s+/); // Split on any whitespace
+                if (searchTerms.length === 1) {
+                    // Single term - search in firstname, lastname, or idNumber
+                    filter.OR = [
+                        { lastname: { contains: searchTerms[0], mode: 'insensitive' } },
+                        { firstname: { contains: searchTerms[0], mode: 'insensitive' } },
+                        { idNumber: { contains: searchTerms[0], mode: 'insensitive' } },
+                    ];
+                }
+                else {
+                    // Multiple terms - try to match combinations of firstname and lastname
+                    filter.AND = searchTerms.map((term) => ({
+                        OR: [
+                            { firstname: { contains: term, mode: 'insensitive' } },
+                            { lastname: { contains: term, mode: 'insensitive' } },
+                        ],
+                    }));
+                    // Also include the original OR condition for idNumber matches
+                    filter.OR = [
+                        { AND: filter.AND },
+                        { idNumber: { contains: query.trim(), mode: 'insensitive' } },
+                    ];
+                    delete filter.AND; // Remove the AND since we've incorporated it into OR
+                }
+            }
+            return yield prisma_1.prisma.voters.findMany({
+                where: filter,
+                take: 10,
+                skip: skip !== null && skip !== void 0 ? skip : 0,
+                orderBy: {
+                    lastname: 'asc',
+                },
+            });
+        }),
+        getAllIDs: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode }) {
+            const filter = {};
+            if (zipCode !== 'all') {
+                filter.municipalsId = parseInt(zipCode, 10);
+            }
+            return yield prisma_1.prisma.templateId.findMany({
+                where: Object.assign({}, filter),
+            });
+        }),
+        barangayVoters: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { barangayID, skip }) {
+            console.log({ barangayID });
+            return yield prisma_1.prisma.voters.findMany({
+                where: {
+                    barangaysId: barangayID,
+                    level: { not: 0 },
+                },
+                orderBy: {
+                    lastname: 'asc',
+                },
+            });
+        }),
+        generatedRecord: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode, query, templateId, skip }) {
+            const filter = {};
+            if (zipCode !== 'all') {
+                filter.municipalsId = parseInt(zipCode, 10);
+            }
+            if (query) {
+                const searchTerms = query.trim().split(/\s+/); // Split on any whitespace
+                if (searchTerms.length === 1) {
+                    // Single term - search in firstname, lastname, or idNumber
+                    filter.OR = [
+                        { lastname: { contains: searchTerms[0], mode: 'insensitive' } },
+                        { firstname: { contains: searchTerms[0], mode: 'insensitive' } },
+                        { idNumber: { contains: searchTerms[0], mode: 'insensitive' } },
+                    ];
+                }
+                else {
+                    // Multiple terms - try to match combinations of firstname and lastname
+                    filter.AND = searchTerms.map((term) => ({
+                        OR: [
+                            { firstname: { contains: term, mode: 'insensitive' } },
+                            { lastname: { contains: term, mode: 'insensitive' } },
+                        ],
+                    }));
+                    // Also include the original OR condition for idNumber matches
+                    filter.OR = [
+                        { AND: filter.AND },
+                        { idNumber: { contains: query.trim(), mode: 'insensitive' } },
+                    ];
+                    delete filter.AND; // Remove the AND since we've incorporated it into OR
+                }
+            }
+            return yield prisma_1.prisma.idRecords.findMany({
+                where: {
+                    voter: Object.assign({}, filter),
+                },
+                take: 20,
+                skip: skip !== null && skip !== void 0 ? skip : 0,
+                orderBy: {
+                    timestamp: 'desc',
+                },
+            });
+        }),
     },
     Mutation: {
         signUp: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { user }) {
@@ -5995,6 +6106,19 @@ const resolvers = {
             });
             return 'OK';
         }),
+        uploadIdTemplate: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { name, uri, municipalsId, level, desc }) {
+            console.log({ name, uri, municipalsId, level, desc });
+            yield prisma_1.prisma.templateId.create({
+                data: {
+                    name: name,
+                    url: uri,
+                    municipalsId: municipalsId,
+                    level,
+                    desc,
+                },
+            });
+            return 'OK';
+        }),
     },
     Voter: {
         votersCount: () => __awaiter(void 0, void 0, void 0, function* () {
@@ -7373,6 +7497,22 @@ const resolvers = {
             return yield prisma_1.prisma.voters.findFirst({
                 where: {
                     id: parent.votersId,
+                },
+            });
+        }),
+    },
+    IdRecords: {
+        voter: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma_1.prisma.voters.findFirst({
+                where: {
+                    id: parent.votersId,
+                },
+            });
+        }),
+        template: (parent) => __awaiter(void 0, void 0, void 0, function* () {
+            return yield prisma_1.prisma.templateId.findFirst({
+                where: {
+                    id: parent.templateIdId,
                 },
             });
         }),

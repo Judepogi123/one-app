@@ -42,6 +42,8 @@ import {
   TeamlLeaderQRcodes,
   Machine,
   MembersAttendance,
+  TemplateId,
+  IdRecords,
 } from '../../prisma/prisma';
 import {
   BarangayOptionResponse,
@@ -335,6 +337,20 @@ export type Resolvers = {
     >;
     getAllMachines: ResolverFn<{}, { zipCode: number }, {}, Machine[]>;
     checkStab: ResolverFn<{}, { id: string }, {}, QRcode | null>;
+    searchFigureHead: ResolverFn<
+      {},
+      { barangayId: string; zipCode: string; query: string; level: string; skip: number },
+      {},
+      Voters[]
+    >;
+    getAllIDs: ResolverFn<{}, { zipCode: string }, {}, TemplateId[]>;
+    barangayVoters: ResolverFn<{}, { barangayID: string; skip: number }, {}, Voters[]>;
+    generatedRecord: ResolverFn<
+      {},
+      { zipCode: string; query: string; templateId: string; skip: number },
+      {},
+      IdRecords[]
+    >;
   };
   Mutation: {
     createVoter: ResolverFn<{}, Voters, {}, Voters>;
@@ -1027,6 +1043,12 @@ export type Resolvers = {
     >;
     resetStab: ResolverFn<{}, { zipCode: number; barangayId: string }, {}, string>;
     newMachinePrecinct: ResolverFn<{}, { machineId: string; precinctNo: string }, {}, string>;
+    uploadIdTemplate: ResolverFn<
+      {},
+      { uri: string; name: string; desc: string; municipalsId: number; level: number },
+      {},
+      string
+    >;
   };
   Voter: {
     votersCount: ResolverFn<{}, {}, {}, number>;
@@ -1326,5 +1348,9 @@ export type Resolvers = {
   };
   QRcode: {
     voter: ResolverFn<QRcode, { id: string }, {}, Voters | null>;
+  };
+  IdRecords: {
+    voter: ResolverFn<IdRecords, {}, {}, Voters | null>;
+    template: ResolverFn<IdRecords, {}, {}, TemplateId | null>;
   };
 };

@@ -496,8 +496,32 @@ type ValdiatedTeams {
     calibrateTeamArea(zipCode: Int, barangayId: String, level: Int): [CalibratedResult!]
     getAllMachines(zipCode: Int): [Machine!]
     checkStab(id: String): QRcode
+    searchFigureHead(barangayId: String, zipCode: String, query: String, level: String, skip: Int): [Voter!]
+    getAllIDs(zipCode: String): [TemplateID!]
+    barangayVoters(barangayID: String, skip: Int): [Voter!]
+    generatedRecord(zipCode: String, query: String, templateId: String, skip: Int): [IdRecords!]
   }
 
+    type TemplateID {
+      id: String!
+      url: String
+      level: Int!
+      name: String!
+      desc: String!
+      timestamp: String!
+      municipal: Municipal
+      municipalsId: Int
+    }
+
+    type IdRecords {
+      id: String
+      desc: String
+      template: TemplateID!
+      voter: Voter
+      votersId: String!
+      timestamp: String
+      templateIdId: String
+    }
     type Machine {
     id: ID!
     number: Int
@@ -767,6 +791,7 @@ type BarangayCoor {
     teamMembersAttendance(teams: [EditTeamAttendance!]): String!
     resetStab(zipCode: Int, barangayId: String): String
     newMachinePrecinct(machineId: String!, precinctNo: String!): String!
+    uploadIdTemplate(uri: String, name: String, desc: String,municipalsId: Int,level: Int): String!
   }
 
   input EditTeamAttendance {

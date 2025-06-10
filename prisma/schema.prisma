@@ -7,6 +7,28 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model TemplateId {
+  id           String      @id @default(uuid())
+  url          String
+  level        Int
+  name         String?     @default("Unknown")
+  desc         String?     @default("N/A")
+  timestamp    DateTime    @default(now())
+  municipal    Municipals  @relation(fields: [municipalsId], references: [id])
+  municipalsId Int
+  IdRecords    IdRecords[]
+}
+
+model IdRecords {
+  id           String     @id @default(uuid())
+  desc         String?    @default("N/A")
+  template     TemplateId @relation(fields: [templateIdId], references: [id])
+  voter        Voters     @relation(fields: [votersId], references: [id])
+  votersId     String
+  timestamp    DateTime   @default(now())
+  templateIdId String
+}
+
 model AdminUser {
   uid         String       @id @default(uuid())
   firstname   String
@@ -201,6 +223,7 @@ model Voters {
   purok                  Purok?                   @relation(fields: [purokId], references: [id], onDelete: Cascade)
   Team                   Team?                    @relation(fields: [teamId], references: [id])
   Witness                Witness?
+  IdRecords              IdRecords[]
 }
 
 model Purok {
@@ -256,6 +279,7 @@ model Municipals {
   ValidationResult     ValidationResult[]
   ValidationTimeInput  ValidationTimeInput[]
   voters               Voters[]
+  TemplateId           TemplateId[]
 }
 
 model Barangays {

@@ -48,6 +48,8 @@ import {
   TeamlLeaderQRcodes,
   Machine,
   MembersAttendance,
+  TemplateId,
+  IdRecords,
 } from '@prisma/client';
 
 const prisma = new PrismaClient({
@@ -103,4 +105,6 @@ export {
   TeamlLeaderQRcodes,
   Machine,
   MembersAttendance,
+  TemplateId,
+  IdRecords,
 };
