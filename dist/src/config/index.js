@@ -1528,7 +1528,6 @@ const resolvers = {
             }
             const hashedPassword = encryptPassword ? yield argon2_1.default.hash(password) : password;
             yield prisma_1.prisma.$transaction((prisma) => __awaiter(void 0, void 0, void 0, function* () {
-                // Create user
                 const createdUser = yield prisma.users.create({
                     data: {
                         username,
@@ -1540,13 +1539,10 @@ const resolvers = {
                         forMunicipal: forMunicipal ? parseInt(forMunicipal, 10) : null,
                     },
                 });
-                // Generate QR code
                 const generatedCode = yield qrcode_1.default.toDataURL(createdUser.uid);
-                // Create QR code and update user
                 const qrCode = yield prisma.userQRCode.create({
                     data: { qrCode: generatedCode },
                 });
-                // Update the user with the QR code ID
                 yield prisma.users.update({
                     where: { uid: createdUser.uid },
                     data: { userQRCodeId: qrCode.id },

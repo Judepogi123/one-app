@@ -1708,7 +1708,6 @@ const resolvers: Resolvers = {
       }
       const hashedPassword = encryptPassword ? await argon2.hash(password) : password;
       await prisma.$transaction(async (prisma) => {
-        // Create user
         const createdUser = await prisma.users.create({
           data: {
             username,
@@ -1721,15 +1720,12 @@ const resolvers: Resolvers = {
           },
         });
 
-        // Generate QR code
         const generatedCode = await qrcode.toDataURL(createdUser.uid);
 
-        // Create QR code and update user
         const qrCode = await prisma.userQRCode.create({
           data: { qrCode: generatedCode },
         });
 
-        // Update the user with the QR code ID
         await prisma.users.update({
           where: { uid: createdUser.uid },
           data: { userQRCodeId: qrCode.id },
