@@ -503,6 +503,7 @@ type ValdiatedTeams {
     getAllIDs(zipCode: String): [TemplateID!]
     barangayVoters(barangayID: String, skip: Int): [Voter!]
     generatedRecord(zipCode: String, query: String, templateId: String, skip: Int): [IdRecords!]
+    barangayFigureHead(barangayId: String, level: String): [Team!]
   }
 
     type TemplateID {

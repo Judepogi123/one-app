@@ -597,7 +597,17 @@ const resolvers = {
         }),
         teamList: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode, barangayId, purokId, level, query, skip, candidate, withIssues, members }) {
             const filter = {};
-            console.log({ members });
+            console.log('Params: ', {
+                zipCode,
+                barangayId,
+                purokId,
+                level,
+                query,
+                skip,
+                candidate,
+                withIssues,
+                members,
+            });
             const teamMembers = (0, data_2.teamMembersCount)(members);
             const levelList = [
                 { name: 'TL', value: 1 },
@@ -663,15 +673,8 @@ const resolvers = {
                     },
                 },
             });
-            return teams.filter((team) => {
-                if (members === 'noMembers') {
-                    return team._count.voters === 0;
-                }
-                if (members === 'five') {
-                    return team._count.voters === 5;
-                }
-                return team;
-            });
+            //console.log('Teams: ', teams);
+            return teams;
         }),
         teamCount: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { zipCode, barangayId, purokId, level, query, skip, candidate, withIssues, members }) {
             const filter = {};
@@ -704,6 +707,7 @@ const resolvers = {
             if (level !== 'all') {
                 filter.level = teamLevel.value;
             }
+            console.log({ filter });
             const count = yield prisma_1.prisma.team.count({
                 where: Object.assign({ teamLeaderId: { not: null }, TeamLeader: {
                         votersId: { not: null },
@@ -1494,6 +1498,20 @@ const resolvers = {
                 skip: skip !== null && skip !== void 0 ? skip : 0,
                 orderBy: {
                     timestamp: 'desc',
+                },
+            });
+        }),
+        barangayFigureHead: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { barangayId, level }) {
+            const levelList = [
+                { name: 'TL', value: 1 },
+                { name: 'PC', value: 2 },
+                { name: 'BC', value: 3 },
+            ];
+            const teamLevel = levelList.find((x) => x.name === level);
+            return yield prisma_1.prisma.team.findMany({
+                where: {
+                    barangaysId: barangayId,
+                    level: teamLevel.value,
                 },
             });
         }),

@@ -307,7 +307,7 @@ router.post('/generate-custom-id-rear', async (req: Request, res: Response) => {
 
         const col = i % 2;
         const row = Math.floor(i / 2);
-        const xOffset = 70 + col * (sizes.w * CM_TO_PT + 15);
+        const xOffset = 72 + col * (sizes.w * CM_TO_PT + 15);
         const yOffset = 25 + row * (sizes.h * CM_TO_PT + 15);
 
         doc.image(imageBuffer, xOffset, yOffset, {
@@ -350,7 +350,7 @@ router.post('/generate-id', async (req: Request, res: Response) => {
   const cmToPx = 37.7953;
   const CM_TO_PT = 28.3465;
   const scaleFactor = 4;
-  const IDsPerPage = 4; // Limit per page
+  const IDsPerPage = 4;
 
   try {
     let tlData: any[] = [];
@@ -384,7 +384,6 @@ router.post('/generate-id', async (req: Request, res: Response) => {
       return res.status(404).send('Voter not found');
     }
 
-    // ✅ Ensure size exists
     const doc = new PDFDocument({ size: 'A4', margin: 0 });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="VotersID.pdf"`);
@@ -403,7 +402,6 @@ router.post('/generate-id', async (req: Request, res: Response) => {
         const tl = chunk[i];
         const { voter } = tl;
 
-        // ✅ Use levelIndex instead of voter.level
         const baseWidth = imageSize.w * cmToPx;
         const baseHeight = imageSize.h * cmToPx;
         const width = baseWidth * scaleFactor;

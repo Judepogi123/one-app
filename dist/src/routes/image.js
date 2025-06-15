@@ -284,7 +284,7 @@ router.post('/generate-custom-id-rear', (req, res) => __awaiter(void 0, void 0, 
                 });
                 const col = i % 2;
                 const row = Math.floor(i / 2);
-                const xOffset = 70 + col * (sizes.w * CM_TO_PT + 15);
+                const xOffset = 72 + col * (sizes.w * CM_TO_PT + 15);
                 const yOffset = 25 + row * (sizes.h * CM_TO_PT + 15);
                 doc.image(imageBuffer, xOffset, yOffset, {
                     width: sizes.w * CM_TO_PT + 3,
@@ -326,7 +326,7 @@ router.post('/generate-id', (req, res) => __awaiter(void 0, void 0, void 0, func
     const cmToPx = 37.7953;
     const CM_TO_PT = 28.3465;
     const scaleFactor = 4;
-    const IDsPerPage = 4; // Limit per page
+    const IDsPerPage = 4;
     try {
         let tlData = [];
         if (selectedOnly && id.length > 0) {
@@ -358,7 +358,6 @@ router.post('/generate-id', (req, res) => __awaiter(void 0, void 0, void 0, func
         if (tlData.length === 0) {
             return res.status(404).send('Voter not found');
         }
-        // ✅ Ensure size exists
         const doc = new pdfkit_1.default({ size: 'A4', margin: 0 });
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="VotersID.pdf"`);
@@ -371,7 +370,6 @@ router.post('/generate-id', (req, res) => __awaiter(void 0, void 0, void 0, func
             for (let i = 0; i < chunk.length; i++) {
                 const tl = chunk[i];
                 const { voter } = tl;
-                // ✅ Use levelIndex instead of voter.level
                 const baseWidth = imageSize.w * cmToPx;
                 const baseHeight = imageSize.h * cmToPx;
                 const width = baseWidth * scaleFactor;

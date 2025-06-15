@@ -351,6 +351,7 @@ export type Resolvers = {
       {},
       IdRecords[]
     >;
+    barangayFigureHead: ResolverFn<{}, { barangayId: string; level: string }, {}, Team[]>;
   };
   Mutation: {
     createVoter: ResolverFn<{}, Voters, {}, Voters>;

@@ -702,7 +702,17 @@ const resolvers: Resolvers = {
     ) => {
       const filter: any = {};
 
-      console.log({ members });
+      console.log('Params: ', {
+        zipCode,
+        barangayId,
+        purokId,
+        level,
+        query,
+        skip,
+        candidate,
+        withIssues,
+        members,
+      });
       const teamMembers = teamMembersCount(members);
 
       const levelList: any = [
@@ -775,16 +785,9 @@ const resolvers: Resolvers = {
           },
         },
       });
+      //console.log('Teams: ', teams);
 
-      return teams.filter((team) => {
-        if (members === 'noMembers') {
-          return team._count.voters === 0;
-        }
-        if (members === 'five') {
-          return team._count.voters === 5;
-        }
-        return team;
-      });
+      return teams;
     },
     teamCount: async (
       _,
@@ -822,6 +825,8 @@ const resolvers: Resolvers = {
       if (level !== 'all') {
         filter.level = teamLevel.value;
       }
+      console.log({ filter });
+
       const count = await prisma.team.count({
         where: {
           teamLeaderId: { not: null },
@@ -1673,6 +1678,20 @@ const resolvers: Resolvers = {
         skip: skip ?? 0,
         orderBy: {
           timestamp: 'desc',
+        },
+      });
+    },
+    barangayFigureHead: async (_, { barangayId, level }) => {
+      const levelList: any = [
+        { name: 'TL', value: 1 },
+        { name: 'PC', value: 2 },
+        { name: 'BC', value: 3 },
+      ];
+      const teamLevel = levelList.find((x: { name: string }) => x.name === level);
+      return await prisma.team.findMany({
+        where: {
+          barangaysId: barangayId,
+          level: teamLevel.value as number,
         },
       });
     },
