@@ -5530,11 +5530,6 @@ const resolvers: Resolvers = {
       return 'OK';
     },
     updateVoter: async (_, { id }) => {
-      const voter = await prisma.voters.updateMany({
-        data: {
-          precintsId: null,
-        },
-      });
       // console.log(voter);
       // const tl = await prisma.teamLeader.findFirst({
       //   where: {
@@ -5608,18 +5603,14 @@ const resolvers: Resolvers = {
       //     }
       //   }),
       // ])
-      // await prisma.$transaction([
-      //   prisma.respondentResponse.deleteMany({
-      //     where: {
-      //       surveyId: 'cm9qakae60005q82gbyugffre',
-      //     },
-      //   }),
-      //   prisma.response.deleteMany({
-      //     where: {
-      //       surveyId: 'cm9qakae60005q82gbyugffre',
-      //     },
-      //   }),
-      // ]);
+      await prisma.$transaction([
+        prisma.templateId.deleteMany({
+          where: {
+            id: '6206955f-1262-4c7f-bb5d-7e516e7791ee',
+            municipalsId: 4903,
+          },
+        }),
+      ]);
       // const [surveyResponse, respondentResponse, response] = await prisma.$transaction([
       //   prisma.surveyResponse.findUnique({
       //     where: {

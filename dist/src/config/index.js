@@ -4990,11 +4990,6 @@ const resolvers = {
             return 'OK';
         }),
         updateVoter: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { id }) {
-            const voter = yield prisma_1.prisma.voters.updateMany({
-                data: {
-                    precintsId: null,
-                },
-            });
             // console.log(voter);
             // const tl = await prisma.teamLeader.findFirst({
             //   where: {
@@ -5066,18 +5061,14 @@ const resolvers = {
             //     }
             //   }),
             // ])
-            // await prisma.$transaction([
-            //   prisma.respondentResponse.deleteMany({
-            //     where: {
-            //       surveyId: 'cm9qakae60005q82gbyugffre',
-            //     },
-            //   }),
-            //   prisma.response.deleteMany({
-            //     where: {
-            //       surveyId: 'cm9qakae60005q82gbyugffre',
-            //     },
-            //   }),
-            // ]);
+            yield prisma_1.prisma.$transaction([
+                prisma_1.prisma.templateId.deleteMany({
+                    where: {
+                        id: '6206955f-1262-4c7f-bb5d-7e516e7791ee',
+                        municipalsId: 4903,
+                    },
+                }),
+            ]);
             // const [surveyResponse, respondentResponse, response] = await prisma.$transaction([
             //   prisma.surveyResponse.findUnique({
             //     where: {
