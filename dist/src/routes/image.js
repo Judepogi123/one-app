@@ -284,23 +284,13 @@ router.post('/generate-custom-id-rear', (req, res) => __awaiter(void 0, void 0, 
                 });
                 const col = i % 2;
                 const row = Math.floor(i / 2);
-                const xOffset = 76 + col * (sizes.w * CM_TO_PT + 15);
+                const xOffset = 70 + col * (sizes.w * CM_TO_PT + 15);
                 const yOffset = 26 + row * (sizes.h * CM_TO_PT + 15);
                 doc.image(imageBuffer, xOffset, yOffset, {
                     width: sizes.w * CM_TO_PT + 3,
                     height: sizes.h * CM_TO_PT,
                 });
             }
-        }
-        if (generated.length > 0) {
-            yield prisma_1.prisma.idRecords.createMany({
-                data: generated.map((item) => {
-                    return {
-                        votersId: item,
-                        templateIdId: templateId,
-                    };
-                }),
-            });
         }
         doc.end();
     }
