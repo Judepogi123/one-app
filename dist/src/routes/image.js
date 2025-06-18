@@ -165,7 +165,7 @@ router.post('/generate-custom-id-front', (req, res) => __awaiter(void 0, void 0,
                     const barangayY = height - 65 * scaleFactor;
                     ctx.font = `${16 * scaleFactor}px Arial, sans-serif`;
                     ctx.fillStyle = 'black';
-                    ctx.textAlign = 'center'; // Align text to the right of `letterW`
+                    ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(tl.barangay.name, centerX, barangayY);
                 }
@@ -173,13 +173,13 @@ router.post('/generate-custom-id-front', (req, res) => __awaiter(void 0, void 0,
                     const nameY = height - 115 * scaleFactor;
                     ctx.font = `bold ${20 * scaleFactor}px Arial, sans-serif`;
                     ctx.fillStyle = 'black';
-                    ctx.textAlign = 'center'; // Align text to the right of `letterW`
+                    ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(`${voter.lastname}, ${voter.firstname}`, centerX, nameY);
                     const barangayY = height - 90 * scaleFactor;
                     ctx.font = `${16 * scaleFactor}px Arial, sans-serif`;
                     ctx.fillStyle = 'black';
-                    ctx.textAlign = 'center'; // Align text to the right of `letterW`
+                    ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(tl.barangay.name, centerX, barangayY);
                 }
@@ -189,7 +189,7 @@ router.post('/generate-custom-id-front', (req, res) => __awaiter(void 0, void 0,
                 });
                 const col = i % 2;
                 const row = Math.floor(i / 2);
-                const xOffset = 25 + col * (sizes.w * CM_TO_PT + 15);
+                const xOffset = 30 + col * (sizes.w * CM_TO_PT + 15);
                 const yOffset = 25 + row * (sizes.h * CM_TO_PT + 15);
                 doc.image(imageBuffer, xOffset, yOffset, {
                     width: sizes.w * CM_TO_PT + 3,
