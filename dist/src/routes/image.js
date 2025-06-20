@@ -189,7 +189,7 @@ router.post('/generate-custom-id-front', (req, res) => __awaiter(void 0, void 0,
                 });
                 const col = i % 2;
                 const row = Math.floor(i / 2);
-                const xOffset = 30 + col * (sizes.w * CM_TO_PT + 15);
+                const xOffset = 42 + col * (sizes.w * CM_TO_PT + 15);
                 const yOffset = 25 + row * (sizes.h * CM_TO_PT + 15);
                 doc.image(imageBuffer, xOffset, yOffset, {
                     width: sizes.w * CM_TO_PT + 3,
